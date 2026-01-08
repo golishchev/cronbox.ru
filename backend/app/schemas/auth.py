@@ -66,3 +66,31 @@ class PasswordResetConfirm(BaseModel):
 
     token: str
     new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class EmailVerificationRequest(BaseModel):
+    """Schema for email verification request."""
+
+    token: str
+
+
+class TelegramConnectRequest(BaseModel):
+    """Schema for generating Telegram link code."""
+
+    pass  # No fields needed, uses current user
+
+
+class TelegramConnectResponse(BaseModel):
+    """Schema for Telegram connect response."""
+
+    code: str
+    expires_in: int  # seconds
+    bot_username: str
+
+
+class TelegramLinkRequest(BaseModel):
+    """Schema for linking Telegram account (from bot)."""
+
+    code: str
+    telegram_id: int
+    telegram_username: str | None = None

@@ -33,10 +33,18 @@ def run_server():
     )
 
 
+def run_bot():
+    """Run the Telegram bot."""
+    from app.bot.handlers import run_bot as bot_main
+
+    print("Starting CronBox Telegram bot...")
+    asyncio.run(bot_main())
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python -m app.cli <command>")
-        print("Commands: worker, scheduler, server")
+        print("Commands: worker, scheduler, server, bot")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -47,6 +55,8 @@ if __name__ == "__main__":
         run_scheduler()
     elif command == "server":
         run_server()
+    elif command == "bot":
+        run_bot()
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)
