@@ -1,0 +1,321 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (CronBox)
+  postgres:
+    image: postgres:16-alpine
+    container_name: cronbox-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cronbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-cronbox}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cronbox}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: cronbox-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MariaDB (for Postal)
+  postal-mariadb:
+    image: mariadb:10.11
+    container_name: cronbox-postal-mariadb
+    environment:
+      MARIADB_DATABASE: postal
+      MARIADB_ROOT_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+    volumes:
+      - postal_mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # RabbitMQ (for Postal)
+  postal-rabbitmq:
+    image: rabbitmq:3.12-alpine
+    container_name: cronbox-postal-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: postal
+      RABBITMQ_DEFAULT_PASS: ${POSTAL_RABBITMQ_PASSWORD}
+    volumes:
+      - postal_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Postal Mail Server
+  postal:
+    image: ghcr.io/postalserver/postal:3
+    container_name: cronbox-postal
+    environment:
+      POSTAL_FNAME: Admin
+      POSTAL_LNAME: User
+      POSTAL_EMAIL: ${POSTAL_ADMIN_EMAIL:-admin@cronbox.ru}
+      POSTAL_PASSWORD: ${POSTAL_ADMIN_PASSWORD}
+      MARIADB_HOST: postal-mariadb
+      MARIADB_DATABASE: postal
+      MARIADB_USERNAME: root
+      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+      RABBITMQ_HOST: postal-rabbitmq
+      RABBITMQ_USERNAME: postal
+      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
+      POSTAL_WEB_HOST: ${POSTAL_WEB_HOST:-postal.cronbox.ru}
+      POSTAL_WEB_PROTOCOL: https
+      POSTAL_SMTP_HOST: ${POSTAL_SMTP_HOST:-postal.cronbox.ru}
+      SECRET_KEY: ${POSTAL_SECRET_KEY}
+    volumes:
+      - postal_config:/config
+      - postal_data:/opt/postal/storage
+    ports:
+      - "25:25"      # SMTP
+      - "465:465"    # SMTPS
+      - "587:587"    # Submission
+    depends_on:
+      postal-mariadb:
+        condition: service_healthy
+      postal-rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Postal Web Interface
+  postal-web:
+    image: ghcr.io/postalserver/postal:3
+    container_name: cronbox-postal-web
+    command: postal web-server
+    environment:
+      MARIADB_HOST: postal-mariadb
+      MARIADB_DATABASE: postal
+      MARIADB_USERNAME: root
+      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+      RABBITMQ_HOST: postal-rabbitmq
+      RABBITMQ_USERNAME: postal
+      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
+      SECRET_KEY: ${POSTAL_SECRET_KEY}
+    volumes:
+      - postal_config:/config
+    depends_on:
+      - postal
+    restart: unless-stopped
+
+  # Postal Worker
+  postal-worker:
+    image: ghcr.io/postalserver/postal:3
+    container_name: cronbox-postal-worker
+    command: postal worker
+    environment:
+      MARIADB_HOST: postal-mariadb
+      MARIADB_DATABASE: postal
+      MARIADB_USERNAME: root
+      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+      RABBITMQ_HOST: postal-rabbitmq
+      RABBITMQ_USERNAME: postal
+      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
+      SECRET_KEY: ${POSTAL_SECRET_KEY}
+    volumes:
+      - postal_config:/config
+      - postal_data:/opt/postal/storage
+    depends_on:
+      - postal
+    restart: unless-stopped
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cronbox-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # Postal
+      POSTAL_API_URL: http://postal-web:5000
+      POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
+      POSTAL_WEBHOOK_SECRET: ${POSTAL_WEBHOOK_SECRET}
+      USE_POSTAL: "true"
+      # SMTP fallback
+      SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru"]}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "uv run alembic upgrade head &&
+             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  # Worker (arq)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cronbox-worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # Postal
+      POSTAL_API_URL: http://postal-web:5000
+      POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
+      USE_POSTAL: "true"
+      # SMTP fallback
+      SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uv run arq app.workers.settings.WorkerSettings
+    restart: unless-stopped
+    deploy:
+      replicas: 3
+
+  # Scheduler
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cronbox-scheduler
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uv run python -m app.workers.scheduler
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cronbox-frontend
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: cronbox-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - api
+      - frontend
+      - postal-web
+    restart: unless-stopped
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: cronbox-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: cronbox-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://grafana.cronbox.ru
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  # Redis Exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: cronbox-redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Postgres Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: cronbox-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}?sslmode=disable
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  postal_mariadb_data:
+  postal_rabbitmq_data:
+  postal_config:
+  postal_data:
+  prometheus_data:
+  grafana_data:

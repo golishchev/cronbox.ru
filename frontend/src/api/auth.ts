@@ -1,0 +1,42 @@
+import { apiClient } from './client'
+import type { AuthResponse, LoginRequest, RegisterRequest, User } from '@/types'
+
+export async function login(data: LoginRequest): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>('/auth/login', data)
+  return response.data
+}
+
+export async function register(data: RegisterRequest): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>('/auth/register', data)
+  return response.data
+}
+
+export async function getCurrentUser(): Promise<User> {
+  const response = await apiClient.get<User>('/auth/me')
+  return response.data
+}
+
+export async function refreshTokens(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {
+  const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken })
+  return response.data
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiClient.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+
+export async function logout(): Promise<void> {
+  await apiClient.post('/auth/logout')
+}
+
+export async function updateProfile(data: {
+  name?: string
+  email?: string
+  preferred_language?: 'en' | 'ru'
+}): Promise<User> {
+  const response = await apiClient.patch<User>('/auth/me', data)
+  return response.data
+}

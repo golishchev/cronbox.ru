@@ -1,0 +1,265 @@
+// User types
+export interface User {
+  id: string
+  email: string
+  name: string
+  telegram_id: number | null
+  telegram_username: string | null
+  email_verified: boolean
+  is_active: boolean
+  is_superuser: boolean
+  preferred_language: 'en' | 'ru'
+  created_at: string
+  updated_at: string
+}
+
+// Auth types
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface RegisterRequest {
+  email: string
+  password: string
+  name: string
+}
+
+export interface TokenResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+}
+
+export interface AuthResponse {
+  user: User
+  tokens: TokenResponse
+}
+
+// Workspace types
+export interface Workspace {
+  id: string
+  name: string
+  slug: string
+  owner_id: string
+  plan_id: string
+  cron_tasks_count: number
+  delayed_tasks_this_month: number
+  default_timezone: string
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkspaceWithStats extends Workspace {
+  plan_name: string | null
+  active_cron_tasks: number
+  pending_delayed_tasks: number
+  executions_today: number
+  success_rate_7d: number
+}
+
+export interface CreateWorkspaceRequest {
+  name: string
+  slug: string
+  default_timezone?: string
+}
+
+// HTTP Method enum
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD'
+
+// Task status enum
+export type TaskStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
+
+// Cron Task types
+export interface CronTask {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  url: string
+  method: HttpMethod
+  headers: Record<string, string>
+  body: string | null
+  schedule: string
+  timezone: string
+  timeout_seconds: number
+  retry_count: number
+  retry_delay_seconds: number
+  is_active: boolean
+  is_paused: boolean
+  last_run_at: string | null
+  last_status: TaskStatus | null
+  next_run_at: string | null
+  consecutive_failures: number
+  notify_on_failure: boolean
+  notify_on_recovery: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCronTaskRequest {
+  name: string
+  description?: string
+  url: string
+  method?: HttpMethod
+  headers?: Record<string, string>
+  body?: string
+  schedule: string
+  timezone?: string
+  timeout_seconds?: number
+  retry_count?: number
+  retry_delay_seconds?: number
+  notify_on_failure?: boolean
+  notify_on_recovery?: boolean
+}
+
+export interface UpdateCronTaskRequest {
+  name?: string
+  description?: string
+  url?: string
+  method?: HttpMethod
+  headers?: Record<string, string>
+  body?: string
+  schedule?: string
+  timezone?: string
+  timeout_seconds?: number
+  retry_count?: number
+  is_active?: boolean
+  notify_on_failure?: boolean
+  notify_on_recovery?: boolean
+}
+
+// Delayed Task types
+export interface DelayedTask {
+  id: string
+  workspace_id: string
+  idempotency_key: string | null
+  name: string | null
+  tags: string[]
+  url: string
+  method: HttpMethod
+  headers: Record<string, string>
+  body: string | null
+  execute_at: string
+  timeout_seconds: number
+  retry_count: number
+  retry_delay_seconds: number
+  status: TaskStatus
+  executed_at: string | null
+  retry_attempt: number
+  callback_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateDelayedTaskRequest {
+  url: string
+  method?: HttpMethod
+  headers?: Record<string, string>
+  body?: string
+  execute_at: string
+  name?: string
+  idempotency_key?: string
+  tags?: string[]
+  timeout_seconds?: number
+  retry_count?: number
+  retry_delay_seconds?: number
+  callback_url?: string
+}
+
+// Execution types
+export interface Execution {
+  id: string
+  workspace_id: string
+  task_type: 'cron' | 'delayed'
+  task_id: string
+  task_name: string | null
+  status: TaskStatus
+  started_at: string
+  finished_at: string | null
+  duration_ms: number | null
+  retry_attempt: number
+  request_url: string
+  request_method: HttpMethod
+  response_status_code: number | null
+  error_message: string | null
+  error_type: string | null
+  created_at: string
+}
+
+export interface ExecutionDetail extends Execution {
+  request_headers: Record<string, string> | null
+  request_body: string | null
+  response_headers: Record<string, string> | null
+  response_body: string | null
+  response_size_bytes: number | null
+}
+
+export interface ExecutionStats {
+  total: number
+  success: number
+  failed: number
+  success_rate: number
+  avg_duration_ms: number | null
+}
+
+// Pagination
+export interface PaginationMeta {
+  page: number
+  limit: number
+  total: number
+  total_pages: number
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  pagination: PaginationMeta
+}
+
+// Worker/API Key types
+export type WorkerStatus = 'online' | 'offline' | 'busy'
+
+export interface Worker {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  region: string | null
+  status: WorkerStatus
+  is_active: boolean
+  api_key_prefix: string
+  last_heartbeat: string | null
+  tasks_completed: number
+  tasks_failed: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkerCreateRequest {
+  name: string
+  description?: string
+  region?: string
+}
+
+export interface WorkerUpdateRequest {
+  name?: string
+  description?: string
+  region?: string
+  is_active?: boolean
+}
+
+export interface WorkerCreateResponse {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  region: string | null
+  api_key: string
+  api_key_prefix: string
+  created_at: string
+}
+
+// API Error
+export interface ApiError {
+  detail: string
+}

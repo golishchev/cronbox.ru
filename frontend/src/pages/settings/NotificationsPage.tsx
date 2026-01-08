@@ -1,0 +1,462 @@
+import { useEffect, useState } from 'react'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+  sendTestNotification,
+  NotificationSettings,
+} from '@/api/notifications'
+import { getErrorMessage } from '@/api/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Loader2,
+  Bell,
+  Mail,
+  MessageSquare,
+  Webhook,
+  Save,
+  Send,
+  Plus,
+  X,
+} from 'lucide-react'
+
+interface NotificationsPageProps {
+  onNavigate: (route: string) => void
+}
+
+export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
+  const { currentWorkspace } = useWorkspaceStore()
+  const [_settings, setSettings] = useState<NotificationSettings | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [testingChannel, setTestingChannel] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  // Form state
+  const [telegramEnabled, setTelegramEnabled] = useState(false)
+  const [telegramChatIds, setTelegramChatIds] = useState<string[]>([])
+  const [newTelegramChatId, setNewTelegramChatId] = useState('')
+
+  const [emailEnabled, setEmailEnabled] = useState(false)
+  const [emailAddresses, setEmailAddresses] = useState<string[]>([])
+  const [newEmailAddress, setNewEmailAddress] = useState('')
+
+  const [webhookEnabled, setWebhookEnabled] = useState(false)
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [webhookSecret, setWebhookSecret] = useState('')
+
+  const [notifyOnFailure, setNotifyOnFailure] = useState(true)
+  const [notifyOnRecovery, setNotifyOnRecovery] = useState(true)
+  const [notifyOnSuccess, setNotifyOnSuccess] = useState(false)
+
+  const loadSettings = async () => {
+    if (!currentWorkspace) return
+    setIsLoading(true)
+    try {
+      const data = await getNotificationSettings(currentWorkspace.id)
+      setSettings(data)
+      setTelegramEnabled(data.telegram_enabled)
+      setTelegramChatIds(data.telegram_chat_ids || [])
+      setEmailEnabled(data.email_enabled)
+      setEmailAddresses(data.email_addresses || [])
+      setWebhookEnabled(data.webhook_enabled)
+      setWebhookUrl(data.webhook_url || '')
+      setWebhookSecret(data.webhook_secret || '')
+      setNotifyOnFailure(data.notify_on_failure)
+      setNotifyOnRecovery(data.notify_on_recovery)
+      setNotifyOnSuccess(data.notify_on_success)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSettings()
+  }, [currentWorkspace])
+
+  const handleSave = async () => {
+    if (!currentWorkspace) return
+    setIsSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      await updateNotificationSettings(currentWorkspace.id, {
+        telegram_enabled: telegramEnabled,
+        telegram_chat_ids: telegramChatIds,
+        email_enabled: emailEnabled,
+        email_addresses: emailAddresses,
+        webhook_enabled: webhookEnabled,
+        webhook_url: webhookUrl || undefined,
+        webhook_secret: webhookSecret || undefined,
+        notify_on_failure: notifyOnFailure,
+        notify_on_recovery: notifyOnRecovery,
+        notify_on_success: notifyOnSuccess,
+      })
+      setSuccess('Settings saved successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleTestNotification = async (channel: 'telegram' | 'email' | 'webhook') => {
+    if (!currentWorkspace) return
+    setTestingChannel(channel)
+    setError('')
+    setSuccess('')
+
+    try {
+      const result = await sendTestNotification(currentWorkspace.id, channel)
+      setSuccess(result.message)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setTestingChannel(null)
+    }
+  }
+
+  const addTelegramChatId = () => {
+    if (newTelegramChatId && !telegramChatIds.includes(newTelegramChatId)) {
+      setTelegramChatIds([...telegramChatIds, newTelegramChatId])
+      setNewTelegramChatId('')
+    }
+  }
+
+  const removeTelegramChatId = (chatId: string) => {
+    setTelegramChatIds(telegramChatIds.filter(id => id !== chatId))
+  }
+
+  const addEmailAddress = () => {
+    if (newEmailAddress && !emailAddresses.includes(newEmailAddress)) {
+      setEmailAddresses([...emailAddresses, newEmailAddress])
+      setNewEmailAddress('')
+    }
+  }
+
+  const removeEmailAddress = (email: string) => {
+    setEmailAddresses(emailAddresses.filter(e => e !== email))
+  }
+
+  if (!currentWorkspace) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <p className="text-muted-foreground">Please select a workspace</p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+        <p className="text-muted-foreground">
+          Configure how you want to be notified about task events
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-md bg-destructive/15 p-4 text-destructive">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-md bg-green-500/15 p-4 text-green-600">
+          {success}
+        </div>
+      )}
+
+      {/* Notification Events */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Events
+          </CardTitle>
+          <CardDescription>
+            Choose which events should trigger notifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={notifyOnFailure}
+              onChange={(e) => setNotifyOnFailure(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <div>
+              <p className="font-medium">Task Failure</p>
+              <p className="text-sm text-muted-foreground">
+                Notify when a task fails
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={notifyOnRecovery}
+              onChange={(e) => setNotifyOnRecovery(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <div>
+              <p className="font-medium">Task Recovery</p>
+              <p className="text-sm text-muted-foreground">
+                Notify when a previously failing task succeeds
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={notifyOnSuccess}
+              onChange={(e) => setNotifyOnSuccess(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <div>
+              <p className="font-medium">Task Success</p>
+              <p className="text-sm text-muted-foreground">
+                Notify on every successful task execution (can be noisy)
+              </p>
+            </div>
+          </label>
+        </CardContent>
+      </Card>
+
+      {/* Telegram */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              <CardTitle>Telegram</CardTitle>
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={telegramEnabled}
+                onChange={(e) => setTelegramEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm">Enabled</span>
+            </label>
+          </div>
+          <CardDescription>
+            Receive notifications via Telegram bot
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Chat IDs</Label>
+            <div className="flex flex-wrap gap-2">
+              {telegramChatIds.map((chatId) => (
+                <Badge key={chatId} variant="secondary" className="gap-1">
+                  {chatId}
+                  <button onClick={() => removeTelegramChatId(chatId)}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Chat ID (e.g., 123456789)"
+                value={newTelegramChatId}
+                onChange={(e) => setNewTelegramChatId(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addTelegramChatId()}
+              />
+              <Button type="button" variant="outline" onClick={addTelegramChatId}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Start a chat with @CronBoxBot and send /start to get your chat ID
+            </p>
+          </div>
+
+          {telegramEnabled && telegramChatIds.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleTestNotification('telegram')}
+              disabled={testingChannel === 'telegram'}
+            >
+              {testingChannel === 'telegram' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send Test
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Email */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              <CardTitle>Email</CardTitle>
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={emailEnabled}
+                onChange={(e) => setEmailEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm">Enabled</span>
+            </label>
+          </div>
+          <CardDescription>
+            Receive notifications via email
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Email Addresses</Label>
+            <div className="flex flex-wrap gap-2">
+              {emailAddresses.map((email) => (
+                <Badge key={email} variant="secondary" className="gap-1">
+                  {email}
+                  <button onClick={() => removeEmailAddress(email)}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="email@example.com"
+                value={newEmailAddress}
+                onChange={(e) => setNewEmailAddress(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addEmailAddress()}
+              />
+              <Button type="button" variant="outline" onClick={addEmailAddress}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {emailEnabled && emailAddresses.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleTestNotification('email')}
+              disabled={testingChannel === 'email'}
+            >
+              {testingChannel === 'email' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send Test
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Webhook */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5" />
+              <CardTitle>Webhook</CardTitle>
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={webhookEnabled}
+                onChange={(e) => setWebhookEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm">Enabled</span>
+            </label>
+          </div>
+          <CardDescription>
+            Send notifications to a custom webhook URL
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="webhookUrl">Webhook URL</Label>
+            <Input
+              id="webhookUrl"
+              type="url"
+              placeholder="https://example.com/webhook"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="webhookSecret">Secret (optional)</Label>
+            <Input
+              id="webhookSecret"
+              type="password"
+              placeholder="Webhook secret for verification"
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Will be sent in X-Webhook-Secret header
+            </p>
+          </div>
+
+          {webhookEnabled && webhookUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleTestNotification('webhook')}
+              disabled={testingChannel === 'webhook'}
+            >
+              {testingChannel === 'webhook' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send Test
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          Save Settings
+        </Button>
+      </div>
+    </div>
+  )
+}
