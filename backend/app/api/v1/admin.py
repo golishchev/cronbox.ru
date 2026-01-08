@@ -316,6 +316,38 @@ async def update_user(admin: AdminUser, db: DB, user_id: str, data: UpdateUserRe
     return {"message": "User updated successfully"}
 
 
+class WorkspaceDetailResponse(BaseModel):
+    """Workspace detail response for admin."""
+
+    id: str
+    name: str
+    slug: str
+    owner_id: str
+    owner_email: str
+    owner_name: str
+    plan_name: str
+    cron_tasks_count: int
+    delayed_tasks_count: int
+    executions_count: int
+    active_cron_tasks: int
+    pending_delayed_tasks: int
+    default_timezone: str
+    webhook_secret: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateWorkspaceRequest(BaseModel):
+    """Request to update workspace by admin."""
+
+    name: str | None = None
+    slug: str | None = None
+    default_timezone: str | None = None
+
+
 @router.get("/workspaces", response_model=WorkspaceListResponse)
 async def list_workspaces(
     admin: AdminUser,
@@ -392,3 +424,112 @@ async def list_workspaces(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/workspaces/{workspace_id}", response_model=WorkspaceDetailResponse)
+async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
+    """Get workspace details by ID."""
+    workspace = await db.get(Workspace, workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # Get counts
+    cron_count = await db.scalar(
+        select(func.count(CronTask.id)).where(CronTask.workspace_id == workspace.id)
+    )
+    active_cron = await db.scalar(
+        select(func.count(CronTask.id)).where(
+            CronTask.workspace_id == workspace.id,
+            CronTask.is_active == True,
+        )
+    )
+    delayed_count = await db.scalar(
+        select(func.count(DelayedTask.id)).where(
+            DelayedTask.workspace_id == workspace.id
+        )
+    )
+    pending_delayed = await db.scalar(
+        select(func.count(DelayedTask.id)).where(
+            DelayedTask.workspace_id == workspace.id,
+            DelayedTask.status == "pending",
+        )
+    )
+    exec_count = await db.scalar(
+        select(func.count(Execution.id)).where(Execution.workspace_id == workspace.id)
+    )
+
+    # Get subscription plan
+    sub = await db.scalar(
+        select(Subscription)
+        .where(
+            Subscription.workspace_id == workspace.id,
+            Subscription.status == "active",
+        )
+        .order_by(Subscription.created_at.desc())
+    )
+    plan_name = sub.plan_name if sub else "free"
+
+    return WorkspaceDetailResponse(
+        id=str(workspace.id),
+        name=workspace.name,
+        slug=workspace.slug,
+        owner_id=str(workspace.owner_id),
+        owner_email=workspace.owner.email,
+        owner_name=workspace.owner.name,
+        plan_name=plan_name,
+        cron_tasks_count=cron_count or 0,
+        delayed_tasks_count=delayed_count or 0,
+        executions_count=exec_count or 0,
+        active_cron_tasks=active_cron or 0,
+        pending_delayed_tasks=pending_delayed or 0,
+        default_timezone=workspace.default_timezone,
+        webhook_secret=workspace.webhook_secret,
+        created_at=workspace.created_at,
+        updated_at=workspace.updated_at,
+    )
+
+
+@router.patch("/workspaces/{workspace_id}")
+async def update_workspace(
+    admin: AdminUser,
+    db: DB,
+    workspace_id: str,
+    data: UpdateWorkspaceRequest,
+):
+    """Update workspace by admin."""
+    workspace = await db.get(Workspace, workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    # Check for slug conflict if updating slug
+    if "slug" in update_data:
+        existing = await db.scalar(
+            select(Workspace).where(
+                Workspace.slug == update_data["slug"],
+                Workspace.id != workspace.id,
+            )
+        )
+        if existing:
+            raise HTTPException(status_code=409, detail="Slug already in use")
+
+    for key, value in update_data.items():
+        setattr(workspace, key, value)
+
+    await db.commit()
+    await db.refresh(workspace)
+
+    return {"message": "Workspace updated successfully"}
+
+
+@router.delete("/workspaces/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_workspace(admin: AdminUser, db: DB, workspace_id: str):
+    """Delete workspace by admin. This is a destructive operation."""
+    workspace = await db.get(Workspace, workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # Delete all related data (cascade should handle most, but be explicit)
+    await db.delete(workspace)
+    await db.commit()

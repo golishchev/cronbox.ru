@@ -1,17 +1,23 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, BackgroundTasks, status
 
 from app.api.deps import CurrentUser, DB
+from app.config import settings
 from app.schemas.auth import (
+    EmailVerificationRequest,
     LoginResponse,
     PasswordChangeRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
+    TelegramConnectResponse,
     TokenResponse,
 )
 from app.schemas.user import UserLogin, UserResponse, UserUpdate
 from app.db.repositories.users import UserRepository
-from app.services.auth import AuthService
+from app.services.auth import AuthService, TELEGRAM_LINK_EXPIRE
+from app.services.email import email_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -105,3 +111,128 @@ async def logout(current_user: CurrentUser):
     # 2. Invalidate all user sessions
     # For now, this is a no-op since JWT is stateless
     pass
+
+
+@router.post("/send-verification", status_code=status.HTTP_204_NO_CONTENT)
+async def send_verification_email(
+    current_user: CurrentUser,
+    db: DB,
+    background_tasks: BackgroundTasks,
+):
+    """Send email verification link to current user."""
+    if current_user.email_verified:
+        return  # Already verified, no action needed
+
+    auth_service = AuthService(db)
+    token = await auth_service.send_email_verification(current_user)
+
+    # Send email in background
+    verification_url = f"{settings.cors_origins[0]}/#/verify-email?token={token}"
+
+    async def send_email():
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Подтверждение email</h2>
+            <p>Здравствуйте, {current_user.name}!</p>
+            <p>Для подтверждения вашего email перейдите по ссылке:</p>
+            <a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
+                Подтвердить email
+            </a>
+            <p style="margin-top: 16px; color: #666;">
+                Или скопируйте ссылку: {verification_url}
+            </p>
+            <p style="margin-top: 24px; color: #666; font-size: 12px;">
+                Ссылка действительна 24 часа. Если вы не запрашивали это письмо, просто проигнорируйте его.
+            </p>
+        </div>
+        """
+        await email_service.send_email(
+            to=current_user.email,
+            subject="[CronBox] Подтверждение email",
+            html=html,
+        )
+
+    background_tasks.add_task(send_email)
+
+
+@router.post("/verify-email", response_model=UserResponse)
+async def verify_email(data: EmailVerificationRequest, db: DB):
+    """Verify email using token from verification link."""
+    auth_service = AuthService(db)
+    user = await auth_service.verify_email(data.token)
+    return UserResponse.model_validate(user)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
+async def forgot_password(
+    data: PasswordResetRequest,
+    db: DB,
+    background_tasks: BackgroundTasks,
+):
+    """Request password reset. Sends email if user exists."""
+    auth_service = AuthService(db)
+    token = await auth_service.request_password_reset(data.email)
+
+    if token:
+        # Send email in background (only if user exists)
+        reset_url = f"{settings.cors_origins[0]}/#/reset-password?token={token}"
+
+        async def send_email():
+            html = f"""
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Сброс пароля</h2>
+                <p>Вы запросили сброс пароля для вашего аккаунта CronBox.</p>
+                <p>Для установки нового пароля перейдите по ссылке:</p>
+                <a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
+                    Сбросить пароль
+                </a>
+                <p style="margin-top: 16px; color: #666;">
+                    Или скопируйте ссылку: {reset_url}
+                </p>
+                <p style="margin-top: 24px; color: #666; font-size: 12px;">
+                    Ссылка действительна 1 час. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
+                </p>
+            </div>
+            """
+            await email_service.send_email(
+                to=data.email,
+                subject="[CronBox] Сброс пароля",
+                html=html,
+            )
+
+        background_tasks.add_task(send_email)
+
+    # Always return success to prevent email enumeration
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(data: PasswordResetConfirm, db: DB):
+    """Reset password using token from reset link."""
+    auth_service = AuthService(db)
+    await auth_service.reset_password(data.token, data.new_password)
+
+
+@router.post("/telegram/connect", response_model=TelegramConnectResponse)
+async def telegram_connect(current_user: CurrentUser, db: DB):
+    """Generate a code for linking Telegram account."""
+    auth_service = AuthService(db)
+    code = await auth_service.generate_telegram_link_code(current_user)
+
+    # Get bot username from token (format: 123456:ABC...)
+    bot_username = "CronBoxBot"  # Default fallback
+    if settings.telegram_bot_token:
+        # We can't get username from token directly, should be configured
+        pass
+
+    return TelegramConnectResponse(
+        code=code,
+        expires_in=TELEGRAM_LINK_EXPIRE,
+        bot_username=bot_username,
+    )
+
+
+@router.delete("/telegram/disconnect", status_code=status.HTTP_204_NO_CONTENT)
+async def telegram_disconnect(current_user: CurrentUser, db: DB):
+    """Unlink Telegram account from current user."""
+    auth_service = AuthService(db)
+    await auth_service.unlink_telegram(current_user)
