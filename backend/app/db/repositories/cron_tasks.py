@@ -46,7 +46,11 @@ class CronTaskRepository(BaseRepository[CronTask]):
         return result.scalar_one()
 
     async def get_due_tasks(self, now: datetime, limit: int = 100) -> list[CronTask]:
-        """Get tasks due for execution."""
+        """Get tasks due for execution.
+
+        Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
+        when multiple scheduler instances are running.
+        """
         stmt = (
             select(CronTask)
             .where(
@@ -58,6 +62,7 @@ class CronTaskRepository(BaseRepository[CronTask]):
             )
             .order_by(CronTask.next_run_at)
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
