@@ -11,7 +11,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
-from app.db.database import Base, get_db
+from app.db.database import get_db
+from app.models.base import Base
 from app.main import app
 from app.models.user import User
 from app.core.security import get_password_hash, create_access_token
