@@ -1,0 +1,57 @@
+# Traefik Static Configuration
+# https://doc.traefik.io/traefik/
+
+api:
+  dashboard: true
+  insecure: false
+
+log:
+  level: INFO
+  format: common
+
+accessLog:
+  format: common
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 100
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers@file
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: cronbox-network
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Health checks configuration
+serversTransport:
+  forwardingTimeouts:
+    dialTimeout: 30s
+    responseHeaderTimeout: 30s
+    idleConnTimeout: 90s
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${ACME_EMAIL:-admin@cronbox.ru}
+      storage: /etc/traefik/acme/acme.json
+      httpChallenge:
+        entryPoint: web
