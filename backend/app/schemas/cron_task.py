@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from croniter import croniter
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer, field_validator
 import pytz
 
 from app.models.cron_task import HttpMethod, TaskStatus
@@ -111,6 +111,13 @@ class CronTaskResponse(BaseModel):
     notify_on_recovery: bool
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("last_run_at", "next_run_at", "created_at", "updated_at")
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
+        """Serialize datetime as UTC with 'Z' suffix for proper JS parsing."""
+        if dt is None:
+            return None
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class PaginationMeta(BaseModel):

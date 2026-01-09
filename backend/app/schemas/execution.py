@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 from app.models.cron_task import HttpMethod, TaskStatus
 from app.schemas.cron_task import PaginationMeta
@@ -28,6 +28,13 @@ class ExecutionResponse(BaseModel):
     error_message: str | None
     error_type: str | None
     created_at: datetime
+
+    @field_serializer("started_at", "finished_at", "created_at")
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
+        """Serialize datetime as UTC with 'Z' suffix for proper JS parsing."""
+        if dt is None:
+            return None
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class ExecutionDetailResponse(ExecutionResponse):
