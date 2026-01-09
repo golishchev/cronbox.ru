@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createCronTask, updateCronTask } from '@/api/cronTasks'
 import { getErrorMessage } from '@/api/client'
+import { translateApiError } from '@/lib/translateApiError'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +28,7 @@ interface CronTaskFormProps {
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
 
 export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTaskFormProps) {
+  const { t } = useTranslation()
   const isEditing = !!task
 
   const [name, setName] = useState(task?.name ?? '')
@@ -49,15 +52,15 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
 
     // Validate
     if (!name.trim()) {
-      setError('Name is required')
+      setError(t('taskForm.nameRequired'))
       return
     }
     if (!url.trim()) {
-      setError('URL is required')
+      setError(t('taskForm.urlRequired'))
       return
     }
     if (!schedule.trim()) {
-      setError('Schedule is required')
+      setError(t('taskForm.scheduleRequired'))
       return
     }
 
@@ -65,7 +68,7 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
     try {
       parsedHeaders = headers.trim() ? JSON.parse(headers) : {}
     } catch {
-      setError('Invalid JSON in headers')
+      setError(t('taskForm.invalidHeadersJson'))
       return
     }
 
@@ -89,23 +92,23 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
       if (isEditing) {
         await updateCronTask(workspaceId, task.id, data)
         toast({
-          title: 'Task updated',
-          description: `"${data.name}" has been updated`,
+          title: t('taskForm.taskUpdated'),
+          description: t('taskForm.taskUpdatedDescription', { name: data.name }),
           variant: 'success',
         })
       } else {
         await createCronTask(workspaceId, data)
         toast({
-          title: 'Task created',
-          description: `"${data.name}" has been created`,
+          title: t('taskForm.taskCreated'),
+          description: t('taskForm.taskCreatedDescription', { name: data.name }),
           variant: 'success',
         })
       }
       onSuccess()
     } catch (err) {
       toast({
-        title: isEditing ? 'Failed to update task' : 'Failed to create task',
-        description: getErrorMessage(err),
+        title: isEditing ? t('taskForm.failedToUpdate') : t('taskForm.failedToCreate'),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -123,18 +126,18 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
+          <Label htmlFor="name">{t('taskForm.name')} *</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Health Check"
+            placeholder={t('taskForm.namePlaceholder')}
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="method">HTTP Method</Label>
+          <Label htmlFor="method">{t('taskForm.method')}</Label>
           <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
             <SelectTrigger>
               <SelectValue />
@@ -149,24 +152,24 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="url">URL *</Label>
+        <Label htmlFor="url">{t('taskForm.url')} *</Label>
         <Input
           id="url"
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://api.example.com/health"
+          placeholder={t('taskForm.urlPlaceholder')}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('taskForm.description')}</Label>
         <Input
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optional description"
+          placeholder={t('taskForm.descriptionPlaceholder')}
         />
       </div>
 
@@ -174,7 +177,7 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
-          <Label htmlFor="timezone">Timezone</Label>
+          <Label htmlFor="timezone">{t('taskForm.timezone')}</Label>
           <Select value={timezone} onValueChange={setTimezone}>
             <SelectTrigger>
               <SelectValue />
@@ -191,7 +194,7 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="timeout">Timeout (seconds)</Label>
+          <Label htmlFor="timeout">{t('taskForm.timeoutSeconds')}</Label>
           <Input
             id="timeout"
             type="number"
@@ -203,7 +206,7 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="retries">Retry Count</Label>
+          <Label htmlFor="retries">{t('taskForm.retryCount')}</Label>
           <Input
             id="retries"
             type="number"
@@ -216,19 +219,19 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="headers">Headers (JSON)</Label>
+        <Label htmlFor="headers">{t('taskForm.headers')} (JSON)</Label>
         <textarea
           id="headers"
           value={headers}
           onChange={(e) => setHeaders(e.target.value)}
-          placeholder='{"Content-Type": "application/json"}'
+          placeholder={t('taskForm.headersPlaceholder')}
           className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
         />
       </div>
 
       {(method === 'POST' || method === 'PUT' || method === 'PATCH') && (
         <div className="space-y-2">
-          <Label htmlFor="body">Request Body</Label>
+          <Label htmlFor="body">{t('taskForm.body')}</Label>
           <textarea
             id="body"
             value={body}
@@ -241,11 +244,11 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? 'Update Task' : 'Create Task'}
+          {isEditing ? t('taskForm.updateTask') : t('taskForm.createTask')}
         </Button>
       </div>
     </form>

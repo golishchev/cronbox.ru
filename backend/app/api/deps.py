@@ -3,12 +3,14 @@ from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, Path, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.database import get_db
 from app.db.repositories.users import UserRepository
 from app.db.repositories.workspaces import WorkspaceRepository
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.models.worker import Worker
 from app.models.workspace import Workspace
@@ -114,9 +116,46 @@ async def get_current_worker(
     return worker
 
 
+async def require_active_subscription(
+    workspace: Annotated[Workspace, Depends(get_workspace)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Workspace:
+    """
+    Check that workspace has an active subscription for write operations.
+    Returns 402 Payment Required if subscription is expired/cancelled.
+
+    Free plan workspaces (no subscription) are allowed to continue
+    within their limits (limits are checked separately in endpoints).
+    """
+    # Get subscription for workspace
+    result = await db.execute(
+        select(Subscription).where(Subscription.workspace_id == workspace.id)
+    )
+    subscription = result.scalar_one_or_none()
+
+    # No subscription = free plan, allowed (limits checked in endpoints)
+    if subscription is None:
+        return workspace
+
+    # Active or past_due subscription - allowed
+    if subscription.status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE):
+        return workspace
+
+    # Expired or cancelled - block write operations
+    raise HTTPException(
+        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        detail={
+            "error": "subscription_expired",
+            "message": "Your subscription has expired. Please renew to create or modify tasks.",
+            "subscription_status": subscription.status.value,
+        },
+    )
+
+
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentWorkspace = Annotated[Workspace, Depends(get_workspace)]
+ActiveSubscriptionWorkspace = Annotated[Workspace, Depends(require_active_subscription)]
 CurrentWorker = Annotated[Worker, Depends(get_current_worker)]
 DB = Annotated[AsyncSession, Depends(get_db)]

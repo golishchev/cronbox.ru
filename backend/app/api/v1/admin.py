@@ -6,10 +6,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DB
-from app.models import CronTask, DelayedTask, Execution, User, Workspace, Subscription
+from app.models import CronTask, DelayedTask, Execution, User, Workspace, Subscription, Payment, Plan
+from app.models.notification_template import NotificationChannel, NotificationTemplate
+from app.models.subscription import SubscriptionStatus
+from app.models.payment import PaymentStatus
+from app.services.template_service import template_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -167,16 +171,16 @@ async def get_admin_stats(admin: AdminUser, db: DB):
     # Subscription stats
     active_subs = await db.scalar(
         select(func.count(Subscription.id)).where(
-            Subscription.status == "active",
-            Subscription.ends_at > now,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.current_period_end > now,
         )
     )
 
-    # Revenue (this month) - sum of subscription prices
+    # Revenue (this month) - sum of successful payments
     revenue = await db.scalar(
-        select(func.sum(Subscription.amount)).where(
-            Subscription.created_at >= month_start,
-            Subscription.status.in_(["active", "cancelled"]),
+        select(func.sum(Payment.amount)).where(
+            Payment.created_at >= month_start,
+            Payment.status == PaymentStatus.SUCCEEDED,
         )
     ) or 0
 
@@ -194,7 +198,7 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         executions_this_week=executions_this_week or 0,
         success_rate=round(success_rate, 1),
         active_subscriptions=active_subs or 0,
-        revenue_this_month=float(revenue),
+        revenue_this_month=float(revenue) / 100,  # Convert from kopeks to rubles
     )
 
 
@@ -359,12 +363,12 @@ async def list_workspaces(
     """List all workspaces with pagination."""
     offset = (page - 1) * page_size
 
-    # Base query with owner join
-    query = select(Workspace).join(User, Workspace.owner_id == User.id)
+    # Base query with owner eager load
+    query = select(Workspace).options(selectinload(Workspace.owner))
 
     if search:
         search_filter = f"%{search}%"
-        query = query.where(
+        query = query.join(User, Workspace.owner_id == User.id).where(
             (Workspace.name.ilike(search_filter))
             | (Workspace.slug.ilike(search_filter))
             | (User.email.ilike(search_filter))
@@ -395,13 +399,14 @@ async def list_workspaces(
         # Get subscription plan
         sub = await db.scalar(
             select(Subscription)
+            .options(selectinload(Subscription.plan))
             .where(
                 Subscription.workspace_id == ws.id,
-                Subscription.status == "active",
+                Subscription.status == SubscriptionStatus.ACTIVE,
             )
             .order_by(Subscription.created_at.desc())
         )
-        plan_name = sub.plan_name if sub else "free"
+        plan_name = sub.plan.name if sub and sub.plan else "free"
 
         workspace_items.append(
             WorkspaceListItem(
@@ -429,7 +434,12 @@ async def list_workspaces(
 @router.get("/workspaces/{workspace_id}", response_model=WorkspaceDetailResponse)
 async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
     """Get workspace details by ID."""
-    workspace = await db.get(Workspace, workspace_id)
+    result = await db.execute(
+        select(Workspace)
+        .options(selectinload(Workspace.owner))
+        .where(Workspace.id == workspace_id)
+    )
+    workspace = result.scalar_one_or_none()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
 
@@ -461,13 +471,14 @@ async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
     # Get subscription plan
     sub = await db.scalar(
         select(Subscription)
+        .options(selectinload(Subscription.plan))
         .where(
             Subscription.workspace_id == workspace.id,
-            Subscription.status == "active",
+            Subscription.status == SubscriptionStatus.ACTIVE,
         )
         .order_by(Subscription.created_at.desc())
     )
-    plan_name = sub.plan_name if sub else "free"
+    plan_name = sub.plan.name if sub and sub.plan else "free"
 
     return WorkspaceDetailResponse(
         id=str(workspace.id),
@@ -533,3 +544,498 @@ async def delete_workspace(admin: AdminUser, db: DB, workspace_id: str):
     # Delete all related data (cascade should handle most, but be explicit)
     await db.delete(workspace)
     await db.commit()
+
+
+# ============== Plan Management ==============
+
+
+class PlanListItem(BaseModel):
+    """Plan list item for admin."""
+
+    id: str
+    name: str
+    display_name: str
+    description: str | None
+    price_monthly: int
+    price_yearly: int
+    max_cron_tasks: int
+    max_delayed_tasks_per_month: int
+    max_workspaces: int
+    max_execution_history_days: int
+    min_cron_interval_minutes: int
+    telegram_notifications: bool
+    email_notifications: bool
+    webhook_callbacks: bool
+    custom_headers: bool
+    retry_on_failure: bool
+    is_active: bool
+    is_public: bool
+    sort_order: int
+    subscriptions_count: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PlanListResponse(BaseModel):
+    """Plan list response."""
+
+    plans: list[PlanListItem]
+    total: int
+
+
+class CreatePlanRequest(BaseModel):
+    """Request to create a plan."""
+
+    name: str
+    display_name: str
+    description: str | None = None
+    price_monthly: int = 0
+    price_yearly: int = 0
+    max_cron_tasks: int = 5
+    max_delayed_tasks_per_month: int = 100
+    max_workspaces: int = 1
+    max_execution_history_days: int = 7
+    min_cron_interval_minutes: int = 5
+    telegram_notifications: bool = False
+    email_notifications: bool = False
+    webhook_callbacks: bool = False
+    custom_headers: bool = True
+    retry_on_failure: bool = False
+    is_active: bool = True
+    is_public: bool = True
+    sort_order: int = 0
+
+
+class UpdatePlanRequest(BaseModel):
+    """Request to update a plan."""
+
+    display_name: str | None = None
+    description: str | None = None
+    price_monthly: int | None = None
+    price_yearly: int | None = None
+    max_cron_tasks: int | None = None
+    max_delayed_tasks_per_month: int | None = None
+    max_workspaces: int | None = None
+    max_execution_history_days: int | None = None
+    min_cron_interval_minutes: int | None = None
+    telegram_notifications: bool | None = None
+    email_notifications: bool | None = None
+    webhook_callbacks: bool | None = None
+    custom_headers: bool | None = None
+    retry_on_failure: bool | None = None
+    is_active: bool | None = None
+    is_public: bool | None = None
+    sort_order: int | None = None
+
+
+@router.get("/plans", response_model=PlanListResponse)
+async def list_plans(admin: AdminUser, db: DB):
+    """List all plans."""
+    result = await db.execute(select(Plan).order_by(Plan.sort_order, Plan.created_at))
+    plans = result.scalars().all()
+
+    plan_items = []
+    for plan in plans:
+        # Count active subscriptions for this plan
+        subs_count = await db.scalar(
+            select(func.count(Subscription.id)).where(
+                Subscription.plan_id == plan.id,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
+
+        plan_items.append(
+            PlanListItem(
+                id=str(plan.id),
+                name=plan.name,
+                display_name=plan.display_name,
+                description=plan.description,
+                price_monthly=plan.price_monthly,
+                price_yearly=plan.price_yearly,
+                max_cron_tasks=plan.max_cron_tasks,
+                max_delayed_tasks_per_month=plan.max_delayed_tasks_per_month,
+                max_workspaces=plan.max_workspaces,
+                max_execution_history_days=plan.max_execution_history_days,
+                min_cron_interval_minutes=plan.min_cron_interval_minutes,
+                telegram_notifications=plan.telegram_notifications,
+                email_notifications=plan.email_notifications,
+                webhook_callbacks=plan.webhook_callbacks,
+                custom_headers=plan.custom_headers,
+                retry_on_failure=plan.retry_on_failure,
+                is_active=plan.is_active,
+                is_public=plan.is_public,
+                sort_order=plan.sort_order,
+                subscriptions_count=subs_count or 0,
+                created_at=plan.created_at,
+            )
+        )
+
+    return PlanListResponse(plans=plan_items, total=len(plan_items))
+
+
+@router.post("/plans", response_model=PlanListItem, status_code=status.HTTP_201_CREATED)
+async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
+    """Create a new plan."""
+    # Check if name already exists
+    existing = await db.scalar(select(Plan).where(Plan.name == data.name))
+    if existing:
+        raise HTTPException(status_code=409, detail="Plan with this name already exists")
+
+    plan = Plan(**data.model_dump())
+    db.add(plan)
+    await db.commit()
+    await db.refresh(plan)
+
+    return PlanListItem(
+        id=str(plan.id),
+        name=plan.name,
+        display_name=plan.display_name,
+        description=plan.description,
+        price_monthly=plan.price_monthly,
+        price_yearly=plan.price_yearly,
+        max_cron_tasks=plan.max_cron_tasks,
+        max_delayed_tasks_per_month=plan.max_delayed_tasks_per_month,
+        max_workspaces=plan.max_workspaces,
+        max_execution_history_days=plan.max_execution_history_days,
+        min_cron_interval_minutes=plan.min_cron_interval_minutes,
+        telegram_notifications=plan.telegram_notifications,
+        email_notifications=plan.email_notifications,
+        webhook_callbacks=plan.webhook_callbacks,
+        custom_headers=plan.custom_headers,
+        retry_on_failure=plan.retry_on_failure,
+        is_active=plan.is_active,
+        is_public=plan.is_public,
+        sort_order=plan.sort_order,
+        subscriptions_count=0,
+        created_at=plan.created_at,
+    )
+
+
+@router.get("/plans/{plan_id}", response_model=PlanListItem)
+async def get_plan(admin: AdminUser, db: DB, plan_id: str):
+    """Get plan by ID."""
+    plan = await db.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    subs_count = await db.scalar(
+        select(func.count(Subscription.id)).where(
+            Subscription.plan_id == plan.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+    )
+
+    return PlanListItem(
+        id=str(plan.id),
+        name=plan.name,
+        display_name=plan.display_name,
+        description=plan.description,
+        price_monthly=plan.price_monthly,
+        price_yearly=plan.price_yearly,
+        max_cron_tasks=plan.max_cron_tasks,
+        max_delayed_tasks_per_month=plan.max_delayed_tasks_per_month,
+        max_workspaces=plan.max_workspaces,
+        max_execution_history_days=plan.max_execution_history_days,
+        min_cron_interval_minutes=plan.min_cron_interval_minutes,
+        telegram_notifications=plan.telegram_notifications,
+        email_notifications=plan.email_notifications,
+        webhook_callbacks=plan.webhook_callbacks,
+        custom_headers=plan.custom_headers,
+        retry_on_failure=plan.retry_on_failure,
+        is_active=plan.is_active,
+        is_public=plan.is_public,
+        sort_order=plan.sort_order,
+        subscriptions_count=subs_count or 0,
+        created_at=plan.created_at,
+    )
+
+
+@router.patch("/plans/{plan_id}", response_model=PlanListItem)
+async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRequest):
+    """Update a plan."""
+    plan = await db.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(plan, key, value)
+
+    await db.commit()
+    await db.refresh(plan)
+
+    subs_count = await db.scalar(
+        select(func.count(Subscription.id)).where(
+            Subscription.plan_id == plan.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+    )
+
+    return PlanListItem(
+        id=str(plan.id),
+        name=plan.name,
+        display_name=plan.display_name,
+        description=plan.description,
+        price_monthly=plan.price_monthly,
+        price_yearly=plan.price_yearly,
+        max_cron_tasks=plan.max_cron_tasks,
+        max_delayed_tasks_per_month=plan.max_delayed_tasks_per_month,
+        max_workspaces=plan.max_workspaces,
+        max_execution_history_days=plan.max_execution_history_days,
+        min_cron_interval_minutes=plan.min_cron_interval_minutes,
+        telegram_notifications=plan.telegram_notifications,
+        email_notifications=plan.email_notifications,
+        webhook_callbacks=plan.webhook_callbacks,
+        custom_headers=plan.custom_headers,
+        retry_on_failure=plan.retry_on_failure,
+        is_active=plan.is_active,
+        is_public=plan.is_public,
+        sort_order=plan.sort_order,
+        subscriptions_count=subs_count or 0,
+        created_at=plan.created_at,
+    )
+
+
+@router.delete("/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(admin: AdminUser, db: DB, plan_id: str):
+    """Delete a plan. Cannot delete plans with active subscriptions."""
+    plan = await db.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # Check for active subscriptions
+    subs_count = await db.scalar(
+        select(func.count(Subscription.id)).where(
+            Subscription.plan_id == plan.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+    )
+    if subs_count and subs_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete plan with {subs_count} active subscription(s)",
+        )
+
+    await db.delete(plan)
+    await db.commit()
+
+
+# ============== Notification Templates ==============
+
+
+class NotificationTemplateResponse(BaseModel):
+    """Notification template response for admin."""
+
+    id: str
+    code: str
+    language: str
+    channel: str
+    subject: str | None
+    body: str
+    description: str | None
+    variables: list[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationTemplateListResponse(BaseModel):
+    """Notification template list response."""
+
+    templates: list[NotificationTemplateResponse]
+    total: int
+
+
+class NotificationTemplateUpdate(BaseModel):
+    """Request to update a notification template."""
+
+    subject: str | None = None
+    body: str | None = None
+    is_active: bool | None = None
+
+
+class TemplatePreviewRequest(BaseModel):
+    """Request to preview a template with test data."""
+
+    body: str
+    subject: str | None = None
+    variables: dict[str, str]
+
+
+class TemplatePreviewResponse(BaseModel):
+    """Template preview response."""
+
+    subject: str | None
+    body: str
+
+
+@router.get("/notification-templates", response_model=NotificationTemplateListResponse)
+async def list_notification_templates(
+    admin: AdminUser,
+    db: DB,
+    code: str | None = None,
+    language: str | None = None,
+    channel: str | None = None,
+):
+    """List all notification templates with optional filtering."""
+    query = select(NotificationTemplate).order_by(
+        NotificationTemplate.code,
+        NotificationTemplate.language,
+        NotificationTemplate.channel,
+    )
+
+    if code:
+        query = query.where(NotificationTemplate.code == code)
+    if language:
+        query = query.where(NotificationTemplate.language == language)
+    if channel:
+        query = query.where(NotificationTemplate.channel == NotificationChannel(channel))
+
+    result = await db.execute(query)
+    templates = result.scalars().all()
+
+    template_items = [
+        NotificationTemplateResponse(
+            id=str(t.id),
+            code=t.code,
+            language=t.language,
+            channel=t.channel.value,
+            subject=t.subject,
+            body=t.body,
+            description=t.description,
+            variables=t.variables,
+            is_active=t.is_active,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in templates
+    ]
+
+    return NotificationTemplateListResponse(
+        templates=template_items,
+        total=len(template_items),
+    )
+
+
+@router.get("/notification-templates/{template_id}", response_model=NotificationTemplateResponse)
+async def get_notification_template(admin: AdminUser, db: DB, template_id: str):
+    """Get a notification template by ID."""
+    template = await db.get(NotificationTemplate, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return NotificationTemplateResponse(
+        id=str(template.id),
+        code=template.code,
+        language=template.language,
+        channel=template.channel.value,
+        subject=template.subject,
+        body=template.body,
+        description=template.description,
+        variables=template.variables,
+        is_active=template.is_active,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
+
+
+@router.patch("/notification-templates/{template_id}", response_model=NotificationTemplateResponse)
+async def update_notification_template(
+    admin: AdminUser,
+    db: DB,
+    template_id: str,
+    data: NotificationTemplateUpdate,
+):
+    """Update a notification template (subject, body, is_active)."""
+    template = await db.get(NotificationTemplate, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Update fields
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(template, key, value)
+
+    await db.commit()
+    await db.refresh(template)
+
+    return NotificationTemplateResponse(
+        id=str(template.id),
+        code=template.code,
+        language=template.language,
+        channel=template.channel.value,
+        subject=template.subject,
+        body=template.body,
+        description=template.description,
+        variables=template.variables,
+        is_active=template.is_active,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
+
+
+@router.post("/notification-templates/preview", response_model=TemplatePreviewResponse)
+async def preview_notification_template(admin: AdminUser, data: TemplatePreviewRequest):
+    """Preview a template with test variables."""
+    try:
+        rendered_body = data.body.format(**data.variables)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Missing variable in body: {e}"
+        )
+
+    rendered_subject = None
+    if data.subject:
+        try:
+            rendered_subject = data.subject.format(**data.variables)
+        except KeyError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Missing variable in subject: {e}"
+            )
+
+    return TemplatePreviewResponse(subject=rendered_subject, body=rendered_body)
+
+
+@router.post("/notification-templates/reset/{template_id}", response_model=NotificationTemplateResponse)
+async def reset_notification_template(admin: AdminUser, db: DB, template_id: str):
+    """Reset a template to its default values."""
+    template = await db.get(NotificationTemplate, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Get default template data
+    default = template_service.get_default_template(
+        template.code, template.language, template.channel
+    )
+    if not default:
+        raise HTTPException(
+            status_code=404,
+            detail="No default template found for this code/language/channel",
+        )
+
+    # Reset to default values
+    template.subject = default.get("subject")
+    template.body = default["body"]
+    template.is_active = True
+
+    await db.commit()
+    await db.refresh(template)
+
+    return NotificationTemplateResponse(
+        id=str(template.id),
+        code=template.code,
+        language=template.language,
+        channel=template.channel.value,
+        subject=template.subject,
+        body=template.body,
+        description=template.description,
+        variables=template.variables,
+        is_active=template.is_active,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )

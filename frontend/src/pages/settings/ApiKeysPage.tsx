@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getWorkers, createWorker, deleteWorker, regenerateWorkerKey } from '@/api/workers'
 import { getErrorMessage } from '@/api/client'
@@ -43,6 +44,7 @@ interface ApiKeysPageProps {
 }
 
 export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
+  const { t } = useTranslation()
   const { currentWorkspace } = useWorkspaceStore()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -71,7 +73,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       setWorkers(data)
     } catch (err) {
       toast({
-        title: 'Error loading API keys',
+        title: t('apiKeys.errorLoading'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -104,15 +106,15 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       setNewWorkerRegion('')
 
       toast({
-        title: 'API key created',
-        description: 'Make sure to copy the key - it will not be shown again!',
+        title: t('apiKeys.created'),
+        description: t('apiKeys.createdCopyWarning'),
         variant: 'success',
       })
 
       await loadWorkers()
     } catch (err) {
       toast({
-        title: 'Failed to create API key',
+        title: t('apiKeys.failedToCreate'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -129,13 +131,13 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       await deleteWorker(currentWorkspace.id, deletingWorker.id)
       setDeletingWorker(null)
       toast({
-        title: 'API key deleted',
-        description: `"${deletingWorker.name}" has been deleted`,
+        title: t('apiKeys.deleted'),
+        description: t('apiKeys.deletedDescription', { name: deletingWorker.name }),
       })
       await loadWorkers()
     } catch (err) {
       toast({
-        title: 'Failed to delete API key',
+        title: t('apiKeys.failedToDelete'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -155,15 +157,15 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       setShowKeyDialog(true)
 
       toast({
-        title: 'API key regenerated',
-        description: 'The old key has been invalidated. Copy the new key!',
+        title: t('apiKeys.regenerated'),
+        description: t('apiKeys.regeneratedDescription'),
         variant: 'success',
       })
 
       await loadWorkers()
     } catch (err) {
       toast({
-        title: 'Failed to regenerate API key',
+        title: t('apiKeys.failedToRegenerate'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -178,15 +180,15 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       await navigator.clipboard.writeText(newApiKey.api_key)
       setCopied(true)
       toast({
-        title: 'Copied!',
-        description: 'API key copied to clipboard',
+        title: t('apiKeys.copied'),
+        description: t('apiKeys.copiedDescription'),
         variant: 'success',
       })
       setTimeout(() => setCopied(false), 2000)
     } catch {
       toast({
-        title: 'Failed to copy',
-        description: 'Please copy the key manually',
+        title: t('apiKeys.failedToCopy'),
+        description: t('apiKeys.copyManually'),
         variant: 'destructive',
       })
     }
@@ -194,21 +196,21 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
 
   const getStatusBadge = (worker: Worker) => {
     if (!worker.is_active) {
-      return <Badge variant="secondary">Disabled</Badge>
+      return <Badge variant="secondary">{t('common.disabled')}</Badge>
     }
     switch (worker.status) {
       case 'online':
         return (
           <Badge variant="success" className="gap-1">
             <CheckCircle className="h-3 w-3" />
-            Online
+            {t('apiKeys.online')}
           </Badge>
         )
       case 'busy':
         return (
           <Badge variant="default" className="gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Busy
+            {t('apiKeys.busy')}
           </Badge>
         )
       case 'offline':
@@ -216,30 +218,30 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
         return (
           <Badge variant="outline" className="gap-1">
             <Clock className="h-3 w-3" />
-            Offline
+            {t('apiKeys.offline')}
           </Badge>
         )
     }
   }
 
   const formatLastSeen = (lastHeartbeat: string | null) => {
-    if (!lastHeartbeat) return 'Never connected'
+    if (!lastHeartbeat) return t('apiKeys.neverConnected')
     const date = new Date(lastHeartbeat)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffMins = Math.floor(diffMs / 60000)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffMins < 1) return t('apiKeys.justNow')
+    if (diffMins < 60) return t('apiKeys.minutesAgo', { minutes: diffMins })
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffHours < 24) return t('apiKeys.hoursAgo', { hours: diffHours })
     return date.toLocaleDateString()
   }
 
   if (!currentWorkspace) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Please select a workspace</p>
+        <p className="text-muted-foreground">{t('common.selectWorkspace')}</p>
       </div>
     )
   }
@@ -248,14 +250,14 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('apiKeys.title')}</h1>
           <p className="text-muted-foreground">
-            Manage API keys for external workers and integrations
+            {t('apiKeys.subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create API Key
+          {t('apiKeys.createApiKey')}
         </Button>
       </div>
 
@@ -264,13 +266,13 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       ) : workers.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Key className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No API keys yet</h2>
+          <h2 className="text-xl font-semibold">{t('apiKeys.noKeysYet')}</h2>
           <p className="text-muted-foreground text-center max-w-md">
-            Create an API key to connect external workers or integrate with your applications
+            {t('apiKeys.noKeysDescription')}
           </p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create API Key
+            {t('apiKeys.createApiKey')}
           </Button>
         </div>
       ) : (
@@ -278,12 +280,12 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Key Prefix</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Seen</TableHead>
-                <TableHead>Stats</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('apiKeys.name')}</TableHead>
+                <TableHead>{t('apiKeys.keyPrefix')}</TableHead>
+                <TableHead>{t('common.status')}</TableHead>
+                <TableHead>{t('apiKeys.lastSeen')}</TableHead>
+                <TableHead>{t('apiKeys.stats')}</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -329,7 +331,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                         size="icon"
                         onClick={() => setRegeneratingWorker(worker)}
                         disabled={actionLoading === worker.id}
-                        title="Regenerate key"
+                        title={t('apiKeys.regenerateKey')}
                       >
                         <RefreshCw className="h-4 w-4" />
                       </Button>
@@ -338,7 +340,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                         size="icon"
                         onClick={() => setDeletingWorker(worker)}
                         disabled={actionLoading === worker.id}
-                        title="Delete"
+                        title={t('common.delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -355,29 +357,29 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
+            <DialogTitle>{t('apiKeys.createTitle')}</DialogTitle>
             <DialogDescription>
-              Create a new API key for workers or external integrations
+              {t('apiKeys.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t('apiKeys.name')} *</Label>
               <Input
                 id="name"
                 value={newWorkerName}
                 onChange={(e) => setNewWorkerName(e.target.value)}
-                placeholder="Production Worker"
+                placeholder={t('apiKeys.namePlaceholder')}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('common.description')}</Label>
               <Input
                 id="description"
                 value={newWorkerDescription}
                 onChange={(e) => setNewWorkerDescription(e.target.value)}
-                placeholder="Main production worker for HTTP requests"
+                placeholder={t('apiKeys.descriptionPlaceholder')}
               />
             </div>
             <div className="space-y-2">
@@ -386,16 +388,16 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                 id="region"
                 value={newWorkerRegion}
                 onChange={(e) => setNewWorkerRegion(e.target.value)}
-                placeholder="eu-west-1"
+                placeholder={t('apiKeys.regionPlaceholder')}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={createLoading}>
                 {createLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create
+                {t('common.create')}
               </Button>
             </DialogFooter>
           </form>
@@ -413,15 +415,15 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>API Key Created</DialogTitle>
+            <DialogTitle>{t('apiKeys.keyCreated')}</DialogTitle>
             <DialogDescription>
-              Make sure to copy the API key now. You will not be able to see it again!
+              {t('apiKeys.keyCreatedDescription')}
             </DialogDescription>
           </DialogHeader>
           {newApiKey && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>API Key</Label>
+                <Label>{t('apiKeys.apiKey')}</Label>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
                     <Input
@@ -453,7 +455,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                 </div>
               </div>
               <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-3 text-sm text-yellow-800 dark:text-yellow-200">
-                This key will only be shown once. Make sure to copy it now!
+                {t('apiKeys.keyWarning')}
               </div>
             </div>
           )}
@@ -464,7 +466,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
               setShowKey(false)
               setCopied(false)
             }}>
-              Done
+              {t('apiKeys.done')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -474,15 +476,14 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       <Dialog open={!!deletingWorker} onOpenChange={() => setDeletingWorker(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete API Key</DialogTitle>
+            <DialogTitle>{t('apiKeys.deleteTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deletingWorker?.name}"?
-              This will immediately invalidate the key and any workers using it will stop working.
+              {t('apiKeys.deleteConfirm', { name: deletingWorker?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingWorker(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -492,7 +493,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
               {actionLoading === deletingWorker?.id && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -502,15 +503,14 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       <Dialog open={!!regeneratingWorker} onOpenChange={() => setRegeneratingWorker(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Regenerate API Key</DialogTitle>
+            <DialogTitle>{t('apiKeys.regenerateTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to regenerate the API key for "{regeneratingWorker?.name}"?
-              The old key will be immediately invalidated.
+              {t('apiKeys.regenerateConfirm', { name: regeneratingWorker?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRegeneratingWorker(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleRegenerate}
@@ -519,7 +519,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
               {actionLoading === regeneratingWorker?.id && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Regenerate
+              {t('apiKeys.regenerate')}
             </Button>
           </DialogFooter>
         </DialogContent>

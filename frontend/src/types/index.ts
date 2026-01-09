@@ -167,6 +167,20 @@ export interface CreateDelayedTaskRequest {
   callback_url?: string
 }
 
+export interface UpdateDelayedTaskRequest {
+  url?: string
+  method?: HttpMethod
+  headers?: Record<string, string>
+  body?: string
+  execute_at?: string
+  name?: string
+  tags?: string[]
+  timeout_seconds?: number
+  retry_count?: number
+  retry_delay_seconds?: number
+  callback_url?: string
+}
+
 // Execution types
 export interface Execution {
   id: string

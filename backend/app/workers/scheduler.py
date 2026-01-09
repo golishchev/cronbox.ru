@@ -20,6 +20,7 @@ from app.config import settings
 from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
+from app.models.cron_task import TaskStatus
 from app.schemas.worker import WorkerTaskInfo
 from app.services.worker import worker_service
 from app.workers.settings import get_redis_settings
@@ -41,11 +42,12 @@ class TaskScheduler:
 
         logger.info("Scheduler started")
 
-        # Run both polling loops concurrently
+        # Run all polling loops concurrently
         await asyncio.gather(
             self._poll_cron_tasks(),
             self._poll_delayed_tasks(),
             self._update_next_run_times(),
+            self._check_subscriptions(),
         )
 
     async def stop(self):
@@ -84,6 +86,69 @@ class TaskScheduler:
                 logger.error("Error updating next run times", error=str(e))
 
             await asyncio.sleep(60)
+
+    async def _check_subscriptions(self):
+        """Check for expired and expiring subscriptions every hour."""
+        while self.running:
+            try:
+                await self._process_subscription_checks()
+            except Exception as e:
+                logger.error("Error checking subscriptions", error=str(e))
+
+            # Check every hour
+            await asyncio.sleep(3600)
+
+    async def _process_subscription_checks(self):
+        """Process subscription expiration checks and send notifications."""
+        from app.services.billing import billing_service
+        from app.services.notifications import notification_service
+
+        async with async_session_factory() as db:
+            # 1. Check and process expired subscriptions
+            expired_workspaces = await billing_service.check_expired_subscriptions(db)
+            for workspace_id, tasks_paused in expired_workspaces:
+                await notification_service.send_subscription_expired(
+                    db=db,
+                    workspace_id=workspace_id,
+                    tasks_paused=tasks_paused,
+                )
+            if expired_workspaces:
+                logger.info(
+                    "Processed expired subscriptions",
+                    count=len(expired_workspaces),
+                )
+
+            # 2. Send notifications for subscriptions expiring in 7 days
+            expiring_7d = await billing_service.get_expiring_subscriptions(db, days_before=7)
+            for subscription in expiring_7d:
+                expiration_date = subscription.current_period_end.strftime("%d.%m.%Y")
+                await notification_service.send_subscription_expiring(
+                    db=db,
+                    workspace_id=subscription.workspace_id,
+                    days_remaining=7,
+                    expiration_date=expiration_date,
+                )
+            if expiring_7d:
+                logger.info(
+                    "Sent 7-day expiration notifications",
+                    count=len(expiring_7d),
+                )
+
+            # 3. Send notifications for subscriptions expiring in 1 day
+            expiring_1d = await billing_service.get_expiring_subscriptions(db, days_before=1)
+            for subscription in expiring_1d:
+                expiration_date = subscription.current_period_end.strftime("%d.%m.%Y")
+                await notification_service.send_subscription_expiring(
+                    db=db,
+                    workspace_id=subscription.workspace_id,
+                    days_remaining=1,
+                    expiration_date=expiration_date,
+                )
+            if expiring_1d:
+                logger.info(
+                    "Sent 1-day expiration notifications",
+                    count=len(expiring_1d),
+                )
 
     async def _process_due_cron_tasks(self):
         """Find and enqueue due cron tasks."""
@@ -160,6 +225,10 @@ class TaskScheduler:
                 logger.info(f"Found {len(due_tasks)} due delayed tasks")
 
             for task in due_tasks:
+                # Mark task as running to prevent re-enqueueing
+                task.status = TaskStatus.RUNNING
+                await db.commit()
+
                 # Check if task is assigned to an external worker
                 if task.worker_id:
                     # Enqueue for external worker (polling)

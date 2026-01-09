@@ -2,14 +2,20 @@
 
 # Start all dev services (backend + frontend in background)
 dev: infra
-	@echo "Starting backend..."
-	@cd backend && source ../.venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+	@echo "Starting API server..."
+	@cd backend && uv run python -m app.cli server &
+	@echo "Starting scheduler..."
+	@cd backend && uv run python -m app.cli scheduler &
+	@echo "Starting worker..."
+	@cd backend && uv run python -m app.cli worker &
 	@echo "Starting frontend..."
 	@cd frontend && npm run dev &
 	@echo ""
 	@echo "Dev servers started:"
-	@echo "  Backend:  http://localhost:8000"
-	@echo "  Frontend: http://localhost:3000"
+	@echo "  API:       http://localhost:8000"
+	@echo "  Frontend:  http://localhost:3000"
+	@echo "  Scheduler: running"
+	@echo "  Worker:    running"
 	@echo ""
 	@echo "Run 'make stop' to stop all services"
 
@@ -19,7 +25,15 @@ infra:
 
 # Backend dev server (foreground)
 dev-backend:
-	cd backend && source ../.venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uv run python -m app.cli server
+
+# Scheduler (foreground)
+dev-scheduler:
+	cd backend && uv run python -m app.cli scheduler
+
+# Worker (foreground)
+dev-worker:
+	cd backend && uv run python -m app.cli worker
 
 # Frontend dev server (foreground)
 dev-frontend:
@@ -28,6 +42,9 @@ dev-frontend:
 # Stop all services
 stop:
 	-docker-compose down
-	-pkill -f "uvicorn app.main:app" 2>/dev/null || true
+	-pkill -f "app.cli server" 2>/dev/null || true
+	-pkill -f "app.cli scheduler" 2>/dev/null || true
+	-pkill -f "app.cli worker" 2>/dev/null || true
+	-pkill -f "uvicorn" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
 	@echo "All services stopped"

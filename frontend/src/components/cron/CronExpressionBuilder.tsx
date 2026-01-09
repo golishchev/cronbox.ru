@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, Clock, Settings2 } from 'lucide-react'
-import cronstrue from 'cronstrue'
+import cronstrue from 'cronstrue/i18n'
 
 interface CronExpressionBuilderProps {
   value: string
@@ -29,51 +30,44 @@ interface CronExpressionBuilderProps {
 type ScheduleType = 'preset' | 'custom' | 'advanced'
 
 interface PresetSchedule {
-  label: string
+  labelKey: string
   value: string
   category: 'frequent' | 'daily' | 'weekly' | 'monthly'
 }
 
 const PRESET_SCHEDULES: PresetSchedule[] = [
   // Frequent
-  { label: 'Every minute', value: '* * * * *', category: 'frequent' },
-  { label: 'Every 5 minutes', value: '*/5 * * * *', category: 'frequent' },
-  { label: 'Every 10 minutes', value: '*/10 * * * *', category: 'frequent' },
-  { label: 'Every 15 minutes', value: '*/15 * * * *', category: 'frequent' },
-  { label: 'Every 30 minutes', value: '*/30 * * * *', category: 'frequent' },
-  { label: 'Every hour', value: '0 * * * *', category: 'frequent' },
-  { label: 'Every 2 hours', value: '0 */2 * * *', category: 'frequent' },
-  { label: 'Every 6 hours', value: '0 */6 * * *', category: 'frequent' },
-  { label: 'Every 12 hours', value: '0 */12 * * *', category: 'frequent' },
+  { labelKey: 'presetEveryMinute', value: '* * * * *', category: 'frequent' },
+  { labelKey: 'presetEvery5Minutes', value: '*/5 * * * *', category: 'frequent' },
+  { labelKey: 'presetEvery10Minutes', value: '*/10 * * * *', category: 'frequent' },
+  { labelKey: 'presetEvery15Minutes', value: '*/15 * * * *', category: 'frequent' },
+  { labelKey: 'presetEvery30Minutes', value: '*/30 * * * *', category: 'frequent' },
+  { labelKey: 'presetEveryHour', value: '0 * * * *', category: 'frequent' },
+  { labelKey: 'presetEvery2Hours', value: '0 */2 * * *', category: 'frequent' },
+  { labelKey: 'presetEvery6Hours', value: '0 */6 * * *', category: 'frequent' },
+  { labelKey: 'presetEvery12Hours', value: '0 */12 * * *', category: 'frequent' },
   // Daily
-  { label: 'Every day at midnight', value: '0 0 * * *', category: 'daily' },
-  { label: 'Every day at 6am', value: '0 6 * * *', category: 'daily' },
-  { label: 'Every day at 9am', value: '0 9 * * *', category: 'daily' },
-  { label: 'Every day at noon', value: '0 12 * * *', category: 'daily' },
-  { label: 'Every day at 6pm', value: '0 18 * * *', category: 'daily' },
+  { labelKey: 'presetDailyMidnight', value: '0 0 * * *', category: 'daily' },
+  { labelKey: 'presetDaily6am', value: '0 6 * * *', category: 'daily' },
+  { labelKey: 'presetDaily9am', value: '0 9 * * *', category: 'daily' },
+  { labelKey: 'presetDailyNoon', value: '0 12 * * *', category: 'daily' },
+  { labelKey: 'presetDaily6pm', value: '0 18 * * *', category: 'daily' },
   // Weekly
-  { label: 'Every Monday at 9am', value: '0 9 * * 1', category: 'weekly' },
-  { label: 'Every Friday at 5pm', value: '0 17 * * 5', category: 'weekly' },
-  { label: 'Weekdays at 9am', value: '0 9 * * 1-5', category: 'weekly' },
-  { label: 'Weekends at noon', value: '0 12 * * 0,6', category: 'weekly' },
+  { labelKey: 'presetMonday9am', value: '0 9 * * 1', category: 'weekly' },
+  { labelKey: 'presetFriday5pm', value: '0 17 * * 5', category: 'weekly' },
+  { labelKey: 'presetWeekdays9am', value: '0 9 * * 1-5', category: 'weekly' },
+  { labelKey: 'presetWeekendsNoon', value: '0 12 * * 0,6', category: 'weekly' },
   // Monthly
-  { label: '1st of month at midnight', value: '0 0 1 * *', category: 'monthly' },
-  { label: '1st of month at 9am', value: '0 9 1 * *', category: 'monthly' },
-  { label: '15th of month at noon', value: '0 12 15 * *', category: 'monthly' },
-  { label: 'Last day of month at midnight', value: '0 0 L * *', category: 'monthly' },
+  { labelKey: 'presetFirstOfMonthMidnight', value: '0 0 1 * *', category: 'monthly' },
+  { labelKey: 'presetFirstOfMonth9am', value: '0 9 1 * *', category: 'monthly' },
+  { labelKey: 'preset15thNoon', value: '0 12 15 * *', category: 'monthly' },
+  { labelKey: 'presetLastDayMidnight', value: '0 0 L * *', category: 'monthly' },
 ]
 
-const DAYS_OF_WEEK = [
-  { value: '0', label: 'Sun' },
-  { value: '1', label: 'Mon' },
-  { value: '2', label: 'Tue' },
-  { value: '3', label: 'Wed' },
-  { value: '4', label: 'Thu' },
-  { value: '5', label: 'Fri' },
-  { value: '6', label: 'Sat' },
-]
+const DAYS_OF_WEEK_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilderProps) {
+  const { t, i18n } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [scheduleType, setScheduleType] = useState<ScheduleType>('preset')
   const [selectedCategory, setSelectedCategory] = useState<'frequent' | 'daily' | 'weekly' | 'monthly'>('frequent')
@@ -91,9 +85,10 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
   const getCronDescription = (cron: string): string => {
     try {
-      return cronstrue.toString(cron, { use24HourTimeFormat: true })
+      const locale = i18n.language === 'ru' ? 'ru' : 'en'
+      return cronstrue.toString(cron, { use24HourTimeFormat: true, locale })
     } catch {
-      return 'Invalid cron expression'
+      return t('cronBuilder.invalidExpression')
     }
   }
 
@@ -153,7 +148,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
   return (
     <div className="space-y-2">
-      <Label>Cron Schedule *</Label>
+      <Label>{t('cronBuilder.label')} *</Label>
       <div className="flex gap-2">
         <Input
           value={value}
@@ -168,7 +163,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
           onClick={() => setIsOpen(true)}
         >
           <Settings2 className="h-4 w-4 mr-2" />
-          Builder
+          {t('cronBuilder.builder')}
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
@@ -178,9 +173,9 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Schedule Builder</DialogTitle>
+            <DialogTitle>{t('cronBuilder.title')}</DialogTitle>
             <DialogDescription>
-              Configure when your task should run
+              {t('cronBuilder.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -194,7 +189,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                 onClick={() => setScheduleType('preset')}
               >
                 <Clock className="h-4 w-4 mr-2" />
-                Presets
+                {t('cronBuilder.presets')}
               </Button>
               <Button
                 type="button"
@@ -203,7 +198,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                 onClick={() => setScheduleType('custom')}
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Custom
+                {t('cronBuilder.custom')}
               </Button>
               <Button
                 type="button"
@@ -212,7 +207,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                 onClick={() => setScheduleType('advanced')}
               >
                 <Settings2 className="h-4 w-4 mr-2" />
-                Advanced
+                {t('cronBuilder.advanced')}
               </Button>
             </div>
 
@@ -224,10 +219,10 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                     <Badge
                       key={cat}
                       variant={selectedCategory === cat ? 'default' : 'outline'}
-                      className="cursor-pointer capitalize"
+                      className="cursor-pointer"
                       onClick={() => setSelectedCategory(cat)}
                     >
-                      {cat}
+                      {t(`cronBuilder.${cat}`)}
                     </Badge>
                   ))}
                 </div>
@@ -240,8 +235,8 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                       className="justify-between h-auto py-3"
                       onClick={() => handlePresetSelect(preset)}
                     >
-                      <span>{preset.label}</span>
-                      <code className="text-xs bg-muted px-2 py-1 rounded ml-4">
+                      <span>{t(`cronBuilder.${preset.labelKey}`)}</span>
+                      <code className={`text-xs px-2 py-1 rounded ml-4 ${value === preset.value ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-foreground'}`}>
                         {preset.value}
                       </code>
                     </Button>
@@ -254,24 +249,24 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
             {scheduleType === 'custom' && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Frequency</Label>
+                  <Label>{t('cronBuilder.frequency')}</Label>
                   <Select value={frequency} onValueChange={(v) => setFrequency(v as typeof frequency)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="minutes">Every X minutes</SelectItem>
-                      <SelectItem value="hours">Every X hours</SelectItem>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="minutes">{t('cronBuilder.everyXMinutes')}</SelectItem>
+                      <SelectItem value="hours">{t('cronBuilder.everyXHours')}</SelectItem>
+                      <SelectItem value="daily">{t('cronBuilder.daily')}</SelectItem>
+                      <SelectItem value="weekly">{t('cronBuilder.weekly')}</SelectItem>
+                      <SelectItem value="monthly">{t('cronBuilder.monthly')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {(frequency === 'minutes' || frequency === 'hours') && (
                   <div className="space-y-2">
-                    <Label>Every</Label>
+                    <Label>{t('cronBuilder.every')}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -281,14 +276,14 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                         onChange={(e) => setInterval(parseInt(e.target.value) || 1)}
                         className="w-20"
                       />
-                      <span className="text-muted-foreground">{frequency}</span>
+                      <span className="text-muted-foreground">{t(`cronBuilder.${frequency}`)}</span>
                     </div>
                   </div>
                 )}
 
                 {frequency === 'hours' && (
                   <div className="space-y-2">
-                    <Label>At minute</Label>
+                    <Label>{t('cronBuilder.atMinute')}</Label>
                     <Select value={minute.toString()} onValueChange={(v) => setMinute(parseInt(v))}>
                       <SelectTrigger className="w-24">
                         <SelectValue />
@@ -304,7 +299,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
                 {(frequency === 'daily' || frequency === 'weekly' || frequency === 'monthly') && (
                   <div className="space-y-2">
-                    <Label>Time</Label>
+                    <Label>{t('cronBuilder.time')}</Label>
                     <div className="flex items-center gap-2">
                       <Select value={hour.toString()} onValueChange={(v) => setHour(parseInt(v))}>
                         <SelectTrigger className="w-20">
@@ -333,17 +328,17 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
                 {frequency === 'weekly' && (
                   <div className="space-y-2">
-                    <Label>Days</Label>
+                    <Label>{t('cronBuilder.days')}</Label>
                     <div className="flex flex-wrap gap-2">
-                      {DAYS_OF_WEEK.map((day) => (
+                      {DAYS_OF_WEEK_KEYS.map((dayKey, index) => (
                         <Button
-                          key={day.value}
+                          key={index}
                           type="button"
-                          variant={selectedDays.includes(day.value) ? 'default' : 'outline'}
+                          variant={selectedDays.includes(index.toString()) ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => toggleDay(day.value)}
+                          onClick={() => toggleDay(index.toString())}
                         >
-                          {day.label}
+                          {t(`cronBuilder.${dayKey}`)}
                         </Button>
                       ))}
                     </div>
@@ -352,7 +347,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
                 {frequency === 'monthly' && (
                   <div className="space-y-2">
-                    <Label>Day of month</Label>
+                    <Label>{t('cronBuilder.dayOfMonth')}</Label>
                     <Select value={dayOfMonth.toString()} onValueChange={(v) => setDayOfMonth(parseInt(v))}>
                       <SelectTrigger className="w-24">
                         <SelectValue />
@@ -367,7 +362,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                 )}
 
                 <div className="rounded-md bg-muted p-4">
-                  <p className="text-sm font-medium">Preview</p>
+                  <p className="text-sm font-medium">{t('cronBuilder.preview')}</p>
                   <code className="text-lg font-mono">{buildCustomExpression()}</code>
                   <p className="text-sm text-muted-foreground mt-2">
                     {getCronDescription(buildCustomExpression())}
@@ -380,7 +375,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
             {scheduleType === 'advanced' && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Cron Expression</Label>
+                  <Label>{t('cronBuilder.cronExpression')}</Label>
                   <Input
                     value={advancedExpression}
                     onChange={(e) => setAdvancedExpression(e.target.value)}
@@ -394,31 +389,31 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                   </p>
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p className="font-medium">Format: minute hour day-of-month month day-of-week</p>
+                  <p className="font-medium">{t('cronBuilder.formatHelp')}</p>
                   <div className="grid grid-cols-5 gap-2 text-xs">
                     <div>
-                      <p className="font-medium">Minute</p>
+                      <p className="font-medium">{t('cronBuilder.minute')}</p>
                       <p>0-59</p>
                     </div>
                     <div>
-                      <p className="font-medium">Hour</p>
+                      <p className="font-medium">{t('cronBuilder.hour')}</p>
                       <p>0-23</p>
                     </div>
                     <div>
-                      <p className="font-medium">Day</p>
+                      <p className="font-medium">{t('cronBuilder.day')}</p>
                       <p>1-31</p>
                     </div>
                     <div>
-                      <p className="font-medium">Month</p>
+                      <p className="font-medium">{t('cronBuilder.month')}</p>
                       <p>1-12</p>
                     </div>
                     <div>
-                      <p className="font-medium">Weekday</p>
-                      <p>0-6 (Sun-Sat)</p>
+                      <p className="font-medium">{t('cronBuilder.weekday')}</p>
+                      <p>0-6 ({t('cronBuilder.sun')}-{t('cronBuilder.sat')})</p>
                     </div>
                   </div>
                   <p className="mt-2">
-                    Special chars: * (any), */n (every n), n-m (range), n,m (list)
+                    {t('cronBuilder.specialChars')}
                   </p>
                 </div>
               </div>
@@ -427,11 +422,11 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             {scheduleType !== 'preset' && (
               <Button type="button" onClick={handleApply}>
-                Apply
+                {t('cronBuilder.apply')}
               </Button>
             )}
           </DialogFooter>

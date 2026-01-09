@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import {
   getNotificationSettings,
@@ -29,6 +30,7 @@ interface NotificationsPageProps {
 }
 
 export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
+  const { t } = useTranslation()
   const { currentWorkspace } = useWorkspaceStore()
   const [_settings, setSettings] = useState<NotificationSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -100,7 +102,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
         notify_on_recovery: notifyOnRecovery,
         notify_on_success: notifyOnSuccess,
       })
-      setSuccess('Settings saved successfully')
+      setSuccess(t('notifications.settingsSaved'))
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(getErrorMessage(err))
@@ -151,7 +153,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   if (!currentWorkspace) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Please select a workspace</p>
+        <p className="text-muted-foreground">{t('common.selectWorkspace')}</p>
       </div>
     )
   }
@@ -167,9 +169,9 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('notifications.title')}</h1>
         <p className="text-muted-foreground">
-          Configure how you want to be notified about task events
+          {t('notifications.subtitle')}
         </p>
       </div>
 
@@ -190,10 +192,10 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notification Events
+            {t('notifications.events')}
           </CardTitle>
           <CardDescription>
-            Choose which events should trigger notifications
+            {t('notifications.eventsDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -205,9 +207,9 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               className="h-4 w-4 rounded border-gray-300"
             />
             <div>
-              <p className="font-medium">Task Failure</p>
+              <p className="font-medium">{t('notifications.taskFailure')}</p>
               <p className="text-sm text-muted-foreground">
-                Notify when a task fails
+                {t('notifications.taskFailureDescription')}
               </p>
             </div>
           </label>
@@ -220,9 +222,9 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               className="h-4 w-4 rounded border-gray-300"
             />
             <div>
-              <p className="font-medium">Task Recovery</p>
+              <p className="font-medium">{t('notifications.taskRecovery')}</p>
               <p className="text-sm text-muted-foreground">
-                Notify when a previously failing task succeeds
+                {t('notifications.taskRecoveryDescription')}
               </p>
             </div>
           </label>
@@ -235,9 +237,9 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               className="h-4 w-4 rounded border-gray-300"
             />
             <div>
-              <p className="font-medium">Task Success</p>
+              <p className="font-medium">{t('notifications.taskSuccess')}</p>
               <p className="text-sm text-muted-foreground">
-                Notify on every successful task execution (can be noisy)
+                {t('notifications.taskSuccessDescription')}
               </p>
             </div>
           </label>
@@ -250,7 +252,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
-              <CardTitle>Telegram</CardTitle>
+              <CardTitle>{t('notifications.telegram')}</CardTitle>
             </div>
             <label className="flex items-center gap-2">
               <input
@@ -259,16 +261,16 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
                 onChange={(e) => setTelegramEnabled(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <span className="text-sm">Enabled</span>
+              <span className="text-sm">{t('common.enabled')}</span>
             </label>
           </div>
           <CardDescription>
-            Receive notifications via Telegram bot
+            {t('notifications.telegramDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Chat IDs</Label>
+            <Label>{t('notifications.chatIds')}</Label>
             <div className="flex flex-wrap gap-2">
               {telegramChatIds.map((chatId) => (
                 <Badge key={chatId} variant="secondary" className="gap-1">
@@ -281,7 +283,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
             </div>
             <div className="flex gap-2">
               <Input
-                placeholder="Chat ID (e.g., 123456789)"
+                placeholder={t('notifications.chatIdPlaceholder')}
                 value={newTelegramChatId}
                 onChange={(e) => setNewTelegramChatId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTelegramChatId()}
@@ -291,7 +293,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Start a chat with @CronBoxBot and send /start to get your chat ID
+              {t('notifications.chatIdHint')}
             </p>
           </div>
 
@@ -307,7 +309,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Send Test
+              {t('notifications.sendTest')}
             </Button>
           )}
         </CardContent>
@@ -319,7 +321,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              <CardTitle>Email</CardTitle>
+              <CardTitle>{t('notifications.emailNotifications')}</CardTitle>
             </div>
             <label className="flex items-center gap-2">
               <input
@@ -328,16 +330,16 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
                 onChange={(e) => setEmailEnabled(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <span className="text-sm">Enabled</span>
+              <span className="text-sm">{t('common.enabled')}</span>
             </label>
           </div>
           <CardDescription>
-            Receive notifications via email
+            {t('notifications.emailDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Email Addresses</Label>
+            <Label>{t('notifications.emailAddresses')}</Label>
             <div className="flex flex-wrap gap-2">
               {emailAddresses.map((email) => (
                 <Badge key={email} variant="secondary" className="gap-1">
@@ -351,7 +353,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
             <div className="flex gap-2">
               <Input
                 type="email"
-                placeholder="email@example.com"
+                placeholder={t('notifications.emailPlaceholder')}
                 value={newEmailAddress}
                 onChange={(e) => setNewEmailAddress(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addEmailAddress()}
@@ -374,7 +376,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Send Test
+              {t('notifications.sendTest')}
             </Button>
           )}
         </CardContent>
@@ -386,7 +388,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Webhook className="h-5 w-5" />
-              <CardTitle>Webhook</CardTitle>
+              <CardTitle>{t('notifications.webhook')}</CardTitle>
             </div>
             <label className="flex items-center gap-2">
               <input
@@ -395,16 +397,16 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
                 onChange={(e) => setWebhookEnabled(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <span className="text-sm">Enabled</span>
+              <span className="text-sm">{t('common.enabled')}</span>
             </label>
           </div>
           <CardDescription>
-            Send notifications to a custom webhook URL
+            {t('notifications.webhookDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="webhookUrl">Webhook URL</Label>
+            <Label htmlFor="webhookUrl">{t('notifications.webhookUrl')}</Label>
             <Input
               id="webhookUrl"
               type="url"
@@ -415,16 +417,16 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="webhookSecret">Secret (optional)</Label>
+            <Label htmlFor="webhookSecret">{t('notifications.webhookSecret')}</Label>
             <Input
               id="webhookSecret"
               type="password"
-              placeholder="Webhook secret for verification"
+              placeholder={t('notifications.webhookSecretPlaceholder')}
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Will be sent in X-Webhook-Secret header
+              {t('notifications.webhookSecretHint')}
             </p>
           </div>
 
@@ -440,7 +442,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Send Test
+              {t('notifications.sendTest')}
             </Button>
           )}
         </CardContent>
@@ -454,7 +456,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Save Settings
+          {t('notifications.saveSettings')}
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, CreditCard, AlertCircle, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,7 @@ interface BillingPageProps {
 }
 
 export function BillingPage({ onNavigate: _ }: BillingPageProps) {
+  const { t } = useTranslation()
   const { currentWorkspace } = useWorkspaceStore()
   const [plans, setPlans] = useState<Plan[]>([])
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -140,19 +142,19 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-500">Active</Badge>
+        return <Badge className="bg-green-500">{t('billing.active')}</Badge>
       case 'past_due':
-        return <Badge variant="destructive">Past Due</Badge>
+        return <Badge variant="destructive">{t('billing.pastDue')}</Badge>
       case 'cancelled':
-        return <Badge variant="secondary">Cancelled</Badge>
+        return <Badge variant="secondary">{t('billing.cancelled')}</Badge>
       case 'expired':
-        return <Badge variant="outline">Expired</Badge>
+        return <Badge variant="outline">{t('billing.expired')}</Badge>
       case 'succeeded':
-        return <Badge className="bg-green-500">Paid</Badge>
+        return <Badge className="bg-green-500">{t('billing.paid')}</Badge>
       case 'pending':
-        return <Badge variant="outline">Pending</Badge>
+        return <Badge variant="outline">{t('common.pending')}</Badge>
       case 'refunded':
-        return <Badge variant="secondary">Refunded</Badge>
+        return <Badge variant="secondary">{t('billing.refunded')}</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -171,9 +173,9 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('billing.title')}</h1>
         <p className="text-muted-foreground">
-          Manage your subscription and payment history
+          {t('billing.subtitle')}
         </p>
       </div>
 
@@ -188,20 +190,20 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       {subscription && (
         <Card>
           <CardHeader>
-            <CardTitle>Current Subscription</CardTitle>
+            <CardTitle>{t('billing.currentSubscription')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-4">
               <div>
-                <p className="text-sm text-muted-foreground">Plan</p>
+                <p className="text-sm text-muted-foreground">{t('billing.plan')}</p>
                 <p className="font-semibold">{subscription.plan?.display_name || 'Unknown'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-sm text-muted-foreground">{t('common.status')}</p>
                 {getStatusBadge(subscription.status)}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Current Period</p>
+                <p className="text-sm text-muted-foreground">{t('billing.currentPeriod')}</p>
                 <p className="text-sm">
                   {formatDate(subscription.current_period_start)} - {formatDate(subscription.current_period_end)}
                 </p>
@@ -209,7 +211,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               <div>
                 {subscription.cancel_at_period_end ? (
                   <p className="text-sm text-yellow-600">
-                    Cancels on {formatDate(subscription.current_period_end)}
+                    {t('billing.cancelsOn', { date: formatDate(subscription.current_period_end) })}
                   </p>
                 ) : (
                   <Button
@@ -217,7 +219,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                     size="sm"
                     onClick={() => setShowCancelDialog(true)}
                   >
-                    Cancel Subscription
+                    {t('billing.cancelSubscription')}
                   </Button>
                 )}
               </div>
@@ -238,7 +240,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            Monthly
+            {t('billing.monthly')}
           </button>
           <button
             onClick={() => setBillingPeriod('yearly')}
@@ -249,7 +251,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            Yearly <span className="text-green-600 ml-1">-20%</span>
+            {t('billing.yearly')} <span className="text-green-600 ml-1">{t('billing.yearlyDiscount')}</span>
           </button>
         </div>
       </div>
@@ -271,7 +273,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
             >
               {isCurrentPlan && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge>Current Plan</Badge>
+                  <Badge>{t('billing.currentPlan')}</Badge>
                 </div>
               )}
               <CardHeader>
@@ -281,11 +283,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               <CardContent className="space-y-4">
                 <div>
                   <span className="text-3xl font-bold">
-                    {isFree ? 'Free' : formatPrice(price)}
+                    {isFree ? t('billing.free') : formatPrice(price)}
                   </span>
                   {!isFree && (
                     <span className="text-muted-foreground">
-                      /{billingPeriod === 'yearly' ? 'year' : 'month'}
+                      /{billingPeriod === 'yearly' ? t('billing.yearly').toLowerCase() : t('billing.monthly').toLowerCase()}
                     </span>
                   )}
                 </div>
@@ -293,46 +295,46 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_cron_tasks} cron tasks</span>
+                    <span>{plan.max_cron_tasks} {t('billing.cronTasks')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_delayed_tasks_per_month} delayed tasks/month</span>
+                    <span>{plan.max_delayed_tasks_per_month} {t('billing.delayedTasksMonth')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_workspaces} workspace{plan.max_workspaces > 1 ? 's' : ''}</span>
+                    <span>{plan.max_workspaces} {plan.max_workspaces > 1 ? t('billing.workspacesPlural') : t('billing.workspaces')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_execution_history_days} days history</span>
+                    <span>{plan.max_execution_history_days} {t('billing.daysHistory')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>Min interval: {plan.min_cron_interval_minutes} min</span>
+                    <span>{t('billing.minInterval', { minutes: plan.min_cron_interval_minutes })}</span>
                   </li>
                   {plan.telegram_notifications && (
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />
-                      <span>Telegram notifications</span>
+                      <span>{t('billing.telegramNotifications')}</span>
                     </li>
                   )}
                   {plan.email_notifications && (
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />
-                      <span>Email notifications</span>
+                      <span>{t('billing.emailNotifications')}</span>
                     </li>
                   )}
                   {plan.webhook_callbacks && (
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />
-                      <span>Webhook callbacks</span>
+                      <span>{t('billing.webhookCallbacks')}</span>
                     </li>
                   )}
                   {plan.retry_on_failure && (
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />
-                      <span>Auto retry on failure</span>
+                      <span>{t('billing.autoRetry')}</span>
                     </li>
                   )}
                 </ul>
@@ -340,11 +342,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               <CardFooter>
                 {isCurrentPlan ? (
                   <Button className="w-full" disabled>
-                    Current Plan
+                    {t('billing.currentPlan')}
                   </Button>
                 ) : isFree ? (
                   <Button className="w-full" variant="outline" disabled>
-                    Free
+                    {t('billing.free')}
                   </Button>
                 ) : (
                   <Button
@@ -355,7 +357,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                     }}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Upgrade
+                    {t('billing.upgrade')}
                   </Button>
                 )}
               </CardFooter>
@@ -368,16 +370,16 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       {payments.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Payment History</CardTitle>
+            <CardTitle>{t('billing.paymentHistory')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t('common.date')}</TableHead>
+                  <TableHead>{t('common.description')}</TableHead>
+                  <TableHead>{t('billing.amount')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -399,24 +401,24 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upgrade to {selectedPlan?.display_name}</DialogTitle>
+            <DialogTitle>{t('billing.upgradeTo', { plan: selectedPlan?.display_name })}</DialogTitle>
             <DialogDescription>
-              You will be redirected to the payment page to complete your subscription.
+              {t('billing.upgradeDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="flex justify-between items-center">
-              <span>Plan:</span>
+              <span>{t('billing.plan')}:</span>
               <span className="font-semibold">{selectedPlan?.display_name}</span>
             </div>
             <div className="flex justify-between items-center mt-2">
-              <span>Billing:</span>
+              <span>{t('billing.billingPeriod')}:</span>
               <span className="font-semibold">
-                {billingPeriod === 'yearly' ? 'Yearly' : 'Monthly'}
+                {billingPeriod === 'yearly' ? t('billing.yearly') : t('billing.monthly')}
               </span>
             </div>
             <div className="flex justify-between items-center mt-2">
-              <span>Amount:</span>
+              <span>{t('billing.amount')}:</span>
               <span className="font-semibold text-lg">
                 {selectedPlan && formatPrice(
                   billingPeriod === 'yearly'
@@ -428,11 +430,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpgrade} disabled={processing}>
               {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Proceed to Payment
+              {t('billing.proceedToPayment')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -442,19 +444,18 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogTitle>{t('billing.cancelSubscriptionTitle')}</DialogTitle>
             <DialogDescription>
-              Your subscription will remain active until the end of the current billing period.
-              After that, you will be downgraded to the Free plan.
+              {t('billing.cancelSubscriptionDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-              Keep Subscription
+              {t('billing.keepSubscription')}
             </Button>
             <Button variant="destructive" onClick={handleCancel} disabled={processing}>
               {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Cancel Subscription
+              {t('billing.cancelSubscription')}
             </Button>
           </DialogFooter>
         </DialogContent>

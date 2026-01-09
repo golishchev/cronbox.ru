@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getWorkspaces, getWorkspace, createWorkspace } from '@/api/workspaces'
 import { getExecutions } from '@/api/executions'
@@ -45,6 +46,7 @@ interface DailyStats {
 }
 
 export function DashboardPage() {
+  const { t, i18n } = useTranslation()
   const { workspaces, currentWorkspace, setWorkspaces, setCurrentWorkspace, isLoading, setLoading } = useWorkspaceStore()
   const [stats, setStats] = useState<WorkspaceWithStats | null>(null)
   const [recentExecutions, setRecentExecutions] = useState<Execution[]>([])
@@ -73,7 +75,7 @@ export function DashboardPage() {
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newWorkspaceName.trim() || !newWorkspaceSlug.trim()) {
-      setCreateError('Name and slug are required')
+      setCreateError(t('workspace.nameRequired'))
       return
     }
 
@@ -91,8 +93,8 @@ export function DashboardPage() {
       setNewWorkspaceName('')
       setNewWorkspaceSlug('')
       toast({
-        title: 'Workspace created',
-        description: `"${workspace.name}" has been created`,
+        title: t('workspace.created'),
+        description: t('workspace.createdDescription', { name: workspace.name }),
         variant: 'success',
       })
     } catch (err) {
@@ -112,7 +114,7 @@ export function DashboardPage() {
           setCurrentWorkspace(ws[0])
         }
       } catch {
-        setError('Failed to load workspaces')
+        setError(t('dashboard.failedToLoad'))
       } finally {
         setLoading(false)
       }
@@ -152,6 +154,7 @@ export function DashboardPage() {
 
   const calculateDailyStats = (executions: Execution[]): DailyStats[] => {
     const stats: Record<string, DailyStats> = {}
+    const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
 
     // Initialize last 7 days
     for (let i = 6; i >= 0; i--) {
@@ -159,7 +162,7 @@ export function DashboardPage() {
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       stats[dateStr] = {
-        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: date.toLocaleDateString(locale, { weekday: 'short' }),
         success: 0,
         failed: 0,
         total: 0,
@@ -185,13 +188,13 @@ export function DashboardPage() {
   const getStatusBadge = (status: TaskStatus) => {
     switch (status) {
       case 'success':
-        return <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" />Success</Badge>
+        return <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" />{t('common.success')}</Badge>
       case 'failed':
-        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Failed</Badge>
+        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />{t('common.failed')}</Badge>
       case 'running':
-        return <Badge variant="default" className="gap-1"><Loader2 className="h-3 w-3 animate-spin" />Running</Badge>
+        return <Badge variant="default" className="gap-1"><Loader2 className="h-3 w-3 animate-spin" />{t('common.running')}</Badge>
       case 'pending':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Pending</Badge>
+        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />{t('common.pending')}</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -220,11 +223,11 @@ export function DashboardPage() {
       <>
         <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
           <Clock className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-2xl font-semibold">No workspaces yet</h2>
-          <p className="text-muted-foreground">Create your first workspace to get started</p>
+          <h2 className="text-2xl font-semibold">{t('dashboard.noWorkspacesYet')}</h2>
+          <p className="text-muted-foreground">{t('dashboard.createFirstWorkspace')}</p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Workspace
+            {t('workspace.create')}
           </Button>
         </div>
 
@@ -232,9 +235,9 @@ export function DashboardPage() {
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Workspace</DialogTitle>
+              <DialogTitle>{t('workspace.createNew')}</DialogTitle>
               <DialogDescription>
-                Create a new workspace to organize your scheduled tasks
+                {t('workspace.createDescription')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateWorkspace} className="space-y-4">
@@ -244,35 +247,35 @@ export function DashboardPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name">Workspace Name</Label>
+                <Label htmlFor="name">{t('workspace.name')}</Label>
                 <Input
                   id="name"
                   value={newWorkspaceName}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="My Project"
+                  placeholder={t('workspace.namePlaceholder')}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
+                <Label htmlFor="slug">{t('workspace.slug')}</Label>
                 <Input
                   id="slug"
                   value={newWorkspaceSlug}
                   onChange={(e) => setNewWorkspaceSlug(e.target.value)}
-                  placeholder="my-project"
+                  placeholder={t('workspace.slugPlaceholder')}
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  URL-friendly identifier for your workspace
+                  {t('workspace.slugDescription')}
                 </p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={createLoading}>
                   {createLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
+                  {t('common.create')}
                 </Button>
               </div>
             </form>
@@ -285,9 +288,9 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground">
-          Overview of your scheduled tasks and executions
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
@@ -295,46 +298,46 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Cron Tasks</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.activeCronTasks')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.active_cron_tasks ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              of {stats?.cron_tasks_count ?? 0} total
+              {t('dashboard.ofTotal', { total: stats?.cron_tasks_count ?? 0 })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Delayed Tasks</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.pendingDelayedTasks')}</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.pending_delayed_tasks ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.delayed_tasks_this_month ?? 0} this month
+              {stats?.delayed_tasks_this_month ?? 0} {t('dashboard.thisMonth')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Executions Today</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.executionsToday')}</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.executions_today ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              tasks executed today
+              {t('dashboard.tasksExecutedToday')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate (7d)</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.successRate7d')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -344,7 +347,7 @@ export function DashboardPage() {
                 : 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              last 7 days
+              {t('dashboard.last7Days')}
             </p>
           </CardContent>
         </Card>
@@ -357,10 +360,10 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Executions (Last 7 Days)
+              {t('dashboard.executionsLast7Days')}
             </CardTitle>
             <CardDescription>
-              Success and failure rate over time
+              {t('dashboard.successAndFailureRate')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -390,7 +393,7 @@ export function DashboardPage() {
                     stackId="1"
                     stroke="hsl(var(--success))"
                     fill="hsl(142.1 76.2% 36.3% / 0.3)"
-                    name="Success"
+                    name={t('common.success')}
                   />
                   <Area
                     type="monotone"
@@ -398,13 +401,13 @@ export function DashboardPage() {
                     stackId="1"
                     stroke="hsl(var(--destructive))"
                     fill="hsl(0 84.2% 60.2% / 0.3)"
-                    name="Failed"
+                    name={t('common.failed')}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                No execution data yet
+                {t('dashboard.noExecutionDataYet')}
               </div>
             )}
           </CardContent>
@@ -415,10 +418,10 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Recent Executions
+              {t('dashboard.recentExecutions')}
             </CardTitle>
             <CardDescription>
-              Latest task executions
+              {t('dashboard.latestTaskExecutions')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -427,9 +430,9 @@ export function DashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Duration</TableHead>
+                      <TableHead>{t('executions.task')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead className="text-right">{t('common.duration')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -438,7 +441,7 @@ export function DashboardPage() {
                         <TableCell>
                           <div>
                             <p className="font-medium text-sm truncate max-w-[150px]">
-                              {exec.task_name || 'Unnamed task'}
+                              {exec.task_name || t('executions.unnamedTask')}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {new Date(exec.started_at).toLocaleTimeString()}
@@ -456,7 +459,7 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                No executions yet
+                {t('executions.noExecutionsYet')}
               </div>
             )}
           </CardContent>
@@ -472,17 +475,17 @@ export function DashboardPage() {
                 <CardTitle>{currentWorkspace.name}</CardTitle>
                 <CardDescription>/{currentWorkspace.slug}</CardDescription>
               </div>
-              <Badge variant="secondary">{stats?.plan_name ?? 'Free'}</Badge>
+              <Badge variant="secondary">{stats?.plan_name ?? t('billing.free')}</Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Timezone</span>
+                <span className="text-muted-foreground">{t('dashboard.timezone')}</span>
                 <span>{currentWorkspace.default_timezone}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Created</span>
+                <span className="text-muted-foreground">{t('dashboard.created')}</span>
                 <span>{new Date(currentWorkspace.created_at).toLocaleDateString()}</span>
               </div>
             </div>

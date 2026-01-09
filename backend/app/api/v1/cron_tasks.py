@@ -5,7 +5,7 @@ from croniter import croniter
 from fastapi import APIRouter, HTTPException, Query, status
 import pytz
 
-from app.api.deps import CurrentUser, CurrentWorkspace, DB
+from app.api.deps import CurrentUser, CurrentWorkspace, ActiveSubscriptionWorkspace, DB
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.db.repositories.plans import PlanRepository
@@ -29,6 +29,23 @@ def calculate_next_run(schedule: str, timezone: str) -> datetime:
     next_run = cron.get_next(datetime)
     # Convert to UTC for storage
     return next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+
+
+def calculate_min_interval_minutes(schedule: str, timezone: str) -> int:
+    """Calculate minimum interval between cron runs in minutes."""
+    tz = pytz.timezone(timezone)
+    now = datetime.now(tz)
+    cron = croniter(schedule, now)
+
+    # Get several consecutive run times to find minimum interval
+    run_times = [cron.get_next(datetime) for _ in range(10)]
+
+    min_interval = float("inf")
+    for i in range(1, len(run_times)):
+        interval = (run_times[i] - run_times[i - 1]).total_seconds() / 60
+        min_interval = min(min_interval, interval)
+
+    return int(min_interval)
 
 
 @router.get("", response_model=CronTaskListResponse)
@@ -68,7 +85,7 @@ async def list_cron_tasks(
 @router.post("", response_model=CronTaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_cron_task(
     data: CronTaskCreate,
-    workspace: CurrentWorkspace,
+    workspace: ActiveSubscriptionWorkspace,
     db: DB,
 ):
     """Create a new cron task."""
@@ -85,6 +102,14 @@ async def create_cron_task(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Cron task limit reached. Your plan allows {plan.max_cron_tasks} cron task(s)",
+            )
+
+        # Check minimum interval
+        interval_minutes = calculate_min_interval_minutes(data.schedule, data.timezone)
+        if interval_minutes < plan.min_cron_interval_minutes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Cron interval too frequent. Your plan requires minimum {plan.min_cron_interval_minutes} minute(s) between runs",
             )
 
     # Calculate next run time
@@ -141,7 +166,7 @@ async def get_cron_task(
 async def update_cron_task(
     task_id: UUID,
     data: CronTaskUpdate,
-    workspace: CurrentWorkspace,
+    workspace: ActiveSubscriptionWorkspace,
     db: DB,
 ):
     """Update a cron task."""
@@ -156,11 +181,23 @@ async def update_cron_task(
 
     update_data = data.model_dump(exclude_unset=True)
 
-    # If schedule or timezone changed, recalculate next_run_at
+    # If schedule or timezone changed, recalculate next_run_at and validate interval
     if "schedule" in update_data or "timezone" in update_data:
         schedule = update_data.get("schedule", task.schedule)
         timezone = update_data.get("timezone", task.timezone)
         update_data["next_run_at"] = calculate_next_run(schedule, timezone)
+
+        # Check minimum interval against plan
+        workspace_repo = WorkspaceRepository(db)
+        workspace_with_plan = await workspace_repo.get_with_plan(workspace.id)
+        if workspace_with_plan and workspace_with_plan.plan:
+            plan = workspace_with_plan.plan
+            interval_minutes = calculate_min_interval_minutes(schedule, timezone)
+            if interval_minutes < plan.min_cron_interval_minutes:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Cron interval too frequent. Your plan requires minimum {plan.min_cron_interval_minutes} minute(s) between runs",
+                )
 
     # Convert HttpUrl to string if present
     if "url" in update_data and update_data["url"] is not None:
@@ -198,7 +235,7 @@ async def delete_cron_task(
 @router.post("/{task_id}/run", status_code=status.HTTP_202_ACCEPTED)
 async def run_cron_task(
     task_id: UUID,
-    workspace: CurrentWorkspace,
+    workspace: ActiveSubscriptionWorkspace,
     db: DB,
 ):
     """Manually trigger a cron task execution."""
@@ -269,7 +306,7 @@ async def pause_cron_task(
 @router.post("/{task_id}/resume", response_model=CronTaskResponse)
 async def resume_cron_task(
     task_id: UUID,
-    workspace: CurrentWorkspace,
+    workspace: ActiveSubscriptionWorkspace,
     db: DB,
 ):
     """Resume a paused cron task."""

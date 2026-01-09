@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getCronTasks, deleteCronTask, pauseCronTask, resumeCronTask, runCronTask } from '@/api/cronTasks'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ interface CronTasksPageProps {
 }
 
 export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
+  const { t } = useTranslation()
   const { currentWorkspace } = useWorkspaceStore()
   const [tasks, setTasks] = useState<CronTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -56,7 +58,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       setTasks(response.tasks)
     } catch (err) {
       toast({
-        title: 'Error loading tasks',
+        title: t('cronTasks.errorLoading'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -76,21 +78,21 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       if (task.is_paused) {
         await resumeCronTask(currentWorkspace.id, task.id)
         toast({
-          title: 'Task resumed',
-          description: `"${task.name}" is now active`,
+          title: t('cronTasks.taskResumed'),
+          description: t('cronTasks.taskResumedDescription', { name: task.name }),
           variant: 'success',
         })
       } else {
         await pauseCronTask(currentWorkspace.id, task.id)
         toast({
-          title: 'Task paused',
-          description: `"${task.name}" has been paused`,
+          title: t('cronTasks.taskPaused'),
+          description: t('cronTasks.taskPausedDescription', { name: task.name }),
         })
       }
       await loadTasks()
     } catch (err) {
       toast({
-        title: 'Action failed',
+        title: t('cronTasks.actionFailed'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -105,14 +107,14 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     try {
       await runCronTask(currentWorkspace.id, task.id)
       toast({
-        title: 'Task triggered',
-        description: `"${task.name}" has been queued for execution`,
+        title: t('cronTasks.taskTriggered'),
+        description: t('cronTasks.taskTriggeredDescription', { name: task.name }),
         variant: 'success',
       })
       await loadTasks()
     } catch (err) {
       toast({
-        title: 'Failed to run task',
+        title: t('cronTasks.failedToRunTask'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -129,13 +131,13 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       await deleteCronTask(currentWorkspace.id, deletingTask.id)
       setDeletingTask(null)
       toast({
-        title: 'Task deleted',
-        description: `"${taskName}" has been deleted`,
+        title: t('cronTasks.taskDeleted'),
+        description: t('cronTasks.taskDeletedDescription', { name: taskName }),
       })
       await loadTasks()
     } catch (err) {
       toast({
-        title: 'Failed to delete task',
+        title: t('cronTasks.failedToDeleteTask'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -146,18 +148,18 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
 
   const getStatusBadge = (task: CronTask) => {
     if (!task.is_active) {
-      return <Badge variant="secondary">Inactive</Badge>
+      return <Badge variant="secondary">{t('common.inactive')}</Badge>
     }
     if (task.is_paused) {
-      return <Badge variant="warning">Paused</Badge>
+      return <Badge variant="warning">{t('cronTasks.paused')}</Badge>
     }
     if (task.last_status === 'failed') {
-      return <Badge variant="destructive">Failed</Badge>
+      return <Badge variant="destructive">{t('common.failed')}</Badge>
     }
     if (task.last_status === 'success') {
-      return <Badge variant="success">Active</Badge>
+      return <Badge variant="success">{t('common.active')}</Badge>
     }
-    return <Badge variant="secondary">Active</Badge>
+    return <Badge variant="secondary">{t('common.active')}</Badge>
   }
 
   const formatCronExpression = (schedule: string) => {
@@ -169,7 +171,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
   }
 
   const formatNextRun = (nextRunAt: string | null) => {
-    if (!nextRunAt) return 'Not scheduled'
+    if (!nextRunAt) return t('cronTasks.notScheduled')
     const date = new Date(nextRunAt)
     return date.toLocaleString()
   }
@@ -177,7 +179,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
   if (!currentWorkspace) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Please select a workspace</p>
+        <p className="text-muted-foreground">{t('common.selectWorkspace')}</p>
       </div>
     )
   }
@@ -186,14 +188,14 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cron Tasks</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('cronTasks.title')}</h1>
           <p className="text-muted-foreground">
-            Manage recurring HTTP requests on a schedule
+            {t('cronTasks.subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Create Task
+          {t('cronTasks.createTask')}
         </Button>
       </div>
 
@@ -202,11 +204,11 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       ) : tasks.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Clock className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No cron tasks yet</h2>
-          <p className="text-muted-foreground">Create your first scheduled task</p>
+          <h2 className="text-xl font-semibold">{t('cronTasks.noTasksYet')}</h2>
+          <p className="text-muted-foreground">{t('cronTasks.createFirstTask')}</p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Task
+            {t('cronTasks.createTask')}
           </Button>
         </div>
       ) : (
@@ -214,11 +216,11 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Next Run</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('common.name')}</TableHead>
+                <TableHead>{t('cronTasks.schedule')}</TableHead>
+                <TableHead>{t('cronTasks.nextRun')}</TableHead>
+                <TableHead>{t('common.status')}</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -303,9 +305,9 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create Cron Task</DialogTitle>
+            <DialogTitle>{t('cronTasks.createCronTask')}</DialogTitle>
             <DialogDescription>
-              Create a new recurring HTTP request on a schedule
+              {t('cronTasks.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <CronTaskForm
@@ -323,9 +325,9 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Cron Task</DialogTitle>
+            <DialogTitle>{t('cronTasks.editCronTask')}</DialogTitle>
             <DialogDescription>
-              Update the task configuration
+              {t('cronTasks.editDescription')}
             </DialogDescription>
           </DialogHeader>
           {editingTask && (
@@ -346,14 +348,14 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       <Dialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Task</DialogTitle>
+            <DialogTitle>{t('cronTasks.deleteTask')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deletingTask?.name}"? This action cannot be undone.
+              {t('cronTasks.deleteConfirm', { name: deletingTask?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingTask(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -363,7 +365,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
               {actionLoading === deletingTask?.id ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

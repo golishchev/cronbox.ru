@@ -94,3 +94,94 @@ export async function getAdminWorkspaces(params?: {
   const response = await apiClient.get<AdminWorkspacesResponse>('/admin/workspaces', { params })
   return response.data
 }
+
+// Plans
+
+export interface AdminPlan {
+  id: string
+  name: string
+  display_name: string
+  description: string | null
+  price_monthly: number
+  price_yearly: number
+  max_cron_tasks: number
+  max_delayed_tasks_per_month: number
+  max_workspaces: number
+  max_execution_history_days: number
+  min_cron_interval_minutes: number
+  telegram_notifications: boolean
+  email_notifications: boolean
+  webhook_callbacks: boolean
+  custom_headers: boolean
+  retry_on_failure: boolean
+  is_active: boolean
+  is_public: boolean
+  sort_order: number
+  subscriptions_count: number
+  created_at: string
+}
+
+export interface AdminPlansResponse {
+  plans: AdminPlan[]
+  total: number
+}
+
+export interface CreatePlanRequest {
+  name: string
+  display_name: string
+  description?: string | null
+  price_monthly?: number
+  price_yearly?: number
+  max_cron_tasks?: number
+  max_delayed_tasks_per_month?: number
+  max_workspaces?: number
+  max_execution_history_days?: number
+  min_cron_interval_minutes?: number
+  telegram_notifications?: boolean
+  email_notifications?: boolean
+  webhook_callbacks?: boolean
+  custom_headers?: boolean
+  retry_on_failure?: boolean
+  is_active?: boolean
+  is_public?: boolean
+  sort_order?: number
+}
+
+export interface UpdatePlanRequest {
+  display_name?: string
+  description?: string | null
+  price_monthly?: number
+  price_yearly?: number
+  max_cron_tasks?: number
+  max_delayed_tasks_per_month?: number
+  max_workspaces?: number
+  max_execution_history_days?: number
+  min_cron_interval_minutes?: number
+  telegram_notifications?: boolean
+  email_notifications?: boolean
+  webhook_callbacks?: boolean
+  custom_headers?: boolean
+  retry_on_failure?: boolean
+  is_active?: boolean
+  is_public?: boolean
+  sort_order?: number
+}
+
+export async function getAdminPlans(): Promise<AdminPlansResponse> {
+  const response = await apiClient.get<AdminPlansResponse>('/admin/plans')
+  return response.data
+}
+
+export async function createAdminPlan(data: CreatePlanRequest): Promise<AdminPlan> {
+  const response = await apiClient.post<AdminPlan>('/admin/plans', data)
+  return response.data
+}
+
+export async function updateAdminPlan(planId: string, data: UpdatePlanRequest): Promise<AdminPlan> {
+  const response = await apiClient.patch<AdminPlan>(`/admin/plans/${planId}`, data)
+  return response.data
+}
+
+export async function deleteAdminPlan(planId: string): Promise<void> {
+  await apiClient.delete(`/admin/plans/${planId}`)
+}

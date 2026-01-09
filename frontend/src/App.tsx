@@ -21,11 +21,12 @@ const ApiKeysPage = lazy(() => import('@/pages/settings/ApiKeysPage').then(m => 
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })))
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
 const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage').then(m => ({ default: m.AdminWorkspacesPage })))
+const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 
-type Route = 'login' | 'register' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces'
+type Route = 'login' | 'register' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans'
 
 const AUTH_ROUTES = ['login', 'register']
-const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces']
+const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans']
 
 function PageLoader() {
   return (
@@ -146,6 +147,8 @@ function App() {
         return <AdminUsersPage onNavigate={navigate} />
       case 'admin-workspaces':
         return <AdminWorkspacesPage onNavigate={navigate} />
+      case 'admin-plans':
+        return <AdminPlansPage onNavigate={navigate} />
       default:
         return <DashboardPage />
     }

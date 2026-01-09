@@ -245,12 +245,13 @@ async def execute_delayed_task(
             logger.warning("Delayed task not found", task_id=task_id)
             return {"success": False, "error": "Task not found"}
 
-        if task.status != TaskStatus.PENDING:
-            logger.info("Task is not pending", task_id=task_id, status=task.status)
-            return {"success": False, "error": "Task not pending"}
+        if task.status not in (TaskStatus.PENDING, TaskStatus.RUNNING):
+            logger.info("Task is not pending/running", task_id=task_id, status=task.status)
+            return {"success": False, "error": "Task not pending/running"}
 
-        # Mark as running
-        await delayed_repo.mark_running(task)
+        # Mark as running if not already
+        if task.status == TaskStatus.PENDING:
+            await delayed_repo.mark_running(task)
 
         # Create execution record
         execution = await exec_repo.create_execution(

@@ -102,6 +102,41 @@ class TelegramService:
 
         return await self.send_message(chat_id, text)
 
+    async def send_subscription_expiring_notification(
+        self,
+        chat_id: int | str,
+        workspace_name: str,
+        days_remaining: int,
+        expiration_date: str,
+    ) -> bool:
+        """Send a subscription expiring notification."""
+        text = (
+            f"<b>Subscription Expiring Soon</b>\n\n"
+            f"<b>Workspace:</b> {workspace_name}\n"
+            f"<b>Expires in:</b> {days_remaining} day(s)\n"
+            f"<b>Expiration date:</b> {expiration_date}\n\n"
+            f"Renew your subscription to avoid service interruption."
+        )
+        return await self.send_message(chat_id, text)
+
+    async def send_subscription_expired_notification(
+        self,
+        chat_id: int | str,
+        workspace_name: str,
+        tasks_paused: int,
+    ) -> bool:
+        """Send a subscription expired notification."""
+        text = (
+            f"<b>Subscription Expired</b>\n\n"
+            f"<b>Workspace:</b> {workspace_name}\n"
+            f"Your subscription has expired and workspace has been downgraded to the free plan.\n"
+        )
+        if tasks_paused > 0:
+            text += f"<b>Tasks paused:</b> {tasks_paused} (exceeded free plan limit)\n"
+        text += "\nRenew your subscription to restore full access."
+
+        return await self.send_message(chat_id, text)
+
 
 # Global instance
 telegram_service = TelegramService()

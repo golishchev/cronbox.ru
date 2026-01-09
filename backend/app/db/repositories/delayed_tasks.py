@@ -135,3 +135,46 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
             await self.db.flush()
             await self.db.refresh(task)
         return task
+
+    async def update(
+        self,
+        task: DelayedTask,
+        name: str | None = None,
+        tags: list[str] | None = None,
+        url: str | None = None,
+        method: str | None = None,
+        headers: dict | None = None,
+        body: str | None = None,
+        execute_at: datetime | None = None,
+        timeout_seconds: int | None = None,
+        retry_count: int | None = None,
+        retry_delay_seconds: int | None = None,
+        callback_url: str | None = None,
+    ) -> DelayedTask:
+        """Update a pending delayed task."""
+        if name is not None:
+            task.name = name
+        if tags is not None:
+            task.tags = tags
+        if url is not None:
+            task.url = url
+        if method is not None:
+            task.method = method
+        if headers is not None:
+            task.headers = headers
+        if body is not None:
+            task.body = body
+        if execute_at is not None:
+            task.execute_at = execute_at
+        if timeout_seconds is not None:
+            task.timeout_seconds = timeout_seconds
+        if retry_count is not None:
+            task.retry_count = retry_count
+        if retry_delay_seconds is not None:
+            task.retry_delay_seconds = retry_delay_seconds
+        if callback_url is not None:
+            task.callback_url = callback_url
+
+        await self.db.flush()
+        await self.db.refresh(task)
+        return task

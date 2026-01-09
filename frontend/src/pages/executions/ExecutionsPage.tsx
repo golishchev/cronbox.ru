@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getExecutions, getExecution } from '@/api/executions'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ import {
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
+import { translateApiError } from '@/lib/translateApiError'
 import type { Execution, ExecutionDetail, PaginationMeta, TaskStatus } from '@/types'
 
 interface ExecutionsPageProps {
@@ -44,6 +46,7 @@ interface ExecutionsPageProps {
 }
 
 export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
+  const { t } = useTranslation()
   const { currentWorkspace } = useWorkspaceStore()
   const [executions, setExecutions] = useState<Execution[]>([])
   const [pagination, setPagination] = useState<PaginationMeta | null>(null)
@@ -99,28 +102,28 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
         return (
           <Badge variant="secondary" className="gap-1">
             <Clock className="h-3 w-3" />
-            Pending
+            {t('common.pending')}
           </Badge>
         )
       case 'running':
         return (
           <Badge variant="default" className="gap-1">
             <RefreshCw className="h-3 w-3 animate-spin" />
-            Running
+            {t('common.running')}
           </Badge>
         )
       case 'success':
         return (
           <Badge variant="success" className="gap-1">
             <CheckCircle className="h-3 w-3" />
-            Success
+            {t('common.success')}
           </Badge>
         )
       case 'failed':
         return (
           <Badge variant="destructive" className="gap-1">
             <XCircle className="h-3 w-3" />
-            Failed
+            {t('common.failed')}
           </Badge>
         )
       default:
@@ -156,7 +159,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
   if (!currentWorkspace) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Please select a workspace</p>
+        <p className="text-muted-foreground">{t('common.selectWorkspace')}</p>
       </div>
     )
   }
@@ -165,43 +168,43 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Executions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('executions.title')}</h1>
           <p className="text-muted-foreground">
-            View the history of all task executions
+            {t('executions.subtitle')}
           </p>
         </div>
         <Button variant="outline" onClick={loadExecutions} disabled={isLoading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('common.refresh')}
         </Button>
       </div>
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Status:</span>
+          <span className="text-sm text-muted-foreground">{t('common.status')}:</span>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
             <SelectTrigger className="w-[130px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="running">Running</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
+              <SelectItem value="success">{t('common.success')}</SelectItem>
+              <SelectItem value="failed">{t('common.failed')}</SelectItem>
+              <SelectItem value="running">{t('common.running')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Type:</span>
+          <span className="text-sm text-muted-foreground">{t('common.type')}:</span>
           <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
             <SelectTrigger className="w-[130px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
               <SelectItem value="cron">Cron</SelectItem>
-              <SelectItem value="delayed">Delayed</SelectItem>
+              <SelectItem value="delayed">{t('executions.delayed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -218,9 +221,9 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
       ) : executions.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <History className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No executions yet</h2>
+          <h2 className="text-xl font-semibold">{t('executions.noExecutionsYet')}</h2>
           <p className="text-muted-foreground">
-            Task executions will appear here once tasks run
+            {t('executions.executionsWillAppear')}
           </p>
         </div>
       ) : (
@@ -228,13 +231,13 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Response</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('executions.task')}</TableHead>
+                <TableHead>{t('common.type')}</TableHead>
+                <TableHead>{t('executions.started')}</TableHead>
+                <TableHead>{t('common.duration')}</TableHead>
+                <TableHead>{t('common.status')}</TableHead>
+                <TableHead>{t('executions.response')}</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -243,7 +246,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   <TableCell>
                     <div>
                       <p className="font-medium">
-                        {execution.task_name || 'Unnamed task'}
+                        {execution.task_name || t('executions.unnamedTask')}
                       </p>
                       <p className="text-sm text-muted-foreground truncate max-w-[250px]">
                         {execution.request_url}
@@ -270,8 +273,8 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                     <div className="flex items-center gap-2">
                       {getStatusCodeBadge(execution.response_status_code)}
                       {execution.error_message && (
-                        <span className="text-xs text-destructive truncate max-w-[150px]" title={execution.error_message}>
-                          {execution.error_message}
+                        <span className="text-xs text-destructive truncate max-w-[150px]" title={translateApiError(execution.error_message, t)}>
+                          {translateApiError(execution.error_message, t)}
                         </span>
                       )}
                     </div>
@@ -296,7 +299,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
       {pagination && pagination.total_pages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            Showing {executions.length} of {pagination.total} executions
+            {t('executions.showing', { count: executions.length, total: pagination.total })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -306,10 +309,10 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               disabled={page === 1}
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              {t('common.previous')}
             </Button>
             <span className="text-sm">
-              Page {pagination.page} of {pagination.total_pages}
+              {t('executions.page', { current: pagination.page, total: pagination.total_pages })}
             </span>
             <Button
               variant="outline"
@@ -317,7 +320,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
               disabled={page === pagination.total_pages}
             >
-              Next
+              {t('common.next')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -328,7 +331,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
       <Dialog open={!!selectedExecution} onOpenChange={() => setSelectedExecution(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Execution Details</DialogTitle>
+            <DialogTitle>{t('executions.executionDetails')}</DialogTitle>
           </DialogHeader>
           {loadingDetail ? (
             <div className="flex items-center justify-center py-8">
@@ -339,34 +342,34 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               {/* Overview */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Task</p>
-                  <p className="font-medium">{selectedExecution.task_name || 'Unnamed'}</p>
+                  <p className="text-sm text-muted-foreground">{t('executions.task')}</p>
+                  <p className="font-medium">{selectedExecution.task_name || t('executions.unnamedTask')}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p className="text-sm text-muted-foreground">{t('common.type')}</p>
                   <Badge variant="outline">{selectedExecution.task_type}</Badge>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="text-sm text-muted-foreground">{t('common.status')}</p>
                   {getStatusBadge(selectedExecution.status)}
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="text-sm text-muted-foreground">{t('common.duration')}</p>
                   <p className="font-mono">{formatDuration(selectedExecution.duration_ms)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Started</p>
+                  <p className="text-sm text-muted-foreground">{t('executions.started')}</p>
                   <p>{formatDateTime(selectedExecution.started_at)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Finished</p>
+                  <p className="text-sm text-muted-foreground">{t('executions.finished')}</p>
                   <p>{selectedExecution.finished_at ? formatDateTime(selectedExecution.finished_at) : '-'}</p>
                 </div>
               </div>
 
               {/* Request */}
               <div className="space-y-2">
-                <h3 className="font-semibold">Request</h3>
+                <h3 className="font-semibold">{t('executions.request')}</h3>
                 <div className="rounded-md bg-muted p-4 space-y-2">
                   <div className="flex gap-2">
                     <Badge variant="outline">{selectedExecution.request_method}</Badge>
@@ -374,7 +377,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   </div>
                   {selectedExecution.request_headers && Object.keys(selectedExecution.request_headers).length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Headers:</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
                       <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
                         {JSON.stringify(selectedExecution.request_headers, null, 2)}
                       </pre>
@@ -382,7 +385,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   )}
                   {selectedExecution.request_body && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Body:</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
                       <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px]">
                         {selectedExecution.request_body}
                       </pre>
@@ -393,23 +396,23 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
 
               {/* Response */}
               <div className="space-y-2">
-                <h3 className="font-semibold">Response</h3>
+                <h3 className="font-semibold">{t('executions.response')}</h3>
                 <div className="rounded-md bg-muted p-4 space-y-2">
                   <div className="flex gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Status Code</p>
+                      <p className="text-sm text-muted-foreground">{t('executions.statusCode')}</p>
                       {getStatusCodeBadge(selectedExecution.response_status_code)}
                     </div>
                     {selectedExecution.response_size_bytes && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Size</p>
+                        <p className="text-sm text-muted-foreground">{t('executions.size')}</p>
                         <p className="text-sm">{(selectedExecution.response_size_bytes / 1024).toFixed(2)} KB</p>
                       </div>
                     )}
                   </div>
                   {selectedExecution.response_headers && Object.keys(selectedExecution.response_headers).length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Headers:</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
                       <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
                         {JSON.stringify(selectedExecution.response_headers, null, 2)}
                       </pre>
@@ -417,7 +420,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   )}
                   {selectedExecution.response_body && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Body:</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
                       <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px]">
                         {selectedExecution.response_body}
                       </pre>
@@ -429,14 +432,14 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               {/* Error */}
               {selectedExecution.error_message && (
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-destructive">Error</h3>
+                  <h3 className="font-semibold text-destructive">{t('common.error')}</h3>
                   <div className="rounded-md bg-destructive/10 p-4">
                     {selectedExecution.error_type && (
                       <Badge variant="destructive" className="mb-2">
                         {selectedExecution.error_type}
                       </Badge>
                     )}
-                    <p className="text-sm text-destructive">{selectedExecution.error_message}</p>
+                    <p className="text-sm text-destructive">{translateApiError(selectedExecution.error_message, t)}</p>
                   </div>
                 </div>
               )}

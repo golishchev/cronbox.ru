@@ -7,10 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings as app_settings
 from app.models.notification_settings import NotificationSettings
+from app.models.notification_template import NotificationChannel
 from app.models.workspace import Workspace
 from app.services.telegram import telegram_service
 from app.services.postal import postal_service
 from app.services.email import email_service  # SMTP fallback
+from app.services.template_service import template_service
 
 logger = structlog.get_logger()
 
@@ -45,86 +47,76 @@ class NotificationService:
             await db.refresh(settings)
         return settings
 
-    async def _send_email_notification(
+    async def _get_workspace_info(
+        self, db: AsyncSession, workspace_id: UUID
+    ) -> tuple[str, str]:
+        """Get workspace name and owner's preferred language."""
+        result = await db.execute(
+            select(Workspace).where(Workspace.id == workspace_id)
+        )
+        workspace = result.scalar_one_or_none()
+
+        workspace_name = workspace.name if workspace else "Unknown"
+        language = "en"
+        if workspace and workspace.owner:
+            language = workspace.owner.preferred_language or "en"
+
+        return workspace_name, language
+
+    async def _send_templated_telegram(
         self,
         db: AsyncSession,
-        notification_type: str,
+        chat_ids: list[int],
+        template_code: str,
+        language: str,
+        variables: dict,
+    ) -> None:
+        """Send Telegram notification using template."""
+        template = await template_service.get_template(
+            db, template_code, language, NotificationChannel.TELEGRAM
+        )
+        _, body = template_service.render(template, variables)
+
+        if body:
+            for chat_id in chat_ids:
+                await telegram_service.send_message(chat_id, body)
+
+    async def _send_templated_email(
+        self,
+        db: AsyncSession,
         to: list[str],
-        task_name: str,
-        task_type: str,
-        workspace_name: str,
+        template_code: str,
+        language: str,
+        variables: dict,
         workspace_id: UUID,
-        error_message: str | None = None,
-        task_url: str | None = None,
-        duration_ms: int | None = None,
-    ) -> bool:
-        """Send email notification via Postal or SMTP fallback."""
-        # Try Postal first
+        tag: str | None = None,
+    ) -> None:
+        """Send email notification using template."""
+        template = await template_service.get_template(
+            db, template_code, language, NotificationChannel.EMAIL
+        )
+        subject, body = template_service.render(template, variables)
+
+        if not body:
+            return
+
         if app_settings.use_postal and postal_service.is_configured:
-            if notification_type == "failure":
-                result = await postal_service.send_task_failure_notification(
-                    db=db,
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    error_message=error_message,
-                    workspace_name=workspace_name,
-                    workspace_id=workspace_id,
-                    task_url=task_url,
-                )
-            elif notification_type == "recovery":
-                result = await postal_service.send_task_recovery_notification(
-                    db=db,
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                    workspace_id=workspace_id,
-                )
-            elif notification_type == "success":
-                result = await postal_service.send_task_success_notification(
-                    db=db,
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                    workspace_id=workspace_id,
-                    duration_ms=duration_ms,
-                )
-            else:
-                return False
-
-            return result is not None
-
-        # Fallback to SMTP
-        if email_service.is_configured:
-            if notification_type == "failure":
-                return await email_service.send_task_failure_notification(
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    error_message=error_message,
-                    workspace_name=workspace_name,
-                    task_url=task_url,
-                )
-            elif notification_type == "recovery":
-                return await email_service.send_task_recovery_notification(
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                )
-            elif notification_type == "success":
-                return await email_service.send_task_success_notification(
-                    to=to,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                    duration_ms=duration_ms,
-                )
-
-        logger.warning("No email service configured")
-        return False
+            await postal_service.send_email(
+                db=db,
+                to=to,
+                subject=subject or "[CronBox] Notification",
+                html=body,
+                text=body.replace("<br>", "\n").replace("</p>", "\n"),
+                workspace_id=workspace_id,
+                tag=tag,
+            )
+        elif email_service.is_configured:
+            await email_service.send_email(
+                to=to,
+                subject=subject or "[CronBox] Notification",
+                html=body,
+                text=body.replace("<br>", "\n").replace("</p>", "\n"),
+            )
 
     async def send_task_failure(
         self,
@@ -140,36 +132,31 @@ class NotificationService:
         if not settings or not settings.notify_on_failure:
             return
 
-        # Get workspace name
-        result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
-        workspace_name = workspace.name if workspace else "Unknown"
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "task_name": task_name,
+            "task_type": task_type,
+            "error_message": error_message or "Unknown error",
+        }
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            for chat_id in settings.telegram_chat_ids:
-                await telegram_service.send_task_failure_notification(
-                    chat_id=chat_id,
-                    task_name=task_name,
-                    task_type=task_type,
-                    error_message=error_message,
-                    workspace_name=workspace_name,
-                )
+            await self._send_templated_telegram(
+                db, settings.telegram_chat_ids, "task_failure", language, variables
+            )
 
-        # Send Email notifications (Postal or SMTP)
+        # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
-            await self._send_email_notification(
-                db=db,
-                notification_type="failure",
-                to=settings.email_addresses,
-                task_name=task_name,
-                task_type=task_type,
-                workspace_name=workspace_name,
-                workspace_id=workspace_id,
-                error_message=error_message,
-                task_url=task_url,
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "task_failure",
+                language,
+                variables,
+                workspace_id,
+                tag="task-failure",
             )
 
         # Send Webhook notifications
@@ -200,33 +187,30 @@ class NotificationService:
         if not settings or not settings.notify_on_recovery:
             return
 
-        # Get workspace name
-        result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
-        workspace_name = workspace.name if workspace else "Unknown"
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "task_name": task_name,
+            "task_type": task_type,
+        }
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            for chat_id in settings.telegram_chat_ids:
-                await telegram_service.send_task_recovery_notification(
-                    chat_id=chat_id,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                )
+            await self._send_templated_telegram(
+                db, settings.telegram_chat_ids, "task_recovery", language, variables
+            )
 
-        # Send Email notifications (Postal or SMTP)
+        # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
-            await self._send_email_notification(
-                db=db,
-                notification_type="recovery",
-                to=settings.email_addresses,
-                task_name=task_name,
-                task_type=task_type,
-                workspace_name=workspace_name,
-                workspace_id=workspace_id,
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "task_recovery",
+                language,
+                variables,
+                workspace_id,
+                tag="task-recovery",
             )
 
         # Send Webhook notifications
@@ -256,35 +240,31 @@ class NotificationService:
         if not settings or not settings.notify_on_success:
             return
 
-        # Get workspace name
-        result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
-        workspace_name = workspace.name if workspace else "Unknown"
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "task_name": task_name,
+            "task_type": task_type,
+            "duration_ms": str(duration_ms or 0),
+        }
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            for chat_id in settings.telegram_chat_ids:
-                await telegram_service.send_task_success_notification(
-                    chat_id=chat_id,
-                    task_name=task_name,
-                    task_type=task_type,
-                    workspace_name=workspace_name,
-                    duration_ms=duration_ms,
-                )
+            await self._send_templated_telegram(
+                db, settings.telegram_chat_ids, "task_success", language, variables
+            )
 
-        # Send Email notifications (Postal or SMTP)
+        # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
-            await self._send_email_notification(
-                db=db,
-                notification_type="success",
-                to=settings.email_addresses,
-                task_name=task_name,
-                task_type=task_type,
-                workspace_name=workspace_name,
-                workspace_id=workspace_id,
-                duration_ms=duration_ms,
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "task_success",
+                language,
+                variables,
+                workspace_id,
+                tag="task-success",
             )
 
         # Send Webhook notifications
@@ -301,6 +281,127 @@ class NotificationService:
                     "duration_ms": duration_ms,
                 },
             )
+
+    async def send_subscription_expiring(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        days_remaining: int,
+        expiration_date: str,
+    ) -> None:
+        """Send subscription expiring notifications through all enabled channels."""
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "days_remaining": str(days_remaining),
+            "expiration_date": expiration_date,
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            await self._send_templated_telegram(
+                db,
+                settings.telegram_chat_ids,
+                "subscription_expiring",
+                language,
+                variables,
+            )
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "subscription_expiring",
+                language,
+                variables,
+                workspace_id,
+                tag="subscription-expiring",
+            )
+
+        # Send Webhook notification
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="subscription.expiring",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "days_remaining": days_remaining,
+                    "expiration_date": expiration_date,
+                },
+            )
+
+        logger.info(
+            "Subscription expiring notification sent",
+            workspace_id=str(workspace_id),
+            days_remaining=days_remaining,
+        )
+
+    async def send_subscription_expired(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        tasks_paused: int,
+    ) -> None:
+        """Send subscription expired notifications through all enabled channels."""
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "tasks_paused": str(tasks_paused),
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            await self._send_templated_telegram(
+                db,
+                settings.telegram_chat_ids,
+                "subscription_expired",
+                language,
+                variables,
+            )
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "subscription_expired",
+                language,
+                variables,
+                workspace_id,
+                tag="subscription-expired",
+            )
+
+        # Send Webhook notification
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="subscription.expired",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "tasks_paused": tasks_paused,
+                },
+            )
+
+        logger.info(
+            "Subscription expired notification sent",
+            workspace_id=str(workspace_id),
+            tasks_paused=tasks_paused,
+        )
 
     async def _send_webhook(
         self,

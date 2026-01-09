@@ -42,6 +42,7 @@ class UserResponse(UserBase):
     telegram_username: str | None = None
     email_verified: bool
     is_active: bool
+    is_superuser: bool = False
     preferred_language: str = "ru"
     created_at: datetime
     updated_at: datetime

@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { DelayedTask, CreateDelayedTaskRequest, PaginationMeta } from '@/types'
+import type { DelayedTask, CreateDelayedTaskRequest, UpdateDelayedTaskRequest, PaginationMeta } from '@/types'
 
 export interface DelayedTasksResponse {
   tasks: DelayedTask[]
@@ -44,6 +44,18 @@ export async function createDelayedTask(
 ): Promise<DelayedTask> {
   const response = await apiClient.post<DelayedTask>(
     `/workspaces/${workspaceId}/delayed`,
+    data
+  )
+  return response.data
+}
+
+export async function updateDelayedTask(
+  workspaceId: string,
+  taskId: string,
+  data: UpdateDelayedTaskRequest
+): Promise<DelayedTask> {
+  const response = await apiClient.patch<DelayedTask>(
+    `/workspaces/${workspaceId}/delayed/${taskId}`,
     data
   )
   return response.data

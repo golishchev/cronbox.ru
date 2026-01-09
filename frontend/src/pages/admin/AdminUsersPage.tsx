@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getAdminUsers, updateAdminUser, AdminUser } from '@/api/admin'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
@@ -39,6 +40,7 @@ interface AdminUsersPageProps {
 }
 
 export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
+  const { t } = useTranslation()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -65,7 +67,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       setTotal(response.total)
     } catch (err) {
       toast({
-        title: 'Error loading users',
+        title: t('admin.errorLoadingUsers'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -96,15 +98,15 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
         email_verified: editEmailVerified,
       })
       toast({
-        title: 'User updated',
-        description: `${editingUser.email} has been updated`,
+        title: t('admin.userUpdated'),
+        description: t('admin.userUpdatedDescription', { email: editingUser.email }),
         variant: 'success',
       })
       setEditingUser(null)
       loadUsers()
     } catch (err) {
       toast({
-        title: 'Error updating user',
+        title: t('admin.errorUpdatingUser'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -122,12 +124,12 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => onNavigate('admin')}>
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
+              {t('admin.back')}
             </Button>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mt-2">Users</h1>
+          <h1 className="text-3xl font-bold tracking-tight mt-2">{t('admin.users')}</h1>
           <p className="text-muted-foreground">
-            Manage all users in the system
+            {t('admin.usersSubtitle')}
           </p>
         </div>
       </div>
@@ -137,7 +139,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by email or name..."
+            placeholder={t('admin.searchUsersPlaceholder')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -147,7 +149,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           />
         </div>
         <span className="text-sm text-muted-foreground">
-          {total} users total
+          {t('admin.usersTotal', { count: total })}
         </span>
       </div>
 
@@ -157,9 +159,9 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       ) : users.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Users className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No users found</h2>
+          <h2 className="text-xl font-semibold">{t('admin.noUsersFound')}</h2>
           <p className="text-muted-foreground">
-            {search ? 'Try a different search term' : 'No users in the system yet'}
+            {search ? t('admin.tryDifferentSearch') : t('admin.noUsersYet')}
           </p>
         </div>
       ) : (
@@ -168,13 +170,13 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Workspaces</TableHead>
-                  <TableHead>Tasks</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('admin.user')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead>{t('admin.role')}</TableHead>
+                  <TableHead>{t('admin.workspaces')}</TableHead>
+                  <TableHead>{t('admin.tasks')}</TableHead>
+                  <TableHead>{t('admin.created')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,14 +196,14 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {user.is_active ? (
-                          <Badge variant="success">Active</Badge>
+                          <Badge variant="success">{t('admin.active')}</Badge>
                         ) : (
-                          <Badge variant="secondary">Inactive</Badge>
+                          <Badge variant="secondary">{t('admin.inactive')}</Badge>
                         )}
                         {user.email_verified && (
                           <Badge variant="outline" className="gap-1">
                             <Mail className="h-3 w-3" />
-                            Verified
+                            {t('admin.verified')}
                           </Badge>
                         )}
                       </div>
@@ -210,10 +212,10 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                       {user.is_superuser ? (
                         <Badge variant="default" className="gap-1">
                           <Shield className="h-3 w-3" />
-                          Admin
+                          {t('admin.admin')}
                         </Badge>
                       ) : (
-                        <Badge variant="outline">User</Badge>
+                        <Badge variant="outline">{t('admin.user')}</Badge>
                       )}
                     </TableCell>
                     <TableCell>{user.workspaces_count}</TableCell>
@@ -227,7 +229,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                         size="sm"
                         onClick={() => handleEdit(user)}
                       >
-                        Edit
+                        {t('common.edit')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -240,7 +242,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                {t('admin.pageOf', { current: page, total: totalPages })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -250,7 +252,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                   disabled={page === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  {t('common.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -258,7 +260,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                 >
-                  Next
+                  {t('common.next')}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -271,14 +273,14 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>{t('admin.editUser')}</DialogTitle>
             <DialogDescription>
               {editingUser?.email}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="is_active">{t('admin.active')}</Label>
               <Switch
                 id="is_active"
                 checked={editIsActive}
@@ -286,7 +288,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="email_verified">Email Verified</Label>
+              <Label htmlFor="email_verified">{t('admin.emailVerified')}</Label>
               <Switch
                 id="email_verified"
                 checked={editEmailVerified}
@@ -294,7 +296,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="is_superuser">Admin</Label>
+              <Label htmlFor="is_superuser">{t('admin.admin')}</Label>
               <Switch
                 id="is_superuser"
                 checked={editIsSuperuser}
@@ -304,11 +306,11 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={updateLoading}>
               {updateLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

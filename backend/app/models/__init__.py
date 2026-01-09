@@ -5,6 +5,7 @@ from app.models.delayed_task import DelayedTask
 from app.models.email_log import EmailLog, EmailStatus, EmailType
 from app.models.execution import Execution
 from app.models.notification_settings import NotificationSettings
+from app.models.notification_template import NotificationChannel, NotificationTemplate
 from app.models.payment import Payment, PaymentStatus
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
@@ -24,6 +25,8 @@ __all__ = [
     "Subscription",
     "Payment",
     "NotificationSettings",
+    "NotificationTemplate",
+    "NotificationChannel",
     "EmailLog",
     "HttpMethod",
     "TaskStatus",

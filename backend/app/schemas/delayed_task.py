@@ -60,6 +60,22 @@ class DelayedTaskResponse(BaseModel):
     updated_at: datetime
 
 
+class DelayedTaskUpdate(BaseModel):
+    """Schema for updating a delayed task."""
+
+    name: str | None = None
+    tags: list[str] | None = None
+    url: HttpUrl | None = None
+    method: HttpMethod | None = None
+    headers: dict[str, str] | None = None
+    body: str | None = None
+    execute_at: datetime | None = None
+    timeout_seconds: int | None = Field(None, ge=1, le=300)
+    retry_count: int | None = Field(None, ge=0, le=10)
+    retry_delay_seconds: int | None = Field(None, ge=10, le=3600)
+    callback_url: HttpUrl | None = None
+
+
 class DelayedTaskListResponse(BaseModel):
     """Schema for delayed task list response."""
 

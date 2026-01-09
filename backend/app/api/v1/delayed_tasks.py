@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 import pytz
 
-from app.api.deps import CurrentUser, CurrentWorkspace, DB
+from app.api.deps import CurrentUser, CurrentWorkspace, ActiveSubscriptionWorkspace, DB
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.db.repositories.plans import PlanRepository
@@ -14,6 +14,7 @@ from app.schemas.delayed_task import (
     DelayedTaskCreate,
     DelayedTaskListResponse,
     DelayedTaskResponse,
+    DelayedTaskUpdate,
 )
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/delayed", tags=["Delayed Tasks"])
@@ -56,7 +57,7 @@ async def list_delayed_tasks(
 @router.post("", response_model=DelayedTaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_delayed_task(
     data: DelayedTaskCreate,
-    workspace: CurrentWorkspace,
+    workspace: ActiveSubscriptionWorkspace,
     db: DB,
 ):
     """Create a new delayed task.
@@ -135,6 +136,63 @@ async def get_delayed_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Delayed task not found",
         )
+
+    return DelayedTaskResponse.model_validate(task)
+
+
+@router.patch("/{task_id}", response_model=DelayedTaskResponse)
+async def update_delayed_task(
+    task_id: UUID,
+    data: DelayedTaskUpdate,
+    workspace: CurrentWorkspace,
+    db: DB,
+):
+    """Update a pending delayed task.
+
+    Only pending tasks can be updated. Tasks that are running,
+    completed, or cancelled cannot be modified.
+    """
+    delayed_repo = DelayedTaskRepository(db)
+    task = await delayed_repo.get_by_id(task_id)
+
+    if task is None or task.workspace_id != workspace.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delayed task not found",
+        )
+
+    if task.status != TaskStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot update task with status '{task.status.value}'. Only pending tasks can be updated.",
+        )
+
+    # Validate execute_at is in the future if provided
+    execute_at = None
+    if data.execute_at is not None:
+        now = datetime.utcnow()
+        execute_at = data.execute_at.replace(tzinfo=None) if data.execute_at.tzinfo else data.execute_at
+        if execute_at <= now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="execute_at must be in the future",
+            )
+
+    task = await delayed_repo.update(
+        task=task,
+        name=data.name,
+        tags=data.tags,
+        url=str(data.url) if data.url else None,
+        method=data.method,
+        headers=data.headers,
+        body=data.body,
+        execute_at=execute_at,
+        timeout_seconds=data.timeout_seconds,
+        retry_count=data.retry_count,
+        retry_delay_seconds=data.retry_delay_seconds,
+        callback_url=str(data.callback_url) if data.callback_url else None,
+    )
+    await db.commit()
 
     return DelayedTaskResponse.model_validate(task)
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getAdminWorkspaces, AdminWorkspace } from '@/api/admin'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
@@ -26,6 +27,7 @@ interface AdminWorkspacesPageProps {
 }
 
 export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
+  const { t } = useTranslation()
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -45,7 +47,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
       setTotal(response.total)
     } catch (err) {
       toast({
-        title: 'Error loading workspaces',
+        title: t('admin.errorLoadingWorkspaces'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -78,12 +80,12 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => onNavigate('admin')}>
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
+              {t('admin.back')}
             </Button>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mt-2">Workspaces</h1>
+          <h1 className="text-3xl font-bold tracking-tight mt-2">{t('admin.workspaces')}</h1>
           <p className="text-muted-foreground">
-            View all workspaces in the system
+            {t('admin.workspacesSubtitle')}
           </p>
         </div>
       </div>
@@ -93,7 +95,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, slug, or owner..."
+            placeholder={t('admin.searchWorkspacesPlaceholder')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -103,7 +105,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
           />
         </div>
         <span className="text-sm text-muted-foreground">
-          {total} workspaces total
+          {t('admin.workspacesTotal', { count: total })}
         </span>
       </div>
 
@@ -113,9 +115,9 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
       ) : workspaces.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Building2 className="h-16 w-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No workspaces found</h2>
+          <h2 className="text-xl font-semibold">{t('admin.noWorkspacesFound')}</h2>
           <p className="text-muted-foreground">
-            {search ? 'Try a different search term' : 'No workspaces in the system yet'}
+            {search ? t('admin.tryDifferentSearch') : t('admin.noWorkspacesYet')}
           </p>
         </div>
       ) : (
@@ -124,13 +126,13 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Cron Tasks</TableHead>
-                  <TableHead>Delayed Tasks</TableHead>
-                  <TableHead>Executions</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>{t('admin.workspaces')}</TableHead>
+                  <TableHead>{t('admin.owner')}</TableHead>
+                  <TableHead>{t('admin.plan')}</TableHead>
+                  <TableHead>{t('admin.cronTasks')}</TableHead>
+                  <TableHead>{t('admin.delayedTasks')}</TableHead>
+                  <TableHead>{t('nav.executions')}</TableHead>
+                  <TableHead>{t('admin.created')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,7 +167,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                {t('admin.pageOf', { current: page, total: totalPages })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -175,7 +177,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
                   disabled={page === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  {t('common.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -183,7 +185,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                 >
-                  Next
+                  {t('common.next')}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { createDelayedTask } from '@/api/delayedTasks'
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { createDelayedTask, updateDelayedTask } from '@/api/delayedTasks'
 import { getErrorMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,15 +13,26 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
-import type { CreateDelayedTaskRequest, HttpMethod } from '@/types'
+import type { CreateDelayedTaskRequest, UpdateDelayedTaskRequest, DelayedTask, HttpMethod } from '@/types'
 
 interface DelayedTaskFormProps {
   workspaceId: string
+  task?: DelayedTask
   onSuccess: () => void
   onCancel: () => void
 }
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
+
+// Format date as local datetime string for datetime-local input
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
 
 // Helper to get default datetime (now + 1 hour)
 function getDefaultDateTime(): string {
@@ -29,20 +41,23 @@ function getDefaultDateTime(): string {
   date.setMinutes(0)
   date.setSeconds(0)
   date.setMilliseconds(0)
-  return date.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:mm
+  return formatDateTimeLocal(date)
 }
 
 // Quick schedule options
 const QUICK_SCHEDULES = [
-  { label: 'In 5 minutes', minutes: 5 },
-  { label: 'In 15 minutes', minutes: 15 },
-  { label: 'In 30 minutes', minutes: 30 },
-  { label: 'In 1 hour', minutes: 60 },
-  { label: 'In 3 hours', minutes: 180 },
-  { label: 'In 24 hours', minutes: 1440 },
+  { key: 'in5minutes', minutes: 5 },
+  { key: 'in15minutes', minutes: 15 },
+  { key: 'in30minutes', minutes: 30 },
+  { key: 'in1hour', minutes: 60 },
+  { key: 'in3hours', minutes: 180 },
+  { key: 'in24hours', minutes: 1440 },
 ]
 
-export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTaskFormProps) {
+export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: DelayedTaskFormProps) {
+  const { t } = useTranslation()
+  const isEditMode = !!task
+
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [method, setMethod] = useState<HttpMethod>('GET')
@@ -58,10 +73,27 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Initialize form with task data in edit mode
+  useEffect(() => {
+    if (task) {
+      setName(task.name || '')
+      setUrl(task.url)
+      setMethod(task.method)
+      setExecuteAt(formatDateTimeLocal(new Date(task.execute_at)))
+      setTimeoutSeconds(task.timeout_seconds)
+      setRetryCount(task.retry_count)
+      setHeaders(JSON.stringify(task.headers, null, 2))
+      setBody(task.body || '')
+      setIdempotencyKey(task.idempotency_key || '')
+      setCallbackUrl(task.callback_url || '')
+      setTags(task.tags.join(', '))
+    }
+  }, [task])
+
   const handleQuickSchedule = (minutes: number) => {
     const date = new Date()
     date.setMinutes(date.getMinutes() + minutes)
-    setExecuteAt(date.toISOString().slice(0, 16))
+    setExecuteAt(formatDateTimeLocal(date))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,18 +102,18 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
 
     // Validate
     if (!url.trim()) {
-      setError('URL is required')
+      setError(t('taskForm.urlRequired'))
       return
     }
     if (!executeAt) {
-      setError('Execution time is required')
+      setError(t('taskForm.executeAtRequired'))
       return
     }
 
     // Validate execute_at is in the future
     const executeAtDate = new Date(executeAt)
     if (executeAtDate <= new Date()) {
-      setError('Execution time must be in the future')
+      setError(t('taskForm.executeAtFuture'))
       return
     }
 
@@ -89,28 +121,43 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
     try {
       parsedHeaders = headers.trim() ? JSON.parse(headers) : {}
     } catch {
-      setError('Invalid JSON in headers')
+      setError(t('taskForm.invalidHeadersJson'))
       return
     }
 
     setIsLoading(true)
 
     try {
-      const data: CreateDelayedTaskRequest = {
-        url: url.trim(),
-        method,
-        execute_at: new Date(executeAt).toISOString(),
-        name: name.trim() || undefined,
-        timeout_seconds: timeoutSeconds,
-        retry_count: retryCount,
-        headers: parsedHeaders,
-        body: body.trim() || undefined,
-        idempotency_key: idempotencyKey.trim() || undefined,
-        callback_url: callbackUrl.trim() || undefined,
-        tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      if (isEditMode && task) {
+        const data: UpdateDelayedTaskRequest = {
+          url: url.trim(),
+          method,
+          execute_at: new Date(executeAt).toISOString(),
+          name: name.trim() || undefined,
+          timeout_seconds: timeoutSeconds,
+          retry_count: retryCount,
+          headers: parsedHeaders,
+          body: body.trim() || undefined,
+          callback_url: callbackUrl.trim() || undefined,
+          tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        }
+        await updateDelayedTask(workspaceId, task.id, data)
+      } else {
+        const data: CreateDelayedTaskRequest = {
+          url: url.trim(),
+          method,
+          execute_at: new Date(executeAt).toISOString(),
+          name: name.trim() || undefined,
+          timeout_seconds: timeoutSeconds,
+          retry_count: retryCount,
+          headers: parsedHeaders,
+          body: body.trim() || undefined,
+          idempotency_key: idempotencyKey.trim() || undefined,
+          callback_url: callbackUrl.trim() || undefined,
+          tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+        }
+        await createDelayedTask(workspaceId, data)
       }
-
-      await createDelayedTask(workspaceId, data)
       onSuccess()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -129,17 +176,17 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">Name (optional)</Label>
+          <Label htmlFor="name">{t('taskForm.nameOptional')}</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Send welcome email"
+            placeholder={t('taskForm.namePlaceholder')}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="method">HTTP Method</Label>
+          <Label htmlFor="method">{t('taskForm.method')}</Label>
           <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
             <SelectTrigger>
               <SelectValue />
@@ -154,19 +201,19 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="url">URL *</Label>
+        <Label htmlFor="url">{t('taskForm.url')} *</Label>
         <Input
           id="url"
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://api.example.com/webhook"
+          placeholder={t('taskForm.urlPlaceholder')}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="executeAt">Execute At *</Label>
+        <Label htmlFor="executeAt">{t('taskForm.executeAt')} *</Label>
         <div className="flex gap-2">
           <Input
             id="executeAt"
@@ -186,7 +233,7 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
               size="sm"
               onClick={() => handleQuickSchedule(s.minutes)}
             >
-              {s.label}
+              {t(`taskForm.${s.key}`)}
             </Button>
           ))}
         </div>
@@ -194,7 +241,7 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="timeout">Timeout (seconds)</Label>
+          <Label htmlFor="timeout">{t('taskForm.timeoutSeconds')}</Label>
           <Input
             id="timeout"
             type="number"
@@ -206,7 +253,7 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="retries">Retry Count</Label>
+          <Label htmlFor="retries">{t('taskForm.retryCount')}</Label>
           <Input
             id="retries"
             type="number"
@@ -219,19 +266,19 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="headers">Headers (JSON)</Label>
+        <Label htmlFor="headers">{t('taskForm.headers')} (JSON)</Label>
         <textarea
           id="headers"
           value={headers}
           onChange={(e) => setHeaders(e.target.value)}
-          placeholder='{"Content-Type": "application/json"}'
+          placeholder={t('taskForm.headersPlaceholder')}
           className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
         />
       </div>
 
       {(method === 'POST' || method === 'PUT' || method === 'PATCH') && (
         <div className="space-y-2">
-          <Label htmlFor="body">Request Body</Label>
+          <Label htmlFor="body">{t('taskForm.body')}</Label>
           <textarea
             id="body"
             value={body}
@@ -243,38 +290,40 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
       )}
 
       <div className="space-y-4 border-t pt-4">
-        <p className="text-sm text-muted-foreground">Advanced Options</p>
+        <p className="text-sm text-muted-foreground">{t('taskForm.advancedOptions')}</p>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="idempotencyKey">Idempotency Key</Label>
-            <Input
-              id="idempotencyKey"
-              value={idempotencyKey}
-              onChange={(e) => setIdempotencyKey(e.target.value)}
-              placeholder="unique-task-id-123"
-            />
-            <p className="text-xs text-muted-foreground">
-              Prevents duplicate tasks with the same key
-            </p>
-          </div>
+        <div className={`grid gap-4 ${isEditMode ? '' : 'md:grid-cols-2'}`}>
+          {!isEditMode && (
+            <div className="space-y-2">
+              <Label htmlFor="idempotencyKey">{t('taskForm.idempotencyKey')}</Label>
+              <Input
+                id="idempotencyKey"
+                value={idempotencyKey}
+                onChange={(e) => setIdempotencyKey(e.target.value)}
+                placeholder="unique-task-id-123"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('taskForm.idempotencyKeyHint')}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags">{t('taskForm.tags')}</Label>
             <Input
               id="tags"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="email, welcome, user-123"
+              placeholder={t('taskForm.tagsPlaceholder')}
             />
             <p className="text-xs text-muted-foreground">
-              Comma-separated list of tags
+              {t('taskForm.tagsHint')}
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="callbackUrl">Callback URL</Label>
+          <Label htmlFor="callbackUrl">{t('taskForm.callbackUrl')}</Label>
           <Input
             id="callbackUrl"
             type="url"
@@ -283,18 +332,18 @@ export function DelayedTaskForm({ workspaceId, onSuccess, onCancel }: DelayedTas
             placeholder="https://api.example.com/task-completed"
           />
           <p className="text-xs text-muted-foreground">
-            URL to call after task execution (success or failure)
+            {t('taskForm.callbackUrlHint')}
           </p>
         </div>
       </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Schedule Task
+          {isEditMode ? t('common.saveChanges') : t('taskForm.scheduleTask')}
         </Button>
       </div>
     </form>

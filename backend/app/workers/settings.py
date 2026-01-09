@@ -3,6 +3,11 @@
 from arq.connections import RedisSettings
 
 from app.config import settings
+from app.workers.tasks import (
+    execute_cron_task,
+    execute_delayed_task,
+    execute_http_task,
+)
 
 
 def get_redis_settings() -> RedisSettings:
@@ -34,14 +39,11 @@ class WorkerSettings:
     health_check_interval = 60  # Seconds between health checks
     health_check_key = "cronbox:worker:health"
 
-    # Queue names
-    queue_name = "cronbox:tasks"
-
-    # Import task functions
+    # Task functions
     functions = [
-        "app.workers.tasks.execute_http_task",
-        "app.workers.tasks.execute_cron_task",
-        "app.workers.tasks.execute_delayed_task",
+        execute_http_task,
+        execute_cron_task,
+        execute_delayed_task,
     ]
 
     # Startup and shutdown hooks

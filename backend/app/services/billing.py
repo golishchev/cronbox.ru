@@ -377,8 +377,61 @@ class BillingService:
         )
         return list(result.scalars().all())
 
-    async def check_expired_subscriptions(self, db: AsyncSession) -> int:
-        """Check and mark expired subscriptions. Returns count of expired."""
+    async def get_expiring_subscriptions(
+        self, db: AsyncSession, days_before: int
+    ) -> list[Subscription]:
+        """Get subscriptions expiring in exactly N days (within that day)."""
+        now = datetime.now(timezone.utc)
+        target_date = now + timedelta(days=days_before)
+        start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = start_of_day + timedelta(days=1)
+
+        result = await db.execute(
+            select(Subscription).where(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.current_period_end >= start_of_day,
+                Subscription.current_period_end < end_of_day,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def auto_pause_excess_tasks(
+        self, db: AsyncSession, workspace_id: uuid.UUID, max_tasks: int
+    ) -> int:
+        """Pause cron tasks exceeding the limit. Returns count of paused tasks."""
+        from app.db.repositories.cron_tasks import CronTaskRepository
+
+        cron_repo = CronTaskRepository(db)
+        # Get all active, non-paused tasks
+        active_tasks = await cron_repo.get_by_workspace(
+            workspace_id=workspace_id,
+            is_active=True,
+            limit=1000,
+        )
+        # Filter to only non-paused tasks
+        non_paused_tasks = [t for t in active_tasks if not t.is_paused]
+
+        if len(non_paused_tasks) <= max_tasks:
+            return 0
+
+        # Sort by created_at, keep oldest tasks active
+        sorted_tasks = sorted(non_paused_tasks, key=lambda t: t.created_at)
+        tasks_to_pause = sorted_tasks[max_tasks:]
+
+        count = 0
+        for task in tasks_to_pause:
+            await cron_repo.pause(task)
+            count += 1
+            logger.info(
+                "Task auto-paused due to subscription expiry",
+                task_id=str(task.id),
+                workspace_id=str(workspace_id),
+            )
+
+        return count
+
+    async def check_expired_subscriptions(self, db: AsyncSession) -> list[tuple[uuid.UUID, int]]:
+        """Check and mark expired subscriptions. Returns list of (workspace_id, paused_tasks_count)."""
         now = datetime.now(timezone.utc)
 
         # Find active subscriptions that have expired
@@ -390,7 +443,7 @@ class BillingService:
         )
         subscriptions = result.scalars().all()
 
-        count = 0
+        expired_workspaces: list[tuple[uuid.UUID, int]] = []
         free_plan = await self.get_plan_by_name(db, "free")
 
         for subscription in subscriptions:
@@ -399,7 +452,9 @@ class BillingService:
             else:
                 subscription.status = SubscriptionStatus.EXPIRED
 
-            # Revert workspace to free plan
+            paused_count = 0
+
+            # Revert workspace to free plan and pause excess tasks
             if free_plan:
                 workspace_result = await db.execute(
                     select(Workspace).where(Workspace.id == subscription.workspace_id)
@@ -407,14 +462,21 @@ class BillingService:
                 workspace = workspace_result.scalar_one_or_none()
                 if workspace:
                     workspace.plan_id = free_plan.id
+                    # Pause tasks exceeding free plan limit
+                    paused_count = await self.auto_pause_excess_tasks(
+                        db, workspace.id, free_plan.max_cron_tasks
+                    )
 
-            count += 1
+            expired_workspaces.append((subscription.workspace_id, paused_count))
 
-        if count > 0:
+        if expired_workspaces:
             await db.commit()
-            logger.info("Expired subscriptions processed", count=count)
+            logger.info(
+                "Expired subscriptions processed",
+                count=len(expired_workspaces),
+            )
 
-        return count
+        return expired_workspaces
 
 
 # Global instance
