@@ -105,10 +105,10 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Filters
-  const [filterCode, setFilterCode] = useState<string>('')
-  const [filterLanguage, setFilterLanguage] = useState<string>('')
-  const [filterChannel, setFilterChannel] = useState<string>('')
+  // Filters (use 'all' instead of '' for Radix Select compatibility)
+  const [filterCode, setFilterCode] = useState<string>('all')
+  const [filterLanguage, setFilterLanguage] = useState<string>('all')
+  const [filterChannel, setFilterChannel] = useState<string>('all')
 
   // Edit dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -131,9 +131,9 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
     setIsLoading(true)
     try {
       const params: Record<string, string> = {}
-      if (filterCode) params.code = filterCode
-      if (filterLanguage) params.language = filterLanguage
-      if (filterChannel) params.channel = filterChannel
+      if (filterCode && filterCode !== 'all') params.code = filterCode
+      if (filterLanguage && filterLanguage !== 'all') params.language = filterLanguage
+      if (filterChannel && filterChannel !== 'all') params.channel = filterChannel
 
       const response = await getNotificationTemplates(
         Object.keys(params).length > 0 ? params : undefined
@@ -290,7 +290,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
               <SelectValue placeholder={t('admin.templates.filterCode')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('common.all')}</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
               {TEMPLATE_CODES.map((code) => (
                 <SelectItem key={code} value={code}>
                   {getCodeLabel(code)}
@@ -305,7 +305,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
               <SelectValue placeholder={t('admin.templates.filterLanguage')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('common.all')}</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
               {LANGUAGES.map((lang) => (
                 <SelectItem key={lang} value={lang}>
                   {lang.toUpperCase()}
@@ -320,7 +320,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
               <SelectValue placeholder={t('admin.templates.filterChannel')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('common.all')}</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
               {CHANNELS.map((channel) => (
                 <SelectItem key={channel} value={channel}>
                   {channel === 'EMAIL' ? 'Email' : 'Telegram'}
