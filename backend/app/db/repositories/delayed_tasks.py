@@ -66,7 +66,11 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
         return result.scalar_one_or_none()
 
     async def get_due_tasks(self, now: datetime, limit: int = 100) -> list[DelayedTask]:
-        """Get tasks due for execution."""
+        """Get tasks due for execution.
+
+        Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
+        when multiple scheduler instances are running.
+        """
         stmt = (
             select(DelayedTask)
             .where(
@@ -77,6 +81,7 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
             )
             .order_by(DelayedTask.execute_at)
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

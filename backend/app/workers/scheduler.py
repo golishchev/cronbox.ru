@@ -16,7 +16,6 @@ from arq import create_pool
 from croniter import croniter
 import pytz
 
-from app.config import settings
 from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
@@ -58,24 +57,24 @@ class TaskScheduler:
         logger.info("Scheduler stopped")
 
     async def _poll_cron_tasks(self):
-        """Poll for due cron tasks every 10 seconds."""
+        """Poll for due cron tasks every 2 seconds for improved accuracy."""
         while self.running:
             try:
                 await self._process_due_cron_tasks()
             except Exception as e:
                 logger.error("Error processing cron tasks", error=str(e))
 
-            await asyncio.sleep(10)
+            await asyncio.sleep(2)
 
     async def _poll_delayed_tasks(self):
-        """Poll for due delayed tasks every 5 seconds."""
+        """Poll for due delayed tasks every 1 second for improved accuracy."""
         while self.running:
             try:
                 await self._process_due_delayed_tasks()
             except Exception as e:
                 logger.error("Error processing delayed tasks", error=str(e))
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
     async def _update_next_run_times(self):
         """Update next_run_at for tasks that need it, every minute."""
@@ -151,121 +150,171 @@ class TaskScheduler:
                 )
 
     async def _process_due_cron_tasks(self):
-        """Find and enqueue due cron tasks."""
+        """Find and enqueue due cron tasks.
+
+        Each task is processed in a separate transaction to ensure
+        FOR UPDATE lock is held until commit for that specific task.
+        """
         now = datetime.utcnow()
+        processed = 0
+        max_tasks_per_cycle = 100
 
-        async with async_session_factory() as db:
-            cron_repo = CronTaskRepository(db)
-            due_tasks = await cron_repo.get_due_tasks(now, limit=100)
+        while processed < max_tasks_per_cycle:
+            async with async_session_factory() as db:
+                cron_repo = CronTaskRepository(db)
+                # Fetch ONE task at a time with row lock
+                due_tasks = await cron_repo.get_due_tasks(now, limit=1)
 
-            if due_tasks:
-                logger.info(f"Found {len(due_tasks)} due cron tasks")
+                if not due_tasks:
+                    break  # No more due tasks
 
-            for task in due_tasks:
-                # Calculate next run time immediately to prevent re-enqueueing
-                tz = pytz.timezone(task.timezone)
-                now_tz = datetime.now(tz)
-                cron = croniter(task.schedule, now_tz)
-                next_run = cron.get_next(datetime)
-                next_run_utc = next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+                task = due_tasks[0]
+                try:
+                    # Calculate next run time immediately to prevent re-enqueueing
+                    tz = pytz.timezone(task.timezone)
+                    now_tz = datetime.now(tz)
+                    cron = croniter(task.schedule, now_tz)
+                    next_run = cron.get_next(datetime)
+                    next_run_utc = next_run.astimezone(pytz.UTC).replace(tzinfo=None)
 
-                # Update next_run_at to prevent re-processing
-                task.next_run_at = next_run_utc
-                await db.commit()
+                    # Update next_run_at in memory (row is still locked by FOR UPDATE)
+                    task.next_run_at = next_run_utc
 
-                # Check if task is assigned to an external worker
-                if task.worker_id:
-                    # Enqueue for external worker (polling)
-                    task_info = WorkerTaskInfo(
-                        task_id=task.id,
-                        task_type="cron",
-                        url=task.url,
-                        method=task.method.value,
-                        headers=task.headers or {},
-                        body=task.body,
-                        timeout_seconds=task.timeout_seconds,
-                        retry_count=task.retry_count,
-                        retry_delay_seconds=task.retry_delay_seconds,
-                        workspace_id=task.workspace_id,
-                        task_name=task.name,
-                    )
-                    await worker_service.enqueue_task_for_worker(task.worker_id, task_info)
+                    # Enqueue BEFORE commit to ensure task is queued while row is locked
+                    # This prevents race conditions with other scheduler instances
+                    if task.worker_id:
+                        # Enqueue for external worker (polling)
+                        task_info = WorkerTaskInfo(
+                            task_id=task.id,
+                            task_type="cron",
+                            url=task.url,
+                            method=task.method.value,
+                            headers=task.headers or {},
+                            body=task.body,
+                            timeout_seconds=task.timeout_seconds,
+                            retry_count=task.retry_count,
+                            retry_delay_seconds=task.retry_delay_seconds,
+                            workspace_id=task.workspace_id,
+                            task_name=task.name,
+                        )
+                        await worker_service.enqueue_task_for_worker(task.worker_id, task_info)
 
-                    logger.info(
-                        "Enqueued cron task for external worker",
+                        logger.info(
+                            "Enqueued cron task for external worker",
+                            task_id=str(task.id),
+                            task_name=task.name,
+                            worker_id=str(task.worker_id),
+                            next_run_at=next_run_utc.isoformat(),
+                        )
+                    else:
+                        # Enqueue for cloud worker (arq)
+                        await self.redis_pool.enqueue_job(
+                            "execute_cron_task",
+                            task_id=str(task.id),
+                            retry_attempt=0,
+                        )
+
+                        logger.info(
+                            "Enqueued cron task for cloud worker",
+                            task_id=str(task.id),
+                            task_name=task.name,
+                            next_run_at=next_run_utc.isoformat(),
+                        )
+
+                    # Commit releases the row lock after successful enqueue
+                    await db.commit()
+                    processed += 1
+
+                except Exception as e:
+                    await db.rollback()
+                    logger.error(
+                        "Error processing cron task",
                         task_id=str(task.id),
-                        task_name=task.name,
-                        worker_id=str(task.worker_id),
-                        next_run_at=next_run_utc.isoformat(),
+                        error=str(e),
                     )
-                else:
-                    # Enqueue for cloud worker (arq)
-                    await self.redis_pool.enqueue_job(
-                        "execute_cron_task",
-                        task_id=str(task.id),
-                        retry_attempt=0,
-                    )
+                    # Continue to next task on error
 
-                    logger.info(
-                        "Enqueued cron task for cloud worker",
-                        task_id=str(task.id),
-                        task_name=task.name,
-                        next_run_at=next_run_utc.isoformat(),
-                    )
+        if processed > 0:
+            logger.info(f"Processed {processed} cron tasks")
 
     async def _process_due_delayed_tasks(self):
-        """Find and enqueue due delayed tasks."""
+        """Find and enqueue due delayed tasks.
+
+        Each task is processed in a separate transaction to ensure
+        FOR UPDATE lock is held until commit for that specific task.
+        """
         now = datetime.utcnow()
+        processed = 0
+        max_tasks_per_cycle = 100
 
-        async with async_session_factory() as db:
-            delayed_repo = DelayedTaskRepository(db)
-            due_tasks = await delayed_repo.get_due_tasks(now, limit=100)
+        while processed < max_tasks_per_cycle:
+            async with async_session_factory() as db:
+                delayed_repo = DelayedTaskRepository(db)
+                # Fetch ONE task at a time with row lock
+                due_tasks = await delayed_repo.get_due_tasks(now, limit=1)
 
-            if due_tasks:
-                logger.info(f"Found {len(due_tasks)} due delayed tasks")
+                if not due_tasks:
+                    break  # No more due tasks
 
-            for task in due_tasks:
-                # Mark task as running to prevent re-enqueueing
-                task.status = TaskStatus.RUNNING
-                await db.commit()
+                task = due_tasks[0]
+                try:
+                    # Mark task as running in memory (row is still locked by FOR UPDATE)
+                    task.status = TaskStatus.RUNNING
 
-                # Check if task is assigned to an external worker
-                if task.worker_id:
-                    # Enqueue for external worker (polling)
-                    task_info = WorkerTaskInfo(
-                        task_id=task.id,
-                        task_type="delayed",
-                        url=task.url,
-                        method=task.method.value,
-                        headers=task.headers or {},
-                        body=task.body,
-                        timeout_seconds=task.timeout_seconds,
-                        retry_count=task.retry_count,
-                        retry_delay_seconds=task.retry_delay_seconds,
-                        workspace_id=task.workspace_id,
-                        task_name=task.name,
-                    )
-                    await worker_service.enqueue_task_for_worker(task.worker_id, task_info)
+                    # Enqueue BEFORE commit to ensure task is queued while row is locked
+                    # This prevents race conditions with other scheduler instances
+                    if task.worker_id:
+                        # Enqueue for external worker (polling)
+                        task_info = WorkerTaskInfo(
+                            task_id=task.id,
+                            task_type="delayed",
+                            url=task.url,
+                            method=task.method.value,
+                            headers=task.headers or {},
+                            body=task.body,
+                            timeout_seconds=task.timeout_seconds,
+                            retry_count=task.retry_count,
+                            retry_delay_seconds=task.retry_delay_seconds,
+                            workspace_id=task.workspace_id,
+                            task_name=task.name,
+                        )
+                        await worker_service.enqueue_task_for_worker(task.worker_id, task_info)
 
-                    logger.info(
-                        "Enqueued delayed task for external worker",
+                        logger.info(
+                            "Enqueued delayed task for external worker",
+                            task_id=str(task.id),
+                            task_name=task.name,
+                            worker_id=str(task.worker_id),
+                        )
+                    else:
+                        # Enqueue for cloud worker (arq)
+                        await self.redis_pool.enqueue_job(
+                            "execute_delayed_task",
+                            task_id=str(task.id),
+                            retry_attempt=0,
+                        )
+
+                        logger.info(
+                            "Enqueued delayed task for cloud worker",
+                            task_id=str(task.id),
+                            task_name=task.name,
+                        )
+
+                    # Commit releases the row lock after successful enqueue
+                    await db.commit()
+                    processed += 1
+
+                except Exception as e:
+                    await db.rollback()
+                    logger.error(
+                        "Error processing delayed task",
                         task_id=str(task.id),
-                        task_name=task.name,
-                        worker_id=str(task.worker_id),
+                        error=str(e),
                     )
-                else:
-                    # Enqueue for cloud worker (arq)
-                    await self.redis_pool.enqueue_job(
-                        "execute_delayed_task",
-                        task_id=str(task.id),
-                        retry_attempt=0,
-                    )
+                    # Continue to next task on error
 
-                    logger.info(
-                        "Enqueued delayed task for cloud worker",
-                        task_id=str(task.id),
-                        task_name=task.name,
-                    )
+        if processed > 0:
+            logger.info(f"Processed {processed} delayed tasks")
 
     async def _calculate_next_run_times(self):
         """Calculate next_run_at for tasks that don't have it set."""
