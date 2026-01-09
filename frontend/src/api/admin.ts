@@ -185,3 +185,73 @@ export async function updateAdminPlan(planId: string, data: UpdatePlanRequest): 
 export async function deleteAdminPlan(planId: string): Promise<void> {
   await apiClient.delete(`/admin/plans/${planId}`)
 }
+
+// Notification Templates
+
+export interface NotificationTemplate {
+  id: string
+  code: string
+  language: string
+  channel: string
+  subject: string | null
+  body: string
+  description: string | null
+  variables: string[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface NotificationTemplatesResponse {
+  templates: NotificationTemplate[]
+  total: number
+}
+
+export interface UpdateTemplateRequest {
+  subject?: string | null
+  body?: string
+  is_active?: boolean
+}
+
+export interface TemplatePreviewRequest {
+  body: string
+  subject?: string | null
+  variables: Record<string, string>
+}
+
+export interface TemplatePreviewResponse {
+  subject: string | null
+  body: string
+}
+
+export async function getNotificationTemplates(params?: {
+  code?: string
+  language?: string
+  channel?: string
+}): Promise<NotificationTemplatesResponse> {
+  const response = await apiClient.get<NotificationTemplatesResponse>('/admin/notification-templates', { params })
+  return response.data
+}
+
+export async function getNotificationTemplate(templateId: string): Promise<NotificationTemplate> {
+  const response = await apiClient.get<NotificationTemplate>(`/admin/notification-templates/${templateId}`)
+  return response.data
+}
+
+export async function updateNotificationTemplate(
+  templateId: string,
+  data: UpdateTemplateRequest
+): Promise<NotificationTemplate> {
+  const response = await apiClient.patch<NotificationTemplate>(`/admin/notification-templates/${templateId}`, data)
+  return response.data
+}
+
+export async function previewNotificationTemplate(data: TemplatePreviewRequest): Promise<TemplatePreviewResponse> {
+  const response = await apiClient.post<TemplatePreviewResponse>('/admin/notification-templates/preview', data)
+  return response.data
+}
+
+export async function resetNotificationTemplate(templateId: string): Promise<NotificationTemplate> {
+  const response = await apiClient.post<NotificationTemplate>(`/admin/notification-templates/reset/${templateId}`)
+  return response.data
+}
