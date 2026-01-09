@@ -22,11 +22,17 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cronbox-redis
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # Security: Redis with password authentication
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -147,7 +153,8 @@ services:
     container_name: cronbox-api
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      REDIS_URL: redis://redis:6379/0
+      # Security: Redis with password authentication
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET: ${JWT_SECRET}
       YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
@@ -186,7 +193,8 @@ services:
     container_name: cronbox-worker
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      REDIS_URL: redis://redis:6379/0
+      # Security: Redis with password authentication
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # Postal
@@ -218,7 +226,8 @@ services:
     container_name: cronbox-scheduler
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      REDIS_URL: redis://redis:6379/0
+      # Security: Redis with password authentication
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
     depends_on:
       postgres:
@@ -293,7 +302,9 @@ services:
     image: oliver006/redis_exporter:v1.55.0
     container_name: cronbox-redis-exporter
     environment:
+      # Security: Redis with password authentication
       REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     restart: unless-stopped
     depends_on:
       redis:

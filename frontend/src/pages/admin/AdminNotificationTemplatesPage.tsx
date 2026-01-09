@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 import {
   getNotificationTemplates,
   updateNotificationTemplate,
@@ -544,7 +545,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
               </Label>
               <div
                 className="p-4 bg-muted rounded-md prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: previewBody }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewBody) }}
               />
             </div>
           </div>
