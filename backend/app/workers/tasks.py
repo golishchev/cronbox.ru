@@ -8,11 +8,15 @@ import structlog
 from croniter import croniter
 import pytz
 
+from app.core.url_validator import (
+    SSRFError,
+    validate_url_for_ssrf,
+    sanitize_url_for_logging,
+)
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.executions import ExecutionRepository
-from app.db.repositories.workspaces import WorkspaceRepository
-from app.models.cron_task import HttpMethod, TaskStatus
+from app.models.cron_task import TaskStatus
 
 logger = structlog.get_logger()
 
@@ -29,9 +33,31 @@ async def execute_http_task(
     """Execute an HTTP request and return the result.
 
     This is the core HTTP execution function used by both cron and delayed tasks.
+
+    Security: URLs are validated against SSRF attacks before execution.
     """
     headers = headers or {}
     start_time = datetime.utcnow()
+
+    # SSRF Protection: Validate URL before making request
+    try:
+        validate_url_for_ssrf(url)
+    except SSRFError as e:
+        logger.warning(
+            "SSRF validation failed",
+            url=sanitize_url_for_logging(url),
+            error=e.message,
+        )
+        return {
+            "success": False,
+            "status_code": None,
+            "headers": None,
+            "body": None,
+            "size_bytes": None,
+            "duration_ms": 0,
+            "error": f"URL validation failed: {e.message}",
+            "error_type": "ssrf_blocked",
+        }
 
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:
@@ -109,7 +135,6 @@ async def execute_cron_task(
     async with db_factory() as db:
         cron_repo = CronTaskRepository(db)
         exec_repo = ExecutionRepository(db)
-        workspace_repo = WorkspaceRepository(db)
 
         # Get the task
         task = await cron_repo.get_by_id(UUID(task_id))
@@ -135,11 +160,12 @@ async def execute_cron_task(
             retry_attempt=retry_attempt,
         )
 
+        # Log with sanitized URL (credentials removed)
         logger.info(
             "Executing cron task",
             task_id=task_id,
             task_name=task.name,
-            url=task.url,
+            url=sanitize_url_for_logging(task.url),
             retry_attempt=retry_attempt,
         )
 
@@ -266,11 +292,12 @@ async def execute_delayed_task(
             retry_attempt=retry_attempt,
         )
 
+        # Log with sanitized URL (credentials removed)
         logger.info(
             "Executing delayed task",
             task_id=task_id,
             task_name=task.name,
-            url=task.url,
+            url=sanitize_url_for_logging(task.url),
             retry_attempt=retry_attempt,
         )
 

@@ -1,5 +1,6 @@
 import secrets
 import structlog
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,19 +59,82 @@ class AuthService:
         return user, tokens
 
     async def login(self, email: str, password: str) -> tuple[User, TokenResponse]:
-        """Authenticate user and return tokens."""
+        """
+        Authenticate user and return tokens.
+
+        Security features:
+        - Account lockout after repeated failed attempts
+        - Timing-safe password comparison
+        - Failed attempt tracking
+        """
         user = await self.user_repo.get_by_email(email)
 
-        if not user or not verify_password(password, user.password_hash):
+        # Check if account is locked (even if user doesn't exist, continue to prevent enumeration)
+        if user and user.is_locked():
+            remaining_minutes = int(
+                (user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60
+            ) + 1
+            logger.warning(
+                "Login attempt on locked account",
+                email=email,
+                locked_until=user.locked_until.isoformat() if user.locked_until else None,
+            )
+            raise UnauthorizedError(
+                f"Account is temporarily locked. Try again in {remaining_minutes} minutes."
+            )
+
+        # Verify password (timing-safe via bcrypt)
+        password_valid = user is not None and verify_password(password, user.password_hash)
+
+        if not password_valid:
+            # Track failed login attempt
+            if user:
+                await self._handle_failed_login(user)
             raise UnauthorizedError("Invalid email or password")
 
         if not user.is_active:
             raise UnauthorizedError("Account is disabled")
 
+        # Successful login - reset failed attempts
+        if user.failed_login_attempts > 0:
+            await self._reset_failed_attempts(user)
+
         # Generate tokens
         tokens = self._create_tokens(user)
 
+        logger.info("User logged in successfully", user_id=str(user.id))
         return user, tokens
+
+    async def _handle_failed_login(self, user: User) -> None:
+        """Handle failed login attempt - increment counter and possibly lock account."""
+        user.failed_login_attempts += 1
+
+        # Check if we should lock the account
+        if user.failed_login_attempts >= settings.max_failed_login_attempts:
+            user.locked_until = datetime.now(timezone.utc) + timedelta(
+                minutes=settings.account_lockout_minutes
+            )
+            logger.warning(
+                "Account locked due to too many failed attempts",
+                user_id=str(user.id),
+                failed_attempts=user.failed_login_attempts,
+                locked_until=user.locked_until.isoformat(),
+            )
+        else:
+            logger.info(
+                "Failed login attempt",
+                user_id=str(user.id),
+                failed_attempts=user.failed_login_attempts,
+                max_attempts=settings.max_failed_login_attempts,
+            )
+
+        await self.db.commit()
+
+    async def _reset_failed_attempts(self, user: User) -> None:
+        """Reset failed login attempts after successful login."""
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        await self.db.commit()
 
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         """Refresh access token using refresh token."""
