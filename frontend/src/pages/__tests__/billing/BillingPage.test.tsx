@@ -117,8 +117,8 @@ describe('BillingPage', () => {
 
     await waitFor(() => {
       expect(billingApi.getPlans).toHaveBeenCalled()
-      expect(billingApi.getSubscription).toHaveBeenCalledWith('workspace-1')
-      expect(billingApi.getPaymentHistory).toHaveBeenCalledWith('workspace-1')
+      expect(billingApi.getSubscription).toHaveBeenCalled()
+      expect(billingApi.getPaymentHistory).toHaveBeenCalled()
     })
   })
 

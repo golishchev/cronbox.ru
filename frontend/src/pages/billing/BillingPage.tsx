@@ -59,14 +59,12 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   }, [currentWorkspace])
 
   const loadBillingData = async () => {
-    if (!currentWorkspace) return
-
     setLoading(true)
     try {
       const [plansData, subscriptionData, paymentsData] = await Promise.all([
         getPlans(),
-        getSubscription(currentWorkspace.id),
-        getPaymentHistory(currentWorkspace.id),
+        getSubscription(),
+        getPaymentHistory(),
       ])
       setPlans(plansData)
       setSubscription(subscriptionData)
@@ -79,14 +77,13 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   }
 
   const handleUpgrade = async () => {
-    if (!currentWorkspace || !selectedPlan) return
+    if (!selectedPlan) return
 
     setProcessing(true)
     setError(null)
 
     try {
       const payment = await createPayment(
-        currentWorkspace.id,
         selectedPlan.id,
         billingPeriod,
         window.location.href
@@ -107,13 +104,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   }
 
   const handleCancel = async () => {
-    if (!currentWorkspace) return
-
     setProcessing(true)
     setError(null)
 
     try {
-      await cancelSubscription(currentWorkspace.id)
+      await cancelSubscription()
       await loadBillingData()
       setShowCancelDialog(false)
     } catch (err: any) {

@@ -44,22 +44,21 @@ export interface Payment {
 }
 
 export async function getPlans(): Promise<Plan[]> {
-  const response = await apiClient.get('/plans')
+  const response = await apiClient.get('/billing/plans')
   return response.data
 }
 
-export async function getSubscription(workspaceId: string): Promise<Subscription | null> {
-  const response = await apiClient.get(`/workspaces/${workspaceId}/subscription`)
+export async function getSubscription(): Promise<Subscription | null> {
+  const response = await apiClient.get('/billing/subscription')
   return response.data
 }
 
 export async function createPayment(
-  workspaceId: string,
   planId: string,
   billingPeriod: 'monthly' | 'yearly' = 'monthly',
   returnUrl?: string
 ): Promise<Payment> {
-  const response = await apiClient.post(`/workspaces/${workspaceId}/subscribe`, {
+  const response = await apiClient.post('/billing/subscribe', {
     plan_id: planId,
     billing_period: billingPeriod,
     return_url: returnUrl,
@@ -68,20 +67,18 @@ export async function createPayment(
 }
 
 export async function cancelSubscription(
-  workspaceId: string,
   immediately: boolean = false
 ): Promise<void> {
-  await apiClient.post(`/workspaces/${workspaceId}/subscription/cancel`, {
+  await apiClient.post('/billing/subscription/cancel', {
     immediately,
   })
 }
 
 export async function getPaymentHistory(
-  workspaceId: string,
   limit: number = 20,
   offset: number = 0
 ): Promise<Payment[]> {
-  const response = await apiClient.get(`/workspaces/${workspaceId}/payments`, {
+  const response = await apiClient.get('/billing/payments', {
     params: { limit, offset },
   })
   return response.data

@@ -401,7 +401,7 @@ async def list_workspaces(
             select(Subscription)
             .options(selectinload(Subscription.plan))
             .where(
-                Subscription.workspace_id == ws.id,
+                Subscription.user_id == ws.owner_id,
                 Subscription.status == SubscriptionStatus.ACTIVE,
             )
             .order_by(Subscription.created_at.desc())
