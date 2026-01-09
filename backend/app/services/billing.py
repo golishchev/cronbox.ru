@@ -216,14 +216,78 @@ class BillingService:
         payment: Payment,
         payment_data: dict,
     ) -> bool:
-        """Handle successful payment."""
+        """Handle successful payment.
+
+        Security measures:
+        1. Check payment is not already processed (idempotency)
+        2. Validate amount matches our records
+        3. Validate currency matches our records
+        """
+        # Idempotency: Check if payment already processed
+        if payment.status == PaymentStatus.SUCCEEDED:
+            logger.info(
+                "Payment already processed (idempotent)",
+                payment_id=str(payment.id),
+            )
+            return True
+
+        if payment.status != PaymentStatus.PENDING:
+            logger.warning(
+                "Invalid payment status for succeeded event",
+                payment_id=str(payment.id),
+                current_status=payment.status.value,
+            )
+            return False
+
+        # Validate amount matches our records
+        webhook_amount = payment_data.get("amount", {})
+        webhook_amount_value = webhook_amount.get("value", "0")
+        webhook_currency = webhook_amount.get("currency", "")
+
+        try:
+            # Convert to kopeks (YooKassa sends rubles as string "299.00")
+            webhook_amount_kopeks = int(float(webhook_amount_value) * 100)
+        except (ValueError, TypeError):
+            logger.error(
+                "Invalid amount format in webhook",
+                payment_id=str(payment.id),
+                webhook_amount=webhook_amount_value,
+            )
+            return False
+
+        # Validate amount
+        if webhook_amount_kopeks != payment.amount:
+            logger.error(
+                "Amount mismatch in webhook",
+                payment_id=str(payment.id),
+                expected_amount=payment.amount,
+                webhook_amount=webhook_amount_kopeks,
+            )
+            return False
+
+        # Validate currency
+        if webhook_currency != payment.currency:
+            logger.error(
+                "Currency mismatch in webhook",
+                payment_id=str(payment.id),
+                expected_currency=payment.currency,
+                webhook_currency=webhook_currency,
+            )
+            return False
+
+        # All validations passed - update payment
         payment.status = PaymentStatus.SUCCEEDED
         payment.paid_at = datetime.now(timezone.utc)
 
         # Save payment method for recurring payments
         payment_method = payment_data.get("payment_method")
         if payment_method:
-            payment.yookassa_payment_method = payment_method
+            # Only save the payment method ID, not the full object
+            payment.yookassa_payment_method = {
+                "id": payment_method.get("id"),
+                "type": payment_method.get("type"),
+                "saved": payment_method.get("saved"),
+            }
 
         # Get plan info from extra_data
         extra_data = payment.extra_data or {}

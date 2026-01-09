@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "CronBox"
     debug: bool = False
+    environment: str = "development"  # development, staging, production
     secret_key: str = "change-me-in-production"
 
     # Database
@@ -26,6 +27,15 @@ class Settings(BaseSettings):
 
     # JWT
     jwt_secret: str = "change-me-jwt-secret"
+
+    # Security settings
+    # Rate limiting for auth endpoints (requests per minute)
+    auth_rate_limit_login: int = 5
+    auth_rate_limit_register: int = 3
+    auth_rate_limit_password_reset: int = 3
+    # Account lockout
+    max_failed_login_attempts: int = 5
+    account_lockout_minutes: int = 15
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
@@ -33,6 +43,7 @@ class Settings(BaseSettings):
     # YooKassa
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
+    yookassa_webhook_secret: str = ""  # For webhook signature verification
 
     # Telegram
     telegram_bot_token: str = ""

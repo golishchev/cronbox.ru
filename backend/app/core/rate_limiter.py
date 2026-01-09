@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config import settings
 from app.core.redis import redis_client
 
 
@@ -101,9 +102,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         "/api/v1/docs",
         "/api/v1/redoc",
         "/api/v1/openapi.json",
-        "/api/v1/webhooks/stripe",
-        "/api/v1/webhooks/yookassa",
+        # Note: webhook paths now have their own IP-based protection
     }
+
+    # Auth endpoints with stricter rate limits (path prefix -> requests per minute)
+    AUTH_RATE_LIMITS: dict[str, int] = {}
 
     def __init__(self, app, default_requests_per_minute: int = 100):
         super().__init__(app)
@@ -111,15 +114,66 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             requests_per_minute=default_requests_per_minute
         )
 
+        # Initialize auth-specific rate limiters from settings
+        self.AUTH_RATE_LIMITS = {
+            "/v1/auth/login": settings.auth_rate_limit_login,
+            "/v1/auth/register": settings.auth_rate_limit_register,
+            "/v1/auth/forgot-password": settings.auth_rate_limit_password_reset,
+            "/v1/auth/reset-password": settings.auth_rate_limit_password_reset,
+        }
+
+        # Create rate limiters for auth endpoints
+        self.auth_limiters: dict[str, RateLimiter] = {}
+        for path, limit in self.AUTH_RATE_LIMITS.items():
+            self.auth_limiters[path] = RateLimiter(
+                requests_per_minute=limit,
+                key_prefix=f"ratelimit:auth:{path.replace('/', '_')}"
+            )
+
+    def _get_auth_limiter(self, path: str) -> RateLimiter | None:
+        """Get rate limiter for auth endpoint if applicable."""
+        for auth_path, limiter in self.auth_limiters.items():
+            if path.startswith(auth_path):
+                return limiter
+        return None
+
     async def dispatch(self, request: Request, call_next: Callable):
         # Skip rate limiting for excluded paths
         if request.url.path in self.EXCLUDED_PATHS:
             return await call_next(request)
 
-        # Get client identifier (IP address or user ID from JWT)
+        # Get client identifier (IP address for auth, token hash for authenticated)
         identifier = self._get_identifier(request)
+        path = request.url.path
 
-        # Check rate limit
+        # Check for auth-specific rate limiting (stricter limits)
+        auth_limiter = self._get_auth_limiter(path)
+        if auth_limiter:
+            # For auth endpoints, always use IP-based limiting
+            ip_identifier = self._get_ip_identifier(request)
+            try:
+                is_allowed, count, remaining = await auth_limiter.is_allowed(
+                    ip_identifier
+                )
+                if not is_allowed:
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "error": "rate_limit_exceeded",
+                            "message": "Too many attempts. Please try again later.",
+                            "retry_after": 60,
+                        },
+                        headers={
+                            "Retry-After": "60",
+                            "X-RateLimit-Limit": str(auth_limiter.requests_per_minute),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": str(60),
+                        },
+                    )
+            except Exception:
+                pass  # Continue with default rate limiting
+
+        # Check default rate limit
         try:
             is_allowed, count, remaining = await self.default_limiter.is_allowed(
                 identifier
@@ -156,6 +210,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
+    def _get_ip_identifier(self, request: Request) -> str:
+        """Get IP-based identifier for rate limiting."""
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
+        return f"ip:{client_ip}"
+
     def _get_identifier(self, request: Request) -> str:
         """Get unique identifier for rate limiting."""
         # Try to get user ID from auth header
@@ -168,14 +231,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return f"token:{hashlib.sha256(token.encode()).hexdigest()[:16]}"
 
         # Fall back to IP address
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            # Get first IP from X-Forwarded-For header
-            client_ip = forwarded.split(",")[0].strip()
-        else:
-            client_ip = request.client.host if request.client else "unknown"
-
-        return f"ip:{client_ip}"
+        return self._get_ip_identifier(request)
 
 
 # Dependency for per-endpoint rate limiting

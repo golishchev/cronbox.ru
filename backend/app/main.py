@@ -10,6 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.config import settings
 from app.core.redis import redis_client
 from app.core.rate_limiter import RateLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.database import engine
 
 
@@ -115,13 +116,29 @@ API requests are rate-limited per workspace:
     },
 )
 
-# CORS middleware
+# Security headers middleware (outermost - runs last on response)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS middleware - explicit methods and headers for security
+ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+ALLOWED_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Accept-Language",
+    "X-Requested-With",
+    "X-Worker-Key",
+    "X-API-Key",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=ALLOWED_METHODS,
+    allow_headers=ALLOWED_HEADERS,
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    max_age=3600,  # Cache preflight for 1 hour
 )
 
 # Rate limiting middleware
