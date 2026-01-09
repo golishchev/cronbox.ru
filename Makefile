@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend infra stop logs
+.PHONY: dev dev-backend dev-frontend infra stop test test-cov lint
 
 # Start all dev services (backend + frontend in background)
 dev: infra
@@ -48,3 +48,16 @@ stop:
 	-pkill -f "uvicorn" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
 	@echo "All services stopped"
+
+# Run all tests
+test:
+	cd backend && uv run pytest tests -v
+
+# Run tests with coverage
+test-cov:
+	cd backend && uv run pytest tests -v --cov=app --cov-report=term-missing
+
+# Lint and type check
+lint:
+	cd backend && uv run ruff check .
+	cd backend && uv run mypy app --ignore-missing-imports

@@ -180,17 +180,12 @@ class TestWorkerAPI:
         """Test worker getting tasks."""
         api_key = worker_with_key.get("api_key")
         if api_key:
-            try:
-                response = await client.get(
-                    "/v1/worker/tasks",
-                    headers={"X-Worker-Key": api_key},
-                )
-                # 200/204 if works, 500 if Redis not available in tests
-                assert response.status_code in [200, 204, 500]
-            except RuntimeError as e:
-                # Skip test if Redis not initialized (expected in test env without Redis)
-                if "Redis client is not initialized" in str(e):
-                    pytest.skip("Redis not available in test environment")
+            response = await client.get(
+                "/v1/worker/tasks",
+                headers={"X-Worker-Key": api_key},
+            )
+            # 200 with tasks or 204 if no tasks available
+            assert response.status_code in [200, 204]
 
     async def test_worker_info(self, client: AsyncClient, worker_with_key):
         """Test worker info endpoint."""

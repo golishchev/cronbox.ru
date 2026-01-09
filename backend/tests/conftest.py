@@ -16,6 +16,7 @@ from app.models.base import Base
 from app.main import app
 from app.models.user import User
 from app.core.security import get_password_hash, create_access_token
+from app.core.redis import redis_client
 
 # Test database URL (use separate test database)
 # Only replace the database name at the end of the URL, not user/password
@@ -42,7 +43,13 @@ async def engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Initialize Redis client
+    await redis_client.initialize()
+
     yield engine
+
+    # Close Redis
+    await redis_client.close()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
