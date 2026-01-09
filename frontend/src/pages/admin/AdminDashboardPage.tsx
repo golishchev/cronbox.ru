@@ -14,6 +14,7 @@ import {
   TrendingUp,
   CreditCard,
   DollarSign,
+  Bell,
 } from 'lucide-react'
 
 interface AdminDashboardPageProps {
@@ -139,6 +140,22 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
               <div className="text-2xl font-bold">&rarr;</div>
               <p className="text-xs text-muted-foreground">
                 {t('admin.plans.manage')}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => onNavigate('admin-templates')}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{t('admin.templates.title')}</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">&rarr;</div>
+              <p className="text-xs text-muted-foreground">
+                {t('admin.templates.manage')}
               </p>
             </CardContent>
           </Card>
