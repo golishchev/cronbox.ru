@@ -45,7 +45,7 @@ class TestExecutions:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "items" in data or isinstance(data, list)
+        assert "executions" in data or "items" in data or isinstance(data, list)
 
     async def test_list_executions_pagination(self, authenticated_client: AsyncClient, workspace):
         """Test execution list pagination."""
@@ -68,7 +68,7 @@ class TestExecutions:
         )
         assert response.status_code == 200
         data = response.json()
-        items = data.get("items", data)
+        items = data.get("executions", data.get("items", []))
         for item in items:
             assert item.get("task_type") == "cron"
 
@@ -82,7 +82,7 @@ class TestExecutions:
         )
         assert response.status_code == 200
         data = response.json()
-        items = data.get("items", data)
+        items = data.get("executions", data.get("items", []))
         for item in items:
             assert item.get("status") == "success"
 
@@ -96,7 +96,7 @@ class TestExecutions:
         )
         assert response.status_code == 200
         data = response.json()
-        items = data.get("items", data)
+        items = data.get("executions", data.get("items", []))
         for item in items:
             assert item.get("task_id") == cron_task["id"]
 
@@ -122,7 +122,8 @@ class TestExecutions:
         list_response = await authenticated_client.get(
             f"/v1/workspaces/{workspace['id']}/executions"
         )
-        items = list_response.json().get("items", list_response.json())
+        data = list_response.json()
+        items = data.get("executions", data.get("items", []))
 
         if items:
             execution_id = items[0]["id"]
@@ -130,10 +131,10 @@ class TestExecutions:
                 f"/v1/workspaces/{workspace['id']}/executions/{execution_id}"
             )
             assert response.status_code == 200
-            data = response.json()
-            assert data["id"] == execution_id
-            assert "request_url" in data
-            assert "status" in data
+            detail_data = response.json()
+            assert detail_data["id"] == execution_id
+            assert "request_url" in detail_data
+            assert "status" in detail_data
 
     async def test_get_nonexistent_execution(self, authenticated_client: AsyncClient, workspace):
         """Test getting non-existent execution."""

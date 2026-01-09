@@ -15,12 +15,13 @@ class TestRegister:
             json={
                 "email": "newuser@example.com",
                 "password": "securepassword123",
+                "name": "New User",
             },
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["email"] == "newuser@example.com"
-        assert "id" in data
+        assert data["user"]["email"] == "newuser@example.com"
+        assert "id" in data["user"]
 
     async def test_register_duplicate_email(self, client: AsyncClient, test_user):
         """Test registration with duplicate email."""
@@ -29,9 +30,10 @@ class TestRegister:
             json={
                 "email": test_user.email,
                 "password": "anotherpassword123",
+                "name": "Another User",
             },
         )
-        assert response.status_code == 400
+        assert response.status_code == 409
         assert "already registered" in response.json()["detail"].lower()
 
     async def test_register_invalid_email(self, client: AsyncClient):
@@ -41,6 +43,7 @@ class TestRegister:
             json={
                 "email": "invalid-email",
                 "password": "securepassword123",
+                "name": "Test User",
             },
         )
         assert response.status_code == 422
@@ -52,6 +55,7 @@ class TestRegister:
             json={
                 "email": "test2@example.com",
                 "password": "short",
+                "name": "Test User",
             },
         )
         assert response.status_code == 422
@@ -71,9 +75,9 @@ class TestLogin:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert data["token_type"] == "bearer"
+        assert "access_token" in data["tokens"]
+        assert "refresh_token" in data["tokens"]
+        assert data["tokens"]["token_type"] == "bearer"
 
     async def test_login_wrong_password(self, client: AsyncClient, test_user):
         """Test login with wrong password."""
@@ -128,7 +132,7 @@ class TestRefreshToken:
                 "password": "testpassword123",
             },
         )
-        refresh_token = login_response.json()["refresh_token"]
+        refresh_token = login_response.json()["tokens"]["refresh_token"]
 
         # Refresh the token
         response = await client.post(

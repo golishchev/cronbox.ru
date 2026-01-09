@@ -92,8 +92,8 @@ class TestCronTasks:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "items" in data
-        assert len(data["items"]) >= 1
+        assert "tasks" in data
+        assert len(data["tasks"]) >= 1
 
     async def test_get_cron_task(self, authenticated_client: AsyncClient, workspace):
         """Test getting a specific cron task."""
@@ -165,7 +165,7 @@ class TestCronTasks:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["is_active"] is False
+        assert data["is_paused"] is True
 
     async def test_resume_cron_task(self, authenticated_client: AsyncClient, workspace):
         """Test resuming a paused cron task."""
@@ -190,7 +190,7 @@ class TestCronTasks:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["is_active"] is True
+        assert data["is_paused"] is False
 
     async def test_delete_cron_task(self, authenticated_client: AsyncClient, workspace):
         """Test deleting a cron task."""

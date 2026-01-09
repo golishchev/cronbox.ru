@@ -18,7 +18,9 @@ from app.models.user import User
 from app.core.security import get_password_hash, create_access_token
 
 # Test database URL (use separate test database)
-TEST_DATABASE_URL = settings.database_url.replace("/cronbox", "/cronbox_test")
+# Only replace the database name at the end of the URL, not user/password
+import re
+TEST_DATABASE_URL = re.sub(r"/cronbox$", "/cronbox_test", settings.database_url)
 
 
 @pytest.fixture(scope="session")
@@ -55,6 +57,11 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
         engine, class_=AsyncSession, expire_on_commit=False
     )
 
+    # Clean all tables before each test
+    async with engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE"))
+
     async with async_session() as session:
         yield session
         await session.rollback()
@@ -84,6 +91,7 @@ async def test_user(db_session: AsyncSession) -> User:
     user = User(
         email="test@example.com",
         password_hash=get_password_hash("testpassword123"),
+        name="Test User",
         is_active=True,
     )
     db_session.add(user)
@@ -95,7 +103,7 @@ async def test_user(db_session: AsyncSession) -> User:
 @pytest_asyncio.fixture
 async def auth_headers(test_user: User) -> dict:
     """Get authorization headers for test user."""
-    token = create_access_token(subject=str(test_user.id))
+    token = create_access_token(user_id=test_user.id, email=test_user.email)
     return {"Authorization": f"Bearer {token}"}
 
 
