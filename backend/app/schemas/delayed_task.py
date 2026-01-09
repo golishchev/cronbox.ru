@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer
 
 from app.models.cron_task import HttpMethod, TaskStatus
 from app.schemas.cron_task import PaginationMeta
@@ -58,6 +58,13 @@ class DelayedTaskResponse(BaseModel):
     callback_url: str | None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("execute_at", "executed_at", "created_at", "updated_at")
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
+        """Serialize datetime as UTC with 'Z' suffix for proper JS parsing."""
+        if dt is None:
+            return None
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class DelayedTaskUpdate(BaseModel):
