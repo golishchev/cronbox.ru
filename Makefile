@@ -1,6 +1,6 @@
-.PHONY: dev dev-backend dev-frontend infra stop test test-cov lint
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint
 
-# Start all dev services (backend + frontend in background)
+# Start all dev services (backend + frontend + landing in background)
 dev: infra
 	@echo "Starting API server..."
 	@cd backend && uv run python -m app.cli server &
@@ -10,12 +10,15 @@ dev: infra
 	@cd backend && uv run python -m app.cli worker &
 	@echo "Starting Telegram bot..."
 	@cd backend && uv run python -m app.cli bot &
-	@echo "Starting frontend..."
+	@echo "Starting frontend (control panel)..."
 	@cd frontend && npm run dev &
+	@echo "Starting landing page..."
+	@cd landing && npm run dev &
 	@echo ""
 	@echo "Dev servers started:"
 	@echo "  API:       http://localhost:8000"
-	@echo "  Frontend:  http://localhost:3000"
+	@echo "  Frontend:  http://localhost:3000 (cp.cronbox.ru)"
+	@echo "  Landing:   http://localhost:3001 (cronbox.ru)"
 	@echo "  Scheduler: running"
 	@echo "  Worker:    running"
 	@echo "  Bot:       running"
@@ -46,6 +49,10 @@ dev-bot:
 dev-frontend:
 	cd frontend && npm run dev
 
+# Landing page dev server (foreground)
+dev-landing:
+	cd landing && npm run dev
+
 # Stop all services
 stop:
 	@echo "Stopping Python processes..."
@@ -74,3 +81,5 @@ test-cov:
 lint:
 	cd backend && uv run ruff check .
 	cd backend && uv run mypy app --ignore-missing-imports
+	cd frontend && npm run lint
+	cd landing && npm run lint

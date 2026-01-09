@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LogOut, User, Menu, Settings, Globe, ChevronDown, Plus, Check, Trash2 } from 'lucide-react'
+import { LogOut, User, Menu, Settings, Globe, ChevronDown, Plus, Check, Trash2, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -228,6 +228,26 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-2">
+        {/* Documentation link */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hidden sm:flex items-center gap-2"
+          onClick={() => window.open('https://cronbox.ru/docs', '_blank')}
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>{t('header.documentation')}</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="sm:hidden"
+          onClick={() => window.open('https://cronbox.ru/docs', '_blank')}
+          title={t('header.documentation')}
+        >
+          <BookOpen className="h-5 w-5" />
+        </Button>
+
         {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

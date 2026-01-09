@@ -172,7 +172,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru"]}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru","https://cp.cronbox.ru","https://api.cronbox.ru"]}
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,12 +237,20 @@ services:
     command: uv run python -m app.workers.scheduler
     restart: unless-stopped
 
-  # Frontend
+  # Frontend (Control Panel - cp.cronbox.ru)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: cronbox-frontend
+    restart: unless-stopped
+
+  # Landing Page (cronbox.ru)
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+    container_name: cronbox-landing
     restart: unless-stopped
 
   # Nginx Reverse Proxy
@@ -259,6 +267,7 @@ services:
     depends_on:
       - api
       - frontend
+      - landing
       - postal-web
     restart: unless-stopped
 
