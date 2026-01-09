@@ -66,6 +66,7 @@ class TestNotificationService:
 
         service = NotificationService()
         mock_db = AsyncMock()
+        mock_db.add = MagicMock()  # add() is synchronous in SQLAlchemy
 
         workspace_id = uuid4()
 

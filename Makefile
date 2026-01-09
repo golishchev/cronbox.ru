@@ -52,10 +52,12 @@ stop:
 # Run all tests
 test:
 	cd backend && uv run pytest tests -v
+	cd frontend && npm run test
 
 # Run tests with coverage
 test-cov:
 	cd backend && uv run pytest tests -v --cov=app --cov-report=term-missing
+	cd frontend && npm run test:coverage
 
 # Lint and type check
 lint:

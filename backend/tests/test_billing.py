@@ -125,3 +125,78 @@ class TestPayments:
         """Test accessing payment history without authentication."""
         response = await client.get("/v1/workspaces/some-id/payments")
         assert response.status_code == 401
+
+
+class TestBillingNotFound:
+    """Tests for billing endpoints with non-existent resources."""
+
+    async def test_subscription_workspace_not_found(
+        self, authenticated_client: AsyncClient
+    ):
+        """Test getting subscription for non-existent workspace."""
+        response = await authenticated_client.get(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscription"
+        )
+        assert response.status_code == 404
+
+    async def test_subscribe_workspace_not_found(
+        self, authenticated_client: AsyncClient
+    ):
+        """Test subscribing for non-existent workspace."""
+        response = await authenticated_client.post(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscribe",
+            json={
+                "plan_id": "00000000-0000-0000-0000-000000000001",
+                "billing_period": "monthly",
+            },
+        )
+        assert response.status_code == 404
+
+    async def test_cancel_workspace_not_found(
+        self, authenticated_client: AsyncClient
+    ):
+        """Test canceling subscription for non-existent workspace."""
+        response = await authenticated_client.post(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscription/cancel",
+            json={"immediately": False},
+        )
+        assert response.status_code == 404
+
+    async def test_payments_workspace_not_found(
+        self, authenticated_client: AsyncClient
+    ):
+        """Test getting payments for non-existent workspace."""
+        response = await authenticated_client.get(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/payments"
+        )
+        assert response.status_code == 404
+
+
+class TestBillingUnauthorized:
+    """Tests for billing endpoints without proper authorization."""
+
+    async def test_subscription_unauthorized(self, client: AsyncClient):
+        """Test getting subscription without auth."""
+        response = await client.get(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscription"
+        )
+        assert response.status_code == 401
+
+    async def test_subscribe_unauthorized(self, client: AsyncClient):
+        """Test subscribing without auth."""
+        response = await client.post(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscribe",
+            json={
+                "plan_id": "00000000-0000-0000-0000-000000000001",
+                "billing_period": "monthly",
+            },
+        )
+        assert response.status_code == 401
+
+    async def test_cancel_unauthorized(self, client: AsyncClient):
+        """Test canceling subscription without auth."""
+        response = await client.post(
+            "/v1/workspaces/00000000-0000-0000-0000-000000000000/subscription/cancel",
+            json={"immediately": False},
+        )
+        assert response.status_code == 401

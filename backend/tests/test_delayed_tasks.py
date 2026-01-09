@@ -214,3 +214,48 @@ class TestDelayedTasks:
         """Test accessing delayed tasks without authentication."""
         response = await client.get("/v1/workspaces/some-id/delayed")
         assert response.status_code == 401
+
+    async def test_get_nonexistent_delayed_task(self, authenticated_client: AsyncClient, workspace):
+        """Test getting a non-existent delayed task."""
+        response = await authenticated_client.get(
+            f"/v1/workspaces/{workspace['id']}/delayed/00000000-0000-0000-0000-000000000000"
+        )
+        assert response.status_code == 404
+
+    async def test_list_delayed_tasks_with_pagination(self, authenticated_client: AsyncClient, workspace):
+        """Test listing delayed tasks with pagination."""
+        execute_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+
+        # Create a few tasks
+        for i in range(3):
+            await authenticated_client.post(
+                f"/v1/workspaces/{workspace['id']}/delayed",
+                json={
+                    "name": f"Pagination Test Task {i}",
+                    "url": "https://example.com/api/test",
+                    "method": "GET",
+                    "execute_at": execute_at,
+                },
+            )
+
+        # List with limit
+        response = await authenticated_client.get(
+            f"/v1/workspaces/{workspace['id']}/delayed?limit=2"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["tasks"]) <= 2
+
+    async def test_create_delayed_task_invalid_url(self, authenticated_client: AsyncClient, workspace):
+        """Test creating a delayed task with invalid URL."""
+        execute_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/delayed",
+            json={
+                "name": "Invalid URL Task",
+                "url": "not-a-valid-url",
+                "method": "GET",
+                "execute_at": execute_at,
+            },
+        )
+        assert response.status_code == 422

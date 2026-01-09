@@ -393,6 +393,7 @@ class TestExecutionRepository:
         from app.db.repositories.executions import ExecutionRepository
 
         mock_db = AsyncMock()
+        mock_db.add = MagicMock()  # add() is synchronous in SQLAlchemy
         repo = ExecutionRepository(mock_db)
 
         workspace_id = uuid4()
@@ -621,6 +622,7 @@ class TestUserRepository:
         from app.db.repositories.users import UserRepository
 
         mock_db = AsyncMock()
+        mock_db.add = MagicMock()  # add() is synchronous in SQLAlchemy
         repo = UserRepository(mock_db)
 
         with patch("app.db.repositories.users.User") as mock_user_class:
