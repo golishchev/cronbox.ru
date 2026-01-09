@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -33,9 +33,9 @@ class BillingService:
 
     async def get_plans(self, db: AsyncSession, only_public: bool = True) -> list[Plan]:
         """Get all available plans."""
-        query = select(Plan).where(Plan.is_active == True)
+        query = select(Plan).where(Plan.is_active.is_(True))
         if only_public:
-            query = query.where(Plan.is_public == True)
+            query = query.where(Plan.is_public.is_(True))
         query = query.order_by(Plan.sort_order)
         result = await db.execute(query)
         return list(result.scalars().all())
@@ -50,42 +50,35 @@ class BillingService:
         result = await db.execute(select(Plan).where(Plan.id == plan_id))
         return result.scalar_one_or_none()
 
-    async def get_subscription(
-        self, db: AsyncSession, workspace_id: uuid.UUID
+    async def get_user_subscription(
+        self, db: AsyncSession, user_id: uuid.UUID
     ) -> Subscription | None:
-        """Get workspace subscription."""
+        """Get user's subscription."""
         result = await db.execute(
-            select(Subscription).where(Subscription.workspace_id == workspace_id)
+            select(Subscription).where(Subscription.user_id == user_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_workspace_with_plan(
-        self, db: AsyncSession, workspace_id: uuid.UUID
-    ) -> tuple[Workspace | None, Plan | None, Subscription | None]:
-        """Get workspace with its current plan and subscription."""
-        # Get workspace
-        workspace_result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
-        workspace = workspace_result.scalar_one_or_none()
-        if not workspace:
-            return None, None, None
-
-        # Get subscription
-        subscription = await self.get_subscription(db, workspace_id)
-
-        # Get plan (from subscription or default free plan)
-        if subscription:
+    async def get_user_plan(self, db: AsyncSession, user_id: uuid.UUID) -> Plan:
+        """Get user's current plan (from subscription or free)."""
+        subscription = await self.get_user_subscription(db, user_id)
+        if subscription and subscription.status in (
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAST_DUE,
+        ):
             plan = await self.get_plan_by_id(db, subscription.plan_id)
-        else:
-            plan = await self.get_plan_by_name(db, "free")
-
-        return workspace, plan, subscription
+            if plan:
+                return plan
+        # Fallback to free plan
+        free_plan = await self.get_plan_by_name(db, "free")
+        if not free_plan:
+            raise RuntimeError("Free plan not found in database")
+        return free_plan
 
     async def create_payment(
         self,
         db: AsyncSession,
-        workspace_id: uuid.UUID,
+        user_id: uuid.UUID,
         plan_id: uuid.UUID,
         billing_period: str = "monthly",  # 'monthly' or 'yearly'
         return_url: str | None = None,
@@ -107,12 +100,25 @@ class BillingService:
             logger.error("Cannot create payment for free plan")
             return None
 
+        # Get user's first workspace for payment association
+        workspace_result = await db.execute(
+            select(Workspace)
+            .where(Workspace.owner_id == user_id)
+            .order_by(Workspace.created_at.asc())
+            .limit(1)
+        )
+        workspace = workspace_result.scalar_one_or_none()
+        if not workspace:
+            logger.error("User has no workspace", user_id=user_id)
+            return None
+
         # Convert kopeks to rubles for YooKassa
         amount_value = f"{amount / 100:.2f}"
 
         # Create payment record
         payment = Payment(
-            workspace_id=workspace_id,
+            workspace_id=workspace.id,
+            user_id=user_id,
             amount=amount,
             currency="RUB",
             status=PaymentStatus.PENDING,
@@ -120,6 +126,7 @@ class BillingService:
             extra_data={
                 "plan_id": str(plan_id),
                 "billing_period": billing_period,
+                "user_id": str(user_id),
             },
         )
         db.add(payment)
@@ -149,7 +156,7 @@ class BillingService:
                         "description": payment.description,
                         "metadata": {
                             "payment_id": str(payment.id),
-                            "workspace_id": str(workspace_id),
+                            "user_id": str(user_id),
                             "plan_id": str(plan_id),
                             "billing_period": billing_period,
                         },
@@ -216,13 +223,7 @@ class BillingService:
         payment: Payment,
         payment_data: dict,
     ) -> bool:
-        """Handle successful payment.
-
-        Security measures:
-        1. Check payment is not already processed (idempotency)
-        2. Validate amount matches our records
-        3. Validate currency matches our records
-        """
+        """Handle successful payment."""
         # Idempotency: Check if payment already processed
         if payment.status == PaymentStatus.SUCCEEDED:
             logger.info(
@@ -245,7 +246,6 @@ class BillingService:
         webhook_currency = webhook_amount.get("currency", "")
 
         try:
-            # Convert to kopeks (YooKassa sends rubles as string "299.00")
             webhook_amount_kopeks = int(float(webhook_amount_value) * 100)
         except (ValueError, TypeError):
             logger.error(
@@ -255,7 +255,6 @@ class BillingService:
             )
             return False
 
-        # Validate amount
         if webhook_amount_kopeks != payment.amount:
             logger.error(
                 "Amount mismatch in webhook",
@@ -265,7 +264,6 @@ class BillingService:
             )
             return False
 
-        # Validate currency
         if webhook_currency != payment.currency:
             logger.error(
                 "Currency mismatch in webhook",
@@ -275,14 +273,13 @@ class BillingService:
             )
             return False
 
-        # All validations passed - update payment
+        # Update payment
         payment.status = PaymentStatus.SUCCEEDED
         payment.paid_at = datetime.now(timezone.utc)
 
         # Save payment method for recurring payments
         payment_method = payment_data.get("payment_method")
         if payment_method:
-            # Only save the payment method ID, not the full object
             payment.yookassa_payment_method = {
                 "id": payment_method.get("id"),
                 "type": payment_method.get("type"),
@@ -293,12 +290,13 @@ class BillingService:
         extra_data = payment.extra_data or {}
         plan_id = extra_data.get("plan_id")
         billing_period = extra_data.get("billing_period", "monthly")
+        user_id = extra_data.get("user_id") or (str(payment.user_id) if payment.user_id else None)
 
-        if plan_id:
+        if plan_id and user_id:
             # Create or update subscription
             await self._create_or_update_subscription(
                 db,
-                workspace_id=payment.workspace_id,
+                user_id=uuid.UUID(user_id),
                 plan_id=uuid.UUID(plan_id),
                 billing_period=billing_period,
                 payment_method_id=payment_method.get("id") if payment_method else None,
@@ -333,12 +331,12 @@ class BillingService:
     async def _create_or_update_subscription(
         self,
         db: AsyncSession,
-        workspace_id: uuid.UUID,
+        user_id: uuid.UUID,
         plan_id: uuid.UUID,
         billing_period: str,
         payment_method_id: str | None = None,
     ) -> Subscription:
-        """Create or update workspace subscription."""
+        """Create or update user subscription."""
         now = datetime.now(timezone.utc)
 
         # Calculate period
@@ -348,7 +346,7 @@ class BillingService:
             period_end = now + timedelta(days=30)
 
         # Get existing subscription
-        subscription = await self.get_subscription(db, workspace_id)
+        subscription = await self.get_user_subscription(db, user_id)
 
         if subscription:
             # Update existing subscription
@@ -363,7 +361,7 @@ class BillingService:
         else:
             # Create new subscription
             subscription = Subscription(
-                workspace_id=workspace_id,
+                user_id=user_id,
                 plan_id=plan_id,
                 status=SubscriptionStatus.ACTIVE,
                 current_period_start=now,
@@ -372,18 +370,15 @@ class BillingService:
             )
             db.add(subscription)
 
-        # Update workspace plan
-        workspace_result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
-        workspace = workspace_result.scalar_one_or_none()
-        if workspace:
-            workspace.plan_id = plan_id
+        # Unblock user's workspaces on upgrade
+        plan = await self.get_plan_by_id(db, plan_id)
+        if plan:
+            await self._unblock_user_workspaces(db, user_id, plan.max_workspaces)
 
         await db.flush()
         logger.info(
             "Subscription created/updated",
-            workspace_id=str(workspace_id),
+            user_id=str(user_id),
             plan_id=str(plan_id),
         )
         return subscription
@@ -391,11 +386,11 @@ class BillingService:
     async def cancel_subscription(
         self,
         db: AsyncSession,
-        workspace_id: uuid.UUID,
+        user_id: uuid.UUID,
         immediately: bool = False,
     ) -> bool:
-        """Cancel a subscription."""
-        subscription = await self.get_subscription(db, workspace_id)
+        """Cancel a user's subscription."""
+        subscription = await self.get_user_subscription(db, user_id)
         if not subscription:
             return False
 
@@ -403,15 +398,16 @@ class BillingService:
             subscription.status = SubscriptionStatus.CANCELLED
             subscription.cancelled_at = datetime.now(timezone.utc)
 
-            # Revert to free plan
+            # Block excess workspaces and pause tasks
             free_plan = await self.get_plan_by_name(db, "free")
             if free_plan:
-                workspace_result = await db.execute(
-                    select(Workspace).where(Workspace.id == workspace_id)
-                )
-                workspace = workspace_result.scalar_one_or_none()
-                if workspace:
-                    workspace.plan_id = free_plan.id
+                await self._block_excess_workspaces(db, user_id, free_plan.max_workspaces)
+                # Pause excess tasks in the first (active) workspace
+                first_workspace = await self._get_oldest_workspace(db, user_id)
+                if first_workspace:
+                    await self.auto_pause_excess_tasks(
+                        db, first_workspace.id, free_plan.max_cron_tasks
+                    )
         else:
             subscription.cancel_at_period_end = True
             subscription.cancelled_at = datetime.now(timezone.utc)
@@ -419,22 +415,171 @@ class BillingService:
         await db.commit()
         logger.info(
             "Subscription cancelled",
-            workspace_id=str(workspace_id),
+            user_id=str(user_id),
             immediately=immediately,
         )
         return True
 
+    async def _get_oldest_workspace(
+        self, db: AsyncSession, user_id: uuid.UUID
+    ) -> Workspace | None:
+        """Get user's oldest workspace by created_at."""
+        result = await db.execute(
+            select(Workspace)
+            .where(Workspace.owner_id == user_id)
+            .order_by(Workspace.created_at.asc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def _block_excess_workspaces(
+        self, db: AsyncSession, user_id: uuid.UUID, max_workspaces: int
+    ) -> list[uuid.UUID]:
+        """Block workspaces exceeding the limit. Returns list of blocked workspace IDs."""
+        result = await db.execute(
+            select(Workspace)
+            .where(Workspace.owner_id == user_id)
+            .order_by(Workspace.created_at.asc())
+        )
+        workspaces = list(result.scalars().all())
+
+        blocked_ids = []
+        now = datetime.now(timezone.utc)
+
+        for i, workspace in enumerate(workspaces):
+            if i < max_workspaces:
+                # Keep active (unblock if was blocked)
+                if workspace.is_blocked:
+                    workspace.is_blocked = False
+                    workspace.blocked_at = None
+                    # Resume paused tasks
+                    await self._resume_workspace_tasks(db, workspace.id)
+            else:
+                # Block excess workspaces
+                if not workspace.is_blocked:
+                    workspace.is_blocked = True
+                    workspace.blocked_at = now
+                    blocked_ids.append(workspace.id)
+                    # Pause all tasks
+                    await self._pause_workspace_tasks(db, workspace.id)
+                    logger.info(
+                        "Workspace blocked",
+                        workspace_id=str(workspace.id),
+                        user_id=str(user_id),
+                    )
+
+        return blocked_ids
+
+    async def _unblock_user_workspaces(
+        self, db: AsyncSession, user_id: uuid.UUID, max_workspaces: int
+    ) -> int:
+        """Unblock workspaces up to the plan limit. Returns count of unblocked."""
+        # Count currently active workspaces
+        active_count_result = await db.execute(
+            select(func.count())
+            .select_from(Workspace)
+            .where(
+                Workspace.owner_id == user_id,
+                Workspace.is_blocked.is_(False),
+            )
+        )
+        active_count = active_count_result.scalar_one()
+
+        can_unblock = max_workspaces - active_count
+        if can_unblock <= 0:
+            return 0
+
+        # Get blocked workspaces ordered by created_at
+        result = await db.execute(
+            select(Workspace)
+            .where(
+                Workspace.owner_id == user_id,
+                Workspace.is_blocked.is_(True),
+            )
+            .order_by(Workspace.created_at.asc())
+            .limit(can_unblock)
+        )
+        blocked_workspaces = list(result.scalars().all())
+
+        unblocked = 0
+        for workspace in blocked_workspaces:
+            workspace.is_blocked = False
+            workspace.blocked_at = None
+            await self._resume_workspace_tasks(db, workspace.id)
+            unblocked += 1
+            logger.info(
+                "Workspace unblocked",
+                workspace_id=str(workspace.id),
+                user_id=str(user_id),
+            )
+
+        return unblocked
+
+    async def _pause_workspace_tasks(
+        self, db: AsyncSession, workspace_id: uuid.UUID
+    ) -> int:
+        """Pause all active cron tasks in a workspace."""
+        from app.db.repositories.cron_tasks import CronTaskRepository
+
+        cron_repo = CronTaskRepository(db)
+        active_tasks = await cron_repo.get_by_workspace(
+            workspace_id=workspace_id,
+            is_active=True,
+            limit=1000,
+        )
+
+        count = 0
+        for task in active_tasks:
+            if not task.is_paused:
+                await cron_repo.pause(task)
+                count += 1
+                logger.info(
+                    "Task paused (workspace blocked)",
+                    task_id=str(task.id),
+                    workspace_id=str(workspace_id),
+                )
+
+        return count
+
+    async def _resume_workspace_tasks(
+        self, db: AsyncSession, workspace_id: uuid.UUID
+    ) -> int:
+        """Resume paused tasks in a workspace."""
+        from app.db.repositories.cron_tasks import CronTaskRepository
+        from app.workers.utils import calculate_next_run
+
+        cron_repo = CronTaskRepository(db)
+        tasks = await cron_repo.get_by_workspace(
+            workspace_id=workspace_id,
+            is_active=True,
+            limit=1000,
+        )
+
+        count = 0
+        for task in tasks:
+            if task.is_paused:
+                next_run = calculate_next_run(task.schedule, task.timezone)
+                await cron_repo.resume(task, next_run)
+                count += 1
+                logger.info(
+                    "Task resumed (workspace unblocked)",
+                    task_id=str(task.id),
+                    workspace_id=str(workspace_id),
+                )
+
+        return count
+
     async def get_payment_history(
         self,
         db: AsyncSession,
-        workspace_id: uuid.UUID,
+        user_id: uuid.UUID,
         limit: int = 20,
         offset: int = 0,
     ) -> list[Payment]:
-        """Get payment history for a workspace."""
+        """Get payment history for a user."""
         result = await db.execute(
             select(Payment)
-            .where(Payment.workspace_id == workspace_id)
+            .where(Payment.user_id == user_id)
             .order_by(Payment.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -487,15 +632,20 @@ class BillingService:
             await cron_repo.pause(task)
             count += 1
             logger.info(
-                "Task auto-paused due to subscription expiry",
+                "Task auto-paused due to plan limit",
                 task_id=str(task.id),
                 workspace_id=str(workspace_id),
             )
 
         return count
 
-    async def check_expired_subscriptions(self, db: AsyncSession) -> list[tuple[uuid.UUID, int]]:
-        """Check and mark expired subscriptions. Returns list of (workspace_id, paused_tasks_count)."""
+    async def check_expired_subscriptions(
+        self, db: AsyncSession
+    ) -> list[tuple[uuid.UUID, int, int]]:
+        """Check and mark expired subscriptions.
+
+        Returns list of (user_id, paused_tasks_count, blocked_workspaces_count).
+        """
         now = datetime.now(timezone.utc)
 
         # Find active subscriptions that have expired
@@ -507,7 +657,7 @@ class BillingService:
         )
         subscriptions = result.scalars().all()
 
-        expired_workspaces: list[tuple[uuid.UUID, int]] = []
+        affected_users: list[tuple[uuid.UUID, int, int]] = []
         free_plan = await self.get_plan_by_name(db, "free")
 
         for subscription in subscriptions:
@@ -517,30 +667,32 @@ class BillingService:
                 subscription.status = SubscriptionStatus.EXPIRED
 
             paused_count = 0
+            blocked_count = 0
 
-            # Revert workspace to free plan and pause excess tasks
             if free_plan:
-                workspace_result = await db.execute(
-                    select(Workspace).where(Workspace.id == subscription.workspace_id)
+                # Block excess workspaces
+                blocked_ids = await self._block_excess_workspaces(
+                    db, subscription.user_id, free_plan.max_workspaces
                 )
-                workspace = workspace_result.scalar_one_or_none()
-                if workspace:
-                    workspace.plan_id = free_plan.id
-                    # Pause tasks exceeding free plan limit
+                blocked_count = len(blocked_ids)
+
+                # Pause excess tasks in first (active) workspace
+                first_workspace = await self._get_oldest_workspace(db, subscription.user_id)
+                if first_workspace:
                     paused_count = await self.auto_pause_excess_tasks(
-                        db, workspace.id, free_plan.max_cron_tasks
+                        db, first_workspace.id, free_plan.max_cron_tasks
                     )
 
-            expired_workspaces.append((subscription.workspace_id, paused_count))
+            affected_users.append((subscription.user_id, paused_count, blocked_count))
 
-        if expired_workspaces:
+        if affected_users:
             await db.commit()
             logger.info(
                 "Expired subscriptions processed",
-                count=len(expired_workspaces),
+                count=len(affected_users),
             )
 
-        return expired_workspaces
+        return affected_users
 
 
 # Global instance

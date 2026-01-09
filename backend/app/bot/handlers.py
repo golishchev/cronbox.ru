@@ -27,8 +27,10 @@ async def cmd_start(message: Message):
         await process_link_code(message, code)
         return
 
+    chat_id = message.from_user.id
     await message.answer(
         "👋 <b>Привет!</b> Я бот CronBox.\n\n"
+        f"🆔 <b>Ваш Chat ID:</b> <code>{chat_id}</code>\n\n"
         "Я буду отправлять вам уведомления о выполнении задач.\n\n"
         "<b>Доступные команды:</b>\n"
         "/link <code>код</code> — привязать аккаунт CronBox\n"
@@ -92,36 +94,45 @@ async def process_link_code(message: Message, code: str):
         )
         return
 
-    async with AsyncSessionLocal() as db:
-        auth_service = AuthService(db)
-        user = await auth_service.link_telegram_by_code(
-            code=code,
-            telegram_id=message.from_user.id,
-            telegram_username=message.from_user.username,
-        )
-
-        if user:
-            await message.answer(
-                f"✅ <b>Аккаунт успешно привязан!</b>\n\n"
-                f"Email: {user.email}\n"
-                f"Имя: {user.name}\n\n"
-                "Теперь вы будете получать уведомления о задачах в этот чат.",
-                parse_mode="HTML",
-            )
-            logger.info(
-                "Telegram account linked via bot",
-                user_id=str(user.id),
+    try:
+        async with AsyncSessionLocal() as db:
+            auth_service = AuthService(db)
+            user = await auth_service.link_telegram_by_code(
+                code=code,
                 telegram_id=message.from_user.id,
+                telegram_username=message.from_user.username,
             )
-        else:
-            await message.answer(
-                "❌ <b>Не удалось привязать аккаунт.</b>\n\n"
-                "Возможные причины:\n"
-                "• Код неверный или истёк\n"
-                "• Этот Telegram уже привязан к другому аккаунту\n\n"
-                "Получите новый код в настройках CronBox.",
-                parse_mode="HTML",
-            )
+
+            if user:
+                await db.commit()
+                await message.answer(
+                    f"✅ <b>Аккаунт успешно привязан!</b>\n\n"
+                    f"Email: {user.email}\n"
+                    f"Имя: {user.name}\n\n"
+                    "Теперь вы будете получать уведомления о задачах в этот чат.",
+                    parse_mode="HTML",
+                )
+                logger.info(
+                    "Telegram account linked via bot",
+                    user_id=str(user.id),
+                    telegram_id=message.from_user.id,
+                )
+            else:
+                await message.answer(
+                    "❌ <b>Не удалось привязать аккаунт.</b>\n\n"
+                    "Возможные причины:\n"
+                    "• Код неверный или истёк\n"
+                    "• Этот Telegram уже привязан к другому аккаунту\n\n"
+                    "Получите новый код в настройках CronBox.",
+                    parse_mode="HTML",
+                )
+    except Exception as e:
+        logger.error("Error linking Telegram account", error=str(e), code=code)
+        await message.answer(
+            "❌ <b>Произошла ошибка.</b>\n\n"
+            "Попробуйте позже или обратитесь в поддержку.",
+            parse_mode="HTML",
+        )
 
 
 @dp.message(Command("status"))
@@ -189,8 +200,16 @@ async def run_bot():
         logger.warning("Telegram bot token not configured, skipping bot startup")
         return
 
+    # Initialize Redis
+    from app.core.redis import redis_client
+    await redis_client.initialize()
+    logger.info("Redis initialized for bot")
+
     logger.info("Starting Telegram bot")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await redis_client.close()
 
 
 async def stop_bot():

@@ -1,4 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks, status
+import os
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, status
 
 from app.api.deps import CurrentUser, DB
 from app.config import settings
@@ -20,6 +24,11 @@ from app.services.auth import AuthService, TELEGRAM_LINK_EXPIRE
 from app.services.email import email_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# Avatar upload settings
+UPLOAD_DIR = Path(__file__).parent.parent.parent.parent / "uploads" / "avatars"
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 
 @router.post(
@@ -219,7 +228,7 @@ async def telegram_connect(current_user: CurrentUser, db: DB):
     code = await auth_service.generate_telegram_link_code(current_user)
 
     # Get bot username from token (format: 123456:ABC...)
-    bot_username = "CronBoxBot"  # Default fallback
+    bot_username = "cronbox_bot"  # Default fallback
     if settings.telegram_bot_token:
         # We can't get username from token directly, should be configured
         pass
@@ -236,3 +245,72 @@ async def telegram_disconnect(current_user: CurrentUser, db: DB):
     """Unlink Telegram account from current user."""
     auth_service = AuthService(db)
     await auth_service.unlink_telegram(current_user)
+
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile,
+    current_user: CurrentUser,
+    db: DB,
+):
+    """Upload user avatar image.
+
+    Accepts JPEG, PNG, GIF, WebP images up to 2 MB.
+    """
+    # Validate content type
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Allowed: JPEG, PNG, GIF, WebP",
+        )
+
+    # Read file and validate size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 2 MB",
+        )
+
+    # Create upload directory if not exists
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Delete old avatar if exists
+    if current_user.avatar_url:
+        old_filename = current_user.avatar_url.split("/")[-1]
+        old_path = UPLOAD_DIR / old_filename
+        if old_path.exists():
+            os.remove(old_path)
+
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    file_path = UPLOAD_DIR / filename
+
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # Update user avatar_url
+    avatar_url = f"/uploads/avatars/{filename}"
+    user_repo = UserRepository(db)
+    updated_user = await user_repo.update(current_user, avatar_url=avatar_url)
+
+    return UserResponse.model_validate(updated_user)
+
+
+@router.delete("/me/avatar", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_avatar(current_user: CurrentUser, db: DB):
+    """Delete user avatar."""
+    if not current_user.avatar_url:
+        return  # No avatar to delete
+
+    # Delete file
+    filename = current_user.avatar_url.split("/")[-1]
+    file_path = UPLOAD_DIR / filename
+    if file_path.exists():
+        os.remove(file_path)
+
+    # Update user
+    user_repo = UserRepository(db)
+    await user_repo.update(current_user, avatar_url=None)

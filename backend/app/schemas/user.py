@@ -44,6 +44,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool = False
     preferred_language: str = "ru"
+    avatar_url: str | None = None
     created_at: datetime
     updated_at: datetime
 

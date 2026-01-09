@@ -27,6 +27,7 @@ describe('ProfilePage', () => {
     telegram_username: null,
     telegram_id: null,
     preferred_language: 'en' as const,
+    avatar_url: null,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   }

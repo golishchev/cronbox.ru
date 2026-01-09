@@ -15,6 +15,7 @@ from app.db.database import get_db
 from app.models.base import Base
 from app.main import app
 from app.models.user import User
+from app.models.plan import Plan
 from app.core.security import get_password_hash, create_access_token
 from app.core.redis import redis_client
 
@@ -93,7 +94,65 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest_asyncio.fixture
-async def test_user(db_session: AsyncSession) -> User:
+async def free_plan(db_session: AsyncSession) -> Plan:
+    """Create a free plan for testing."""
+    plan = Plan(
+        name="free",
+        display_name="Free",
+        description="Free plan with basic features",
+        price_monthly=0,
+        price_yearly=0,
+        max_cron_tasks=3,
+        max_delayed_tasks_per_month=100,
+        max_workspaces=1,
+        max_execution_history_days=7,
+        min_cron_interval_minutes=5,
+        telegram_notifications=False,
+        email_notifications=False,
+        webhook_callbacks=False,
+        custom_headers=True,
+        retry_on_failure=False,
+        is_active=True,
+        is_public=True,
+        sort_order=0,
+    )
+    db_session.add(plan)
+    await db_session.commit()
+    await db_session.refresh(plan)
+    return plan
+
+
+@pytest_asyncio.fixture
+async def pro_plan(db_session: AsyncSession) -> Plan:
+    """Create a pro plan for testing."""
+    plan = Plan(
+        name="pro",
+        display_name="Pro",
+        description="Pro plan with advanced features",
+        price_monthly=99900,
+        price_yearly=999000,
+        max_cron_tasks=50,
+        max_delayed_tasks_per_month=5000,
+        max_workspaces=5,
+        max_execution_history_days=90,
+        min_cron_interval_minutes=1,
+        telegram_notifications=True,
+        email_notifications=True,
+        webhook_callbacks=True,
+        custom_headers=True,
+        retry_on_failure=True,
+        is_active=True,
+        is_public=True,
+        sort_order=1,
+    )
+    db_session.add(plan)
+    await db_session.commit()
+    await db_session.refresh(plan)
+    return plan
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession, free_plan: Plan) -> User:
     """Create a test user."""
     user = User(
         email="test@example.com",

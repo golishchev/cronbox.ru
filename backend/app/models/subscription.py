@@ -19,12 +19,12 @@ class SubscriptionStatus(str, enum.Enum):
 
 
 class Subscription(Base, UUIDMixin, TimestampMixin):
-    """Subscription model - links workspace to a plan."""
+    """Subscription model - links user to a plan."""
 
     __tablename__ = "subscriptions"
 
-    workspace_id: Mapped[UUID] = mapped_column(
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         index=True,
     )
@@ -55,5 +55,5 @@ class Subscription(Base, UUIDMixin, TimestampMixin):
     )
 
     # Relationships
-    workspace: Mapped["Workspace"] = relationship()
+    user: Mapped["User"] = relationship(back_populates="subscription")
     plan: Mapped["Plan"] = relationship()

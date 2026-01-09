@@ -1,0 +1,13 @@
+{
+  "notifications": {
+    "test": {
+      "telegram_title": "Тестовое уведомление",
+      "telegram_body": "Это тестовое уведомление от CronBox для рабочего пространства <b>{workspace_name}</b>.",
+      "email_subject": "[CronBox] Тестовое уведомление - {workspace_name}",
+      "email_title": "Тестовое уведомление",
+      "email_body": "Это тестовое уведомление от CronBox для рабочего пространства <strong>{workspace_name}</strong>.",
+      "email_success": "Если вы получили это письмо, ваши email-уведомления работают корректно.",
+      "webhook_message": "Это тестовое уведомление от CronBox"
+    }
+  }
+}

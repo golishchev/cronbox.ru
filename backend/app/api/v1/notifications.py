@@ -1,15 +1,12 @@
 """Notification settings API endpoints."""
-from uuid import UUID
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user, get_workspace
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.models.notification_settings import NotificationSettings
 from app.schemas.notification_settings import (
     NotificationSettingsResponse,
     NotificationSettingsUpdate,
@@ -18,6 +15,7 @@ from app.schemas.notification_settings import (
 from app.services.notifications import notification_service
 from app.services.telegram import telegram_service
 from app.services.email import email_service
+from app.services.i18n import get_i18n
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/notifications", tags=["notifications"])
 
@@ -55,8 +53,10 @@ async def send_test_notification(
     workspace: Annotated[Workspace, Depends(get_workspace)],
     data: TestNotificationRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Send a test notification."""
+    i18n = get_i18n(current_user.preferred_language)
     settings = await notification_service.get_settings(db, workspace.id)
     if not settings:
         raise HTTPException(
@@ -72,10 +72,14 @@ async def send_test_notification(
             )
 
         success = False
+        telegram_text = (
+            f"<b>{i18n.t('notifications.test.telegram_title')}</b>\n\n"
+            f"{i18n.t('notifications.test.telegram_body', workspace_name=workspace.name)}"
+        )
         for chat_id in settings.telegram_chat_ids:
             result = await telegram_service.send_message(
                 chat_id=chat_id,
-                text=f"<b>Test Notification</b>\n\nThis is a test notification from CronBox for workspace <b>{workspace.name}</b>.",
+                text=telegram_text,
             )
             if result:
                 success = True
@@ -95,12 +99,12 @@ async def send_test_notification(
 
         success = await email_service.send_email(
             to=settings.email_addresses,
-            subject=f"[CronBox] Test Notification - {workspace.name}",
+            subject=i18n.t("notifications.test.email_subject", workspace_name=workspace.name),
             html=f"""
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Test Notification</h2>
-                <p>This is a test notification from CronBox for workspace <strong>{workspace.name}</strong>.</p>
-                <p>If you received this email, your email notifications are working correctly.</p>
+                <h2>{i18n.t("notifications.test.email_title")}</h2>
+                <p>{i18n.t("notifications.test.email_body", workspace_name=workspace.name)}</p>
+                <p>{i18n.t("notifications.test.email_success")}</p>
             </div>
             """,
         )
@@ -125,7 +129,7 @@ async def send_test_notification(
             data={
                 "workspace_id": str(workspace.id),
                 "workspace_name": workspace.name,
-                "message": "This is a test notification from CronBox",
+                "message": i18n.t("notifications.test.webhook_message"),
             },
         )
 

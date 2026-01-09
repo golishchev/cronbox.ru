@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
 from app.models.cron_task import CronTask, TaskStatus
+from app.models.workspace import Workspace
 
 
 class CronTaskRepository(BaseRepository[CronTask]):
@@ -50,14 +51,17 @@ class CronTaskRepository(BaseRepository[CronTask]):
 
         Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
         when multiple scheduler instances are running.
+        Excludes tasks from blocked workspaces.
         """
         stmt = (
             select(CronTask)
+            .join(Workspace, CronTask.workspace_id == Workspace.id)
             .where(
                 and_(
-                    CronTask.is_active == True,
-                    CronTask.is_paused == False,
+                    CronTask.is_active.is_(True),
+                    CronTask.is_paused.is_(False),
                     CronTask.next_run_at <= now,
+                    Workspace.is_blocked.is_(False),
                 )
             )
             .order_by(CronTask.next_run_at)
@@ -73,9 +77,9 @@ class CronTaskRepository(BaseRepository[CronTask]):
             select(CronTask)
             .where(
                 and_(
-                    CronTask.is_active == True,
-                    CronTask.is_paused == False,
-                    CronTask.next_run_at == None,
+                    CronTask.is_active.is_(True),
+                    CronTask.is_paused.is_(False),
+                    CronTask.next_run_at.is_(None),
                 )
             )
             .limit(limit)

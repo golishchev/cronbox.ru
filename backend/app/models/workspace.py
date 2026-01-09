@@ -1,6 +1,7 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -21,10 +22,10 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
         index=True,
     )
 
-    # Plan
-    plan_id: Mapped[UUID] = mapped_column(
-        ForeignKey("plans.id"),
-        index=True,
+    # Blocking (for users who downgraded from paid plan)
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    blocked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # Usage counters
@@ -37,7 +38,6 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
 
     # Relationships
     owner: Mapped["User"] = relationship(back_populates="workspaces")
-    plan: Mapped["Plan"] = relationship()
     cron_tasks: Mapped[list["CronTask"]] = relationship(
         back_populates="workspace",
         cascade="all, delete-orphan",

@@ -32,7 +32,8 @@ class WorkspaceResponse(WorkspaceBase):
     id: UUID
     slug: str
     owner_id: UUID
-    plan_id: UUID
+    is_blocked: bool = False
+    blocked_at: datetime | None = None
     cron_tasks_count: int
     delayed_tasks_this_month: int
     created_at: datetime

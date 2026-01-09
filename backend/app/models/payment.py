@@ -29,6 +29,11 @@ class Payment(Base, UUIDMixin, TimestampMixin):
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         index=True,
     )
+    user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
 
     # Amount (in kopeks for RUB)
     amount: Mapped[int] = mapped_column(Integer)

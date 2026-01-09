@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_db
+from app.api.deps import CurrentUser, UserPlan, get_db
 from app.schemas.billing import (
     CancelSubscriptionRequest,
     CreatePaymentRequest,
@@ -14,7 +14,7 @@ from app.schemas.billing import (
 )
 from app.services.billing import billing_service
 
-router = APIRouter(tags=["billing"])
+router = APIRouter(prefix="/billing", tags=["billing"])
 
 
 @router.get("/plans", response_model=list[PlanResponse])
@@ -41,68 +41,32 @@ async def get_plan(
     return plan
 
 
-@router.get(
-    "/workspaces/{workspace_id}/subscription",
-    response_model=SubscriptionResponse | None,
-)
+@router.get("/subscription", response_model=SubscriptionResponse | None)
 async def get_subscription(
-    workspace_id: UUID,
     current_user: CurrentUser,
+    user_plan: UserPlan,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get current subscription for a workspace."""
-    workspace, plan, subscription = await billing_service.get_workspace_with_plan(
-        db, workspace_id
-    )
-
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    if workspace.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
+    """Get current user's subscription."""
+    subscription = await billing_service.get_user_subscription(db, current_user.id)
 
     if not subscription:
         return None
 
     # Include plan in response
     response = SubscriptionResponse.model_validate(subscription)
-    if plan:
-        response.plan = PlanResponse.model_validate(plan)
+    response.plan = PlanResponse.model_validate(user_plan)
 
     return response
 
 
-@router.post(
-    "/workspaces/{workspace_id}/subscribe",
-    response_model=PaymentResponse,
-)
+@router.post("/subscribe", response_model=PaymentResponse)
 async def create_subscription_payment(
-    workspace_id: UUID,
     request: CreatePaymentRequest,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a payment to subscribe to a plan."""
-    workspace, _, _ = await billing_service.get_workspace_with_plan(db, workspace_id)
-
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    if workspace.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
-
     # Check if YooKassa is configured
     if not billing_service.is_configured:
         raise HTTPException(
@@ -112,7 +76,7 @@ async def create_subscription_payment(
 
     payment = await billing_service.create_payment(
         db,
-        workspace_id=workspace_id,
+        user_id=current_user.id,
         plan_id=request.plan_id,
         billing_period=request.billing_period,
         return_url=request.return_url,
@@ -127,29 +91,14 @@ async def create_subscription_payment(
     return payment
 
 
-@router.post("/workspaces/{workspace_id}/subscription/cancel")
+@router.post("/subscription/cancel")
 async def cancel_subscription(
-    workspace_id: UUID,
     request: CancelSubscriptionRequest,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    """Cancel a subscription."""
-    workspace, _, subscription = await billing_service.get_workspace_with_plan(
-        db, workspace_id
-    )
-
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    if workspace.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
+    """Cancel current user's subscription."""
+    subscription = await billing_service.get_user_subscription(db, current_user.id)
 
     if not subscription:
         raise HTTPException(
@@ -158,7 +107,7 @@ async def cancel_subscription(
         )
 
     success = await billing_service.cancel_subscription(
-        db, workspace_id, immediately=request.immediately
+        db, current_user.id, immediately=request.immediately
     )
 
     if not success:
@@ -170,34 +119,16 @@ async def cancel_subscription(
     return {"message": "Subscription cancelled successfully"}
 
 
-@router.get(
-    "/workspaces/{workspace_id}/payments",
-    response_model=list[PaymentResponse],
-)
+@router.get("/payments", response_model=list[PaymentResponse])
 async def get_payment_history(
-    workspace_id: UUID,
     current_user: CurrentUser,
     limit: int = 20,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get payment history for a workspace."""
-    workspace, _, _ = await billing_service.get_workspace_with_plan(db, workspace_id)
-
-    if not workspace:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    if workspace.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
-
+    """Get payment history for current user."""
     payments = await billing_service.get_payment_history(
-        db, workspace_id, limit=limit, offset=offset
+        db, current_user.id, limit=limit, offset=offset
     )
 
     return payments

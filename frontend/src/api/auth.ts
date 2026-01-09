@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from '@/types'
+import type { AuthResponse, LoginRequest, RegisterRequest, TelegramConnectResponse, User } from '@/types'
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
   const response = await apiClient.post<AuthResponse>('/auth/login', data)
@@ -39,4 +39,28 @@ export async function updateProfile(data: {
 }): Promise<User> {
   const response = await apiClient.patch<User>('/auth/me', data)
   return response.data
+}
+
+export async function connectTelegram(): Promise<TelegramConnectResponse> {
+  const response = await apiClient.post<TelegramConnectResponse>('/auth/telegram/connect')
+  return response.data
+}
+
+export async function disconnectTelegram(): Promise<void> {
+  await apiClient.delete('/auth/telegram/disconnect')
+}
+
+export async function uploadAvatar(file: File): Promise<User> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await apiClient.post<User>('/auth/me/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data
+}
+
+export async function deleteAvatar(): Promise<void> {
+  await apiClient.delete('/auth/me/avatar')
 }

@@ -10,6 +10,7 @@ from app.core.security import decode_token
 from app.db.database import get_db
 from app.db.repositories.users import UserRepository
 from app.db.repositories.workspaces import WorkspaceRepository
+from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.models.worker import Worker
@@ -85,6 +86,16 @@ async def get_workspace(
     return workspace
 
 
+async def get_user_plan(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Plan:
+    """Get current user's plan from their subscription or free plan."""
+    from app.services.billing import billing_service
+
+    return await billing_service.get_user_plan(db, current_user.id)
+
+
 async def get_current_worker(
     x_worker_key: Annotated[str | None, Header(alias="X-Worker-Key")] = None,
     db: AsyncSession = Depends(get_db),
@@ -118,18 +129,30 @@ async def get_current_worker(
 
 async def require_active_subscription(
     workspace: Annotated[Workspace, Depends(get_workspace)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Workspace:
     """
-    Check that workspace has an active subscription for write operations.
+    Check that workspace is not blocked and user has valid subscription.
+    Returns 403 if workspace is blocked (soft-block for downgraded users).
     Returns 402 Payment Required if subscription is expired/cancelled.
 
-    Free plan workspaces (no subscription) are allowed to continue
+    Free plan users (no subscription) are allowed to continue
     within their limits (limits are checked separately in endpoints).
     """
-    # Get subscription for workspace
+    # Check if workspace is blocked
+    if workspace.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "workspace_blocked",
+                "message": "This workspace is blocked. Upgrade your plan to unlock it.",
+            },
+        )
+
+    # Get subscription for USER (not workspace)
     result = await db.execute(
-        select(Subscription).where(Subscription.workspace_id == workspace.id)
+        select(Subscription).where(Subscription.user_id == current_user.id)
     )
     subscription = result.scalar_one_or_none()
 
@@ -158,4 +181,5 @@ CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentWorkspace = Annotated[Workspace, Depends(get_workspace)]
 ActiveSubscriptionWorkspace = Annotated[Workspace, Depends(require_active_subscription)]
 CurrentWorker = Annotated[Worker, Depends(get_current_worker)]
+UserPlan = Annotated[Plan, Depends(get_user_plan)]
 DB = Annotated[AsyncSession, Depends(get_db)]

@@ -1,5 +1,4 @@
 from datetime import datetime
-from uuid import UUID
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,6 +31,9 @@ class User(Base, UUIDMixin, TimestampMixin):
         String(5), default="ru", server_default="ru"
     )
 
+    # Avatar
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Account lockout (brute force protection)
     failed_login_attempts: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0"
@@ -44,6 +46,10 @@ class User(Base, UUIDMixin, TimestampMixin):
     workspaces: Mapped[list["Workspace"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
+    )
+    subscription: Mapped["Subscription | None"] = relationship(
+        back_populates="user",
+        uselist=False,
     )
 
     def is_locked(self) -> bool:

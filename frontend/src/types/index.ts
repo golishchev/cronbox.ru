@@ -9,6 +9,7 @@ export interface User {
   is_active: boolean
   is_superuser: boolean
   preferred_language: 'en' | 'ru'
+  avatar_url: string | null
   created_at: string
   updated_at: string
 }
@@ -271,6 +272,13 @@ export interface WorkerCreateResponse {
   api_key: string
   api_key_prefix: string
   created_at: string
+}
+
+// Telegram
+export interface TelegramConnectResponse {
+  code: string
+  expires_in: number
+  bot_username: string
 }
 
 // API Error

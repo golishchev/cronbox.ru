@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.repositories.base import BaseRepository
 from app.models.cron_task import TaskStatus
 from app.models.delayed_task import DelayedTask
+from app.models.workspace import Workspace
 
 
 class DelayedTaskRepository(BaseRepository[DelayedTask]):
@@ -70,13 +71,16 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
 
         Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
         when multiple scheduler instances are running.
+        Excludes tasks from blocked workspaces.
         """
         stmt = (
             select(DelayedTask)
+            .join(Workspace, DelayedTask.workspace_id == Workspace.id)
             .where(
                 and_(
                     DelayedTask.status == TaskStatus.PENDING,
                     DelayedTask.execute_at <= now,
+                    Workspace.is_blocked.is_(False),
                 )
             )
             .order_by(DelayedTask.execute_at)

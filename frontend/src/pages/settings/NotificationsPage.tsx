@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import {
@@ -13,16 +13,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { toast } from '@/hooks/use-toast'
 import {
   Loader2,
   Bell,
   Mail,
   MessageSquare,
   Webhook,
-  Save,
   Send,
   Plus,
   X,
+  Check,
 } from 'lucide-react'
 
 interface NotificationsPageProps {
@@ -35,9 +36,13 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   const [_settings, setSettings] = useState<NotificationSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+
+  // Track if initial load is complete to avoid saving on mount
+  const isInitialized = useRef(false)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Form state
   const [telegramEnabled, setTelegramEnabled] = useState(false)
@@ -59,6 +64,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   const loadSettings = async () => {
     if (!currentWorkspace) return
     setIsLoading(true)
+    isInitialized.current = false
     try {
       const data = await getNotificationSettings(currentWorkspace.id)
       setSettings(data)
@@ -72,6 +78,10 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
       setNotifyOnFailure(data.notify_on_failure)
       setNotifyOnRecovery(data.notify_on_recovery)
       setNotifyOnSuccess(data.notify_on_success)
+      // Mark as initialized after a short delay to allow state to settle
+      setTimeout(() => {
+        isInitialized.current = true
+      }, 100)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -83,11 +93,12 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
     loadSettings()
   }, [currentWorkspace])
 
-  const handleSave = async () => {
-    if (!currentWorkspace) return
+  const saveSettings = useCallback(async () => {
+    if (!currentWorkspace || !isInitialized.current) return
+
     setIsSaving(true)
+    setSaveStatus('saving')
     setError('')
-    setSuccess('')
 
     try {
       await updateNotificationSettings(currentWorkspace.id, {
@@ -102,25 +113,74 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
         notify_on_recovery: notifyOnRecovery,
         notify_on_success: notifyOnSuccess,
       })
-      setSuccess(t('notifications.settingsSaved'))
-      setTimeout(() => setSuccess(''), 3000)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
     } catch (err) {
       setError(getErrorMessage(err))
+      setSaveStatus('error')
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [
+    currentWorkspace,
+    telegramEnabled,
+    telegramChatIds,
+    emailEnabled,
+    emailAddresses,
+    webhookEnabled,
+    webhookUrl,
+    webhookSecret,
+    notifyOnFailure,
+    notifyOnRecovery,
+    notifyOnSuccess,
+  ])
+
+  // Auto-save with debounce when settings change
+  useEffect(() => {
+    if (!isInitialized.current || isLoading) return
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Debounce save by 500ms
+    saveTimeoutRef.current = setTimeout(() => {
+      saveSettings()
+    }, 500)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [
+    telegramEnabled,
+    telegramChatIds,
+    emailEnabled,
+    emailAddresses,
+    webhookEnabled,
+    webhookUrl,
+    webhookSecret,
+    notifyOnFailure,
+    notifyOnRecovery,
+    notifyOnSuccess,
+    saveSettings,
+    isLoading,
+  ])
 
   const handleTestNotification = async (channel: 'telegram' | 'email' | 'webhook') => {
     if (!currentWorkspace) return
     setTestingChannel(channel)
     setError('')
-    setSuccess('')
 
     try {
-      const result = await sendTestNotification(currentWorkspace.id, channel)
-      setSuccess(result.message)
-      setTimeout(() => setSuccess(''), 3000)
+      await sendTestNotification(currentWorkspace.id, channel)
+      toast({
+        title: t('notifications.testSent'),
+        description: t('notifications.testSentDescription', { channel }),
+        variant: 'success',
+      })
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -169,7 +229,15 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('notifications.title')}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{t('notifications.title')}</h1>
+          {saveStatus === 'saving' && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          {saveStatus === 'saved' && (
+            <Check className="h-4 w-4 text-green-600" />
+          )}
+        </div>
         <p className="text-muted-foreground">
           {t('notifications.subtitle')}
         </p>
@@ -178,12 +246,6 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
       {error && (
         <div className="rounded-md bg-destructive/15 p-4 text-destructive">
           {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="rounded-md bg-green-500/15 p-4 text-green-600">
-          {success}
         </div>
       )}
 
@@ -448,17 +510,6 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {t('notifications.saveSettings')}
-        </Button>
-      </div>
     </div>
   )
 }

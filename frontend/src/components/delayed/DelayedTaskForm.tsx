@@ -64,6 +64,7 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
   const [executeAt, setExecuteAt] = useState(getDefaultDateTime())
   const [timeoutSeconds, setTimeoutSeconds] = useState(30)
   const [retryCount, setRetryCount] = useState(0)
+  const [retryDelaySeconds, setRetryDelaySeconds] = useState(60)
   const [headers, setHeaders] = useState('{}')
   const [body, setBody] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState('')
@@ -82,6 +83,7 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
       setExecuteAt(formatDateTimeLocal(new Date(task.execute_at)))
       setTimeoutSeconds(task.timeout_seconds)
       setRetryCount(task.retry_count)
+      setRetryDelaySeconds(task.retry_delay_seconds)
       setHeaders(JSON.stringify(task.headers, null, 2))
       setBody(task.body || '')
       setIdempotencyKey(task.idempotency_key || '')
@@ -136,6 +138,7 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           name: name.trim() || undefined,
           timeout_seconds: timeoutSeconds,
           retry_count: retryCount,
+          retry_delay_seconds: retryDelaySeconds,
           headers: parsedHeaders,
           body: body.trim() || undefined,
           callback_url: callbackUrl.trim() || undefined,
@@ -150,6 +153,7 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           name: name.trim() || undefined,
           timeout_seconds: timeoutSeconds,
           retry_count: retryCount,
+          retry_delay_seconds: retryDelaySeconds,
           headers: parsedHeaders,
           body: body.trim() || undefined,
           idempotency_key: idempotencyKey.trim() || undefined,
@@ -264,6 +268,20 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           />
         </div>
       </div>
+
+      {retryCount > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="retryDelay">{t('taskForm.retryDelaySeconds')}</Label>
+          <Input
+            id="retryDelay"
+            type="number"
+            min={1}
+            max={3600}
+            value={retryDelaySeconds}
+            onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 60)}
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="headers">{t('taskForm.headers')} (JSON)</Label>

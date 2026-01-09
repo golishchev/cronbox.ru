@@ -6,6 +6,7 @@ import { translateApiError } from '@/lib/translateApiError'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from '@/hooks/use-toast'
 import {
   Select,
@@ -39,9 +40,11 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
   const [timezone, setTimezone] = useState(task?.timezone ?? 'Europe/Moscow')
   const [timeoutSeconds, setTimeoutSeconds] = useState(task?.timeout_seconds ?? 30)
   const [retryCount, setRetryCount] = useState(task?.retry_count ?? 0)
+  const [retryDelaySeconds, setRetryDelaySeconds] = useState(task?.retry_delay_seconds ?? 60)
   const [headers, setHeaders] = useState(JSON.stringify(task?.headers ?? {}, null, 2))
   const [body, setBody] = useState(task?.body ?? '')
-  const [notifyOnFailure, _setNotifyOnFailure] = useState(task?.notify_on_failure ?? true)
+  const [notifyOnFailure, setNotifyOnFailure] = useState(task?.notify_on_failure ?? true)
+  const [notifyOnRecovery, setNotifyOnRecovery] = useState(task?.notify_on_recovery ?? true)
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -84,9 +87,11 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
         timezone,
         timeout_seconds: timeoutSeconds,
         retry_count: retryCount,
+        retry_delay_seconds: retryDelaySeconds,
         headers: parsedHeaders,
         body: body.trim() || undefined,
         notify_on_failure: notifyOnFailure,
+        notify_on_recovery: notifyOnRecovery,
       }
 
       if (isEditing) {
@@ -215,6 +220,56 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
             value={retryCount}
             onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
           />
+        </div>
+      </div>
+
+      {retryCount > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="retryDelay">{t('taskForm.retryDelaySeconds')}</Label>
+          <Input
+            id="retryDelay"
+            type="number"
+            min={1}
+            max={3600}
+            value={retryDelaySeconds}
+            onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 60)}
+          />
+        </div>
+      )}
+
+      <div className="space-y-4 border-t pt-4">
+        <p className="text-sm font-medium">{t('notifications.events')}</p>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="notifyOnFailure"
+              checked={notifyOnFailure}
+              onCheckedChange={(checked) => setNotifyOnFailure(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="notifyOnFailure" className="cursor-pointer">
+                {t('taskForm.notifyOnFailure')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('notifications.taskFailureDescription')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="notifyOnRecovery"
+              checked={notifyOnRecovery}
+              onCheckedChange={(checked) => setNotifyOnRecovery(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="notifyOnRecovery" className="cursor-pointer">
+                {t('taskForm.notifyOnRecovery')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('notifications.taskRecoveryDescription')}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

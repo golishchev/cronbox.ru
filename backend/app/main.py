@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.utils import get_openapi
 
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -168,6 +170,11 @@ async def root():
 from app.api.router import api_router
 
 app.include_router(api_router, prefix=settings.api_prefix)
+
+# Mount static files for uploads (avatars, etc.)
+UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 # Custom OpenAPI schema with security scheme

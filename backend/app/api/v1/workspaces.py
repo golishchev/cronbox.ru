@@ -1,13 +1,9 @@
 import secrets
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, CurrentWorkspace, DB
-from app.db.repositories.plans import PlanRepository
+from app.api.deps import CurrentUser, CurrentWorkspace, DB, UserPlan
 from app.db.repositories.workspaces import WorkspaceRepository
-from app.schemas.cron_task import PaginationMeta
 from app.schemas.workspace import (
     WorkspaceCreate,
     WorkspaceResponse,
@@ -40,11 +36,11 @@ async def list_workspaces(
 async def create_workspace(
     data: WorkspaceCreate,
     current_user: CurrentUser,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Create a new workspace."""
     workspace_repo = WorkspaceRepository(db)
-    plan_repo = PlanRepository(db)
 
     # Check if slug is unique
     if await workspace_repo.slug_exists(data.slug):
@@ -53,23 +49,19 @@ async def create_workspace(
             detail="Workspace with this slug already exists",
         )
 
-    # Get free plan (or ensure it exists)
-    plan = await plan_repo.ensure_free_plan_exists()
-
-    # Check workspace limit based on plan
+    # Check workspace limit based on user's plan
     workspace_count = await workspace_repo.count_by_owner(current_user.id)
-    if workspace_count >= plan.max_workspaces:
+    if workspace_count >= user_plan.max_workspaces:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Workspace limit reached. Your plan allows {plan.max_workspaces} workspace(s)",
+            detail=f"Workspace limit reached. Your plan allows {user_plan.max_workspaces} workspace(s)",
         )
 
-    # Create workspace
+    # Create workspace (no plan_id - plan is at user level now)
     workspace = await workspace_repo.create(
         name=data.name,
         slug=data.slug,
         owner_id=current_user.id,
-        plan_id=plan.id,
         default_timezone=data.default_timezone,
         webhook_secret=secrets.token_urlsafe(32),
     )
@@ -81,12 +73,11 @@ async def create_workspace(
 @router.get("/{workspace_id}", response_model=WorkspaceWithStats)
 async def get_workspace(
     workspace: CurrentWorkspace,
+    current_user: CurrentUser,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Get a specific workspace with statistics."""
-    workspace_repo = WorkspaceRepository(db)
-    workspace_with_plan = await workspace_repo.get_with_plan(workspace.id)
-
     # Calculate additional stats
     from app.db.repositories.cron_tasks import CronTaskRepository
     from app.db.repositories.delayed_tasks import DelayedTaskRepository
@@ -116,15 +107,16 @@ async def get_workspace(
     return WorkspaceWithStats(
         id=workspace.id,
         name=workspace.name,
-        slug=workspace_with_plan.slug if workspace_with_plan else workspace.slug,
+        slug=workspace.slug,
         owner_id=workspace.owner_id,
-        plan_id=workspace.plan_id,
+        is_blocked=workspace.is_blocked,
+        blocked_at=workspace.blocked_at,
         cron_tasks_count=workspace.cron_tasks_count,
         delayed_tasks_this_month=workspace.delayed_tasks_this_month,
         default_timezone=workspace.default_timezone,
         created_at=workspace.created_at,
         updated_at=workspace.updated_at,
-        plan_name=workspace_with_plan.plan.display_name if workspace_with_plan and workspace_with_plan.plan else None,
+        plan_name=user_plan.display_name,
         active_cron_tasks=active_cron,
         pending_delayed_tasks=pending_delayed,
         executions_today=exec_today,

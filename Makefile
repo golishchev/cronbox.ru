@@ -8,6 +8,8 @@ dev: infra
 	@cd backend && uv run python -m app.cli scheduler &
 	@echo "Starting worker..."
 	@cd backend && uv run python -m app.cli worker &
+	@echo "Starting Telegram bot..."
+	@cd backend && uv run python -m app.cli bot &
 	@echo "Starting frontend..."
 	@cd frontend && npm run dev &
 	@echo ""
@@ -16,6 +18,7 @@ dev: infra
 	@echo "  Frontend:  http://localhost:3000"
 	@echo "  Scheduler: running"
 	@echo "  Worker:    running"
+	@echo "  Bot:       running"
 	@echo ""
 	@echo "Run 'make stop' to stop all services"
 
@@ -35,18 +38,26 @@ dev-scheduler:
 dev-worker:
 	cd backend && uv run python -m app.cli worker
 
+# Telegram bot (foreground)
+dev-bot:
+	cd backend && uv run python -m app.cli bot
+
 # Frontend dev server (foreground)
 dev-frontend:
 	cd frontend && npm run dev
 
 # Stop all services
 stop:
-	-docker-compose down
+	@echo "Stopping Python processes..."
 	-pkill -f "app.cli server" 2>/dev/null || true
 	-pkill -f "app.cli scheduler" 2>/dev/null || true
 	-pkill -f "app.cli worker" 2>/dev/null || true
+	-pkill -f "app.cli bot" 2>/dev/null || true
 	-pkill -f "uvicorn" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
+	@sleep 1
+	@echo "Stopping Docker containers..."
+	-docker-compose down
 	@echo "All services stopped"
 
 # Run all tests

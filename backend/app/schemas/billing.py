@@ -39,7 +39,7 @@ class SubscriptionResponse(BaseModel):
     """Subscription response schema."""
 
     id: UUID
-    workspace_id: UUID
+    user_id: UUID
     plan_id: UUID
     status: str
     current_period_start: datetime
@@ -66,7 +66,7 @@ class PaymentResponse(BaseModel):
     """Payment response schema."""
 
     id: UUID
-    workspace_id: UUID
+    user_id: UUID
     amount: int
     currency: str
     status: str

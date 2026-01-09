@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.repositories.base import BaseRepository
+from app.models.plan import Plan
 from app.models.workspace import Workspace
 
 
@@ -81,3 +82,15 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         if workspace:
             workspace.delayed_tasks_this_month = 0
             await self.db.flush()
+
+    async def get_best_plan_for_owner(self, owner_id: UUID) -> Plan | None:
+        """Get the best plan among all owner's workspaces (by max_workspaces limit)."""
+        stmt = (
+            select(Plan)
+            .join(Workspace, Workspace.plan_id == Plan.id)
+            .where(Workspace.owner_id == owner_id)
+            .order_by(Plan.max_workspaces.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()

@@ -2,12 +2,9 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-import pytz
-
-from app.api.deps import CurrentUser, CurrentWorkspace, ActiveSubscriptionWorkspace, DB
+from app.api.deps import CurrentWorkspace, ActiveSubscriptionWorkspace, DB, UserPlan
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
-from app.db.repositories.plans import PlanRepository
 from app.models.cron_task import TaskStatus
 from app.schemas.cron_task import PaginationMeta
 from app.schemas.delayed_task import (
@@ -58,6 +55,7 @@ async def list_delayed_tasks(
 async def create_delayed_task(
     data: DelayedTaskCreate,
     workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Create a new delayed task.
@@ -67,7 +65,6 @@ async def create_delayed_task(
     """
     delayed_repo = DelayedTaskRepository(db)
     workspace_repo = WorkspaceRepository(db)
-    plan_repo = PlanRepository(db)
 
     # Check idempotency key
     if data.idempotency_key:
@@ -78,14 +75,11 @@ async def create_delayed_task(
             return DelayedTaskResponse.model_validate(existing)
 
     # Check plan limits
-    workspace_with_plan = await workspace_repo.get_with_plan(workspace.id)
-    if workspace_with_plan and workspace_with_plan.plan:
-        plan = workspace_with_plan.plan
-        if workspace.delayed_tasks_this_month >= plan.max_delayed_tasks_per_month:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Monthly delayed task limit reached. Your plan allows {plan.max_delayed_tasks_per_month} delayed task(s) per month",
-            )
+    if workspace.delayed_tasks_this_month >= user_plan.max_delayed_tasks_per_month:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Monthly delayed task limit reached. Your plan allows {user_plan.max_delayed_tasks_per_month} delayed task(s) per month",
+        )
 
     # Validate execute_at is in the future
     now = datetime.utcnow()

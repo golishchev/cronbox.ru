@@ -403,7 +403,7 @@ class TestTelegramConnect:
                 result = await telegram_connect(current_user=mock_user, db=mock_db)
 
                 assert result.code == "ABC123"
-                assert result.bot_username == "CronBoxBot"
+                assert result.bot_username == "cronbox_bot"
 
     @pytest.mark.asyncio
     async def test_telegram_connect_no_token(self):
@@ -425,7 +425,7 @@ class TestTelegramConnect:
                 result = await telegram_connect(current_user=mock_user, db=mock_db)
 
                 assert result.code == "XYZ789"
-                assert result.bot_username == "CronBoxBot"
+                assert result.bot_username == "cronbox_bot"
 
 
 class TestTelegramDisconnect:

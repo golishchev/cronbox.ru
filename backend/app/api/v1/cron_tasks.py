@@ -5,11 +5,9 @@ from croniter import croniter
 from fastapi import APIRouter, HTTPException, Query, status
 import pytz
 
-from app.api.deps import CurrentUser, CurrentWorkspace, ActiveSubscriptionWorkspace, DB
+from app.api.deps import CurrentWorkspace, ActiveSubscriptionWorkspace, DB, UserPlan
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
-from app.db.repositories.plans import PlanRepository
-from app.models.cron_task import TaskStatus
 from app.schemas.cron_task import (
     CronTaskCreate,
     CronTaskListResponse,
@@ -86,31 +84,28 @@ async def list_cron_tasks(
 async def create_cron_task(
     data: CronTaskCreate,
     workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Create a new cron task."""
     cron_repo = CronTaskRepository(db)
     workspace_repo = WorkspaceRepository(db)
-    plan_repo = PlanRepository(db)
 
     # Check plan limits
-    workspace_with_plan = await workspace_repo.get_with_plan(workspace.id)
-    if workspace_with_plan and workspace_with_plan.plan:
-        plan = workspace_with_plan.plan
-        current_count = await cron_repo.count_by_workspace(workspace.id)
-        if current_count >= plan.max_cron_tasks:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cron task limit reached. Your plan allows {plan.max_cron_tasks} cron task(s)",
-            )
+    current_count = await cron_repo.count_by_workspace(workspace.id)
+    if current_count >= user_plan.max_cron_tasks:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cron task limit reached. Your plan allows {user_plan.max_cron_tasks} cron task(s)",
+        )
 
-        # Check minimum interval
-        interval_minutes = calculate_min_interval_minutes(data.schedule, data.timezone)
-        if interval_minutes < plan.min_cron_interval_minutes:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cron interval too frequent. Your plan requires minimum {plan.min_cron_interval_minutes} minute(s) between runs",
-            )
+    # Check minimum interval
+    interval_minutes = calculate_min_interval_minutes(data.schedule, data.timezone)
+    if interval_minutes < user_plan.min_cron_interval_minutes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+        )
 
     # Calculate next run time
     next_run_at = calculate_next_run(data.schedule, data.timezone)
@@ -167,6 +162,7 @@ async def update_cron_task(
     task_id: UUID,
     data: CronTaskUpdate,
     workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Update a cron task."""
@@ -187,17 +183,13 @@ async def update_cron_task(
         timezone = update_data.get("timezone", task.timezone)
         update_data["next_run_at"] = calculate_next_run(schedule, timezone)
 
-        # Check minimum interval against plan
-        workspace_repo = WorkspaceRepository(db)
-        workspace_with_plan = await workspace_repo.get_with_plan(workspace.id)
-        if workspace_with_plan and workspace_with_plan.plan:
-            plan = workspace_with_plan.plan
-            interval_minutes = calculate_min_interval_minutes(schedule, timezone)
-            if interval_minutes < plan.min_cron_interval_minutes:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Cron interval too frequent. Your plan requires minimum {plan.min_cron_interval_minutes} minute(s) between runs",
-                )
+        # Check minimum interval against user's plan
+        interval_minutes = calculate_min_interval_minutes(schedule, timezone)
+        if interval_minutes < user_plan.min_cron_interval_minutes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+            )
 
     # Convert HttpUrl to string if present
     if "url" in update_data and update_data["url"] is not None:
