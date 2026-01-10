@@ -1,0 +1,188 @@
+# GitLab CI/CD Pipeline for CronBox
+# Build and deploy directly on server via SSH (no registry)
+
+stages:
+  - test
+  - deploy
+
+variables:
+  APP_DIR: /opt/cronbox
+
+# Cache for faster builds
+.node_cache: &node_cache
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-node
+    paths:
+      - frontend/node_modules/
+      - landing/node_modules/
+
+.python_cache: &python_cache
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-python
+    paths:
+      - backend/.venv/
+
+# ===================
+# TEST STAGE
+# ===================
+
+test:backend:
+  stage: test
+  image: python:3.12-slim
+  <<: *python_cache
+  before_script:
+    - pip install uv
+    - cd backend
+    - uv sync --frozen
+  script:
+    - uv run ruff check .
+    - uv run mypy app --ignore-missing-imports
+    - uv run pytest tests -v --tb=short
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:frontend:
+  stage: test
+  image: node:20-alpine
+  <<: *node_cache
+  before_script:
+    - cd frontend
+    - npm ci
+  script:
+    - npm run lint
+    - npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test:landing:
+  stage: test
+  image: node:20-alpine
+  <<: *node_cache
+  before_script:
+    - cd landing
+    - npm ci
+  script:
+    - npm run lint
+    - npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ===================
+# DEPLOY STAGE
+# ===================
+
+.deploy_template: &deploy_template
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+
+# Manual deploy (click to deploy)
+deploy:production:
+  <<: *deploy_template
+  script:
+    - |
+      ssh $SSH_USER@$SSH_HOST << ENDSSH
+        set -e
+        cd $APP_DIR
+
+        echo "==> Pulling latest code..."
+        git fetch origin
+        git checkout $CI_COMMIT_SHA
+
+        echo "==> Building images..."
+        docker compose -f docker-compose.prod.yml build --parallel
+
+        echo "==> Stopping old containers..."
+        docker compose -f docker-compose.prod.yml down
+
+        echo "==> Starting services..."
+        docker compose -f docker-compose.prod.yml up -d
+
+        echo "==> Waiting for services to start..."
+        sleep 15
+
+        echo "==> Cleaning up old images..."
+        docker image prune -f
+
+        echo "==> Health check..."
+        curl -sf https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
+        curl -sf https://cronbox.ru && echo "Landing OK" || echo "Warning: Landing health check failed"
+
+        echo "==> Deployment complete!"
+      ENDSSH
+  environment:
+    name: production
+    url: https://cronbox.ru
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
+# Auto deploy on push to main (enable by setting AUTO_DEPLOY=true)
+deploy:production:auto:
+  <<: *deploy_template
+  script:
+    - |
+      ssh $SSH_USER@$SSH_HOST << ENDSSH
+        set -e
+        cd $APP_DIR
+
+        echo "==> Pulling latest code..."
+        git fetch origin
+        git checkout $CI_COMMIT_SHA
+
+        echo "==> Building new images..."
+        docker compose -f docker-compose.prod.yml build --parallel
+
+        echo "==> Zero-downtime deployment..."
+        # Update services one by one
+        docker compose -f docker-compose.prod.yml up -d --no-deps --build api
+        sleep 10
+        docker compose -f docker-compose.prod.yml up -d --no-deps --build worker scheduler
+        docker compose -f docker-compose.prod.yml up -d --no-deps --build frontend landing
+
+        echo "==> Cleaning up..."
+        docker image prune -f
+
+        echo "==> Deployment complete!"
+      ENDSSH
+  environment:
+    name: production
+    url: https://cronbox.ru
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $AUTO_DEPLOY == "true"
+
+# Rollback to previous commit
+rollback:production:
+  <<: *deploy_template
+  script:
+    - |
+      ssh $SSH_USER@$SSH_HOST << ENDSSH
+        set -e
+        cd $APP_DIR
+
+        echo "==> Rolling back to previous commit..."
+        git checkout HEAD~1
+
+        echo "==> Rebuilding..."
+        docker compose -f docker-compose.prod.yml build --parallel
+
+        echo "==> Restarting services..."
+        docker compose -f docker-compose.prod.yml up -d
+
+        echo "==> Rollback complete!"
+      ENDSSH
+  environment:
+    name: production
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
