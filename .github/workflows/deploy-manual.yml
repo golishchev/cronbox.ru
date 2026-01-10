@@ -1,0 +1,59 @@
+# Manual deployment and rollback workflow
+
+name: Manual Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - rollback
+      ref:
+        description: 'Git ref to deploy (commit SHA, branch, tag)'
+        required: false
+        default: 'main'
+
+jobs:
+  deploy:
+    name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://cronbox.ru
+
+    steps:
+      - name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }} via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/cronbox
+
+            if [ "${{ github.event.inputs.action }}" = "rollback" ]; then
+              echo "==> Rolling back to previous commit..."
+              git checkout HEAD~1
+            else
+              echo "==> Deploying ref: ${{ github.event.inputs.ref }}"
+              git fetch origin
+              git checkout ${{ github.event.inputs.ref }}
+            fi
+
+            echo "==> Building images..."
+            docker compose -f docker-compose.prod.yml build --parallel
+
+            echo "==> Restarting services..."
+            docker compose -f docker-compose.prod.yml up -d
+
+            echo "==> Cleaning up..."
+            docker image prune -f
+
+            echo "==> Done! Current commit:"
+            git log -1 --oneline
