@@ -1,0 +1,89 @@
+# Traefik Dynamic Configuration - Middlewares
+# https://doc.traefik.io/traefik/middlewares/overview/
+
+http:
+  middlewares:
+    # Security headers for all services
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"
+
+    # Rate limiting for API endpoints (10 req/s average, burst 20)
+    api-rate-limit:
+      rateLimit:
+        average: 10
+        burst: 20
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Stricter rate limiting for auth endpoints (3 req/s, burst 5)
+    auth-rate-limit:
+      rateLimit:
+        average: 3
+        burst: 5
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Gzip compression
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+
+    # Strip prefix for API (if needed)
+    api-stripprefix:
+      stripPrefix:
+        prefixes:
+          - "/v1"
+        forceSlash: false
+
+    # CORS for API
+    api-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-API-Key
+        accessControlAllowCredentials: true
+        accessControlAllowOriginList:
+          - "https://cronbox.ru"
+          - "https://cp.cronbox.ru"
+          - "https://api.cronbox.ru"
+        accessControlMaxAge: 86400
+        addVaryHeader: true
+
+    # Block Swagger/OpenAPI docs in production
+    block-docs:
+      replacePath:
+        path: "/404"
+
+    # Internal only access (for metrics)
+    internal-only:
+      ipAllowList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          - "127.0.0.1/32"
+
+    # Dashboard auth
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "${TRAEFIK_DASHBOARD_USER:-admin}:${TRAEFIK_DASHBOARD_PASSWORD_HASH}"
