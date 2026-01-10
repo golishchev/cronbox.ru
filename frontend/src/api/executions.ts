@@ -52,3 +52,24 @@ export async function getExecutionStats(
   )
   return response.data
 }
+
+export interface DailyStats {
+  date: string
+  success: number
+  failed: number
+  total: number
+}
+
+export interface DailyStatsResponse {
+  stats: DailyStats[]
+}
+
+export async function getDailyExecutionStats(
+  workspaceId: string,
+  days: number = 7
+): Promise<DailyStats[]> {
+  const response = await apiClient.get<DailyStatsResponse>(
+    `/workspaces/${workspaceId}/executions/stats/daily?days=${days}`
+  )
+  return response.data.stats
+}

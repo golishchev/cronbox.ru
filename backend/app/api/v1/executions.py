@@ -8,6 +8,8 @@ from app.db.repositories.executions import ExecutionRepository
 from app.models.cron_task import TaskStatus
 from app.schemas.cron_task import PaginationMeta
 from app.schemas.execution import (
+    DailyExecutionStats,
+    DailyExecutionStatsResponse,
     ExecutionDetailResponse,
     ExecutionListResponse,
     ExecutionResponse,
@@ -80,6 +82,23 @@ async def get_execution_stats(
         task_id=task_id,
     )
     return ExecutionStats(**stats)
+
+
+@router.get("/stats/daily", response_model=DailyExecutionStatsResponse)
+async def get_daily_execution_stats(
+    workspace: CurrentWorkspace,
+    db: DB,
+    days: int = Query(7, ge=1, le=30, description="Number of days (1-30)"),
+):
+    """Get daily execution statistics for the last N days."""
+    exec_repo = ExecutionRepository(db)
+    daily_stats = await exec_repo.get_daily_stats(
+        workspace_id=workspace.id,
+        days=days,
+    )
+    return DailyExecutionStatsResponse(
+        stats=[DailyExecutionStats(**s) for s in daily_stats]
+    )
 
 
 @router.get("/{execution_id}", response_model=ExecutionDetailResponse)

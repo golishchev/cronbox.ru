@@ -190,6 +190,63 @@ class ExecutionRepository(BaseRepository[Execution]):
         await self.db.refresh(execution)
         return execution
 
+    async def get_daily_stats(
+        self,
+        workspace_id: UUID,
+        days: int = 7,
+    ) -> list[dict]:
+        """Get daily execution statistics for the last N days."""
+        from datetime import timedelta
+
+        # Calculate start date (N days ago, beginning of day UTC)
+        start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+
+        from sqlalchemy import case
+
+        stmt = (
+            select(
+                func.date(Execution.started_at).label("date"),
+                func.count(case((Execution.status == TaskStatus.SUCCESS, 1))).label("success"),
+                func.count(case((Execution.status == TaskStatus.FAILED, 1))).label("failed"),
+                func.count().label("total"),
+            )
+            .where(
+                and_(
+                    Execution.workspace_id == workspace_id,
+                    Execution.started_at >= start_date,
+                )
+            )
+            .group_by(func.date(Execution.started_at))
+            .order_by(func.date(Execution.started_at))
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        # Build result with all days (including days with no executions)
+        stats_by_date = {str(row.date): {"success": row.success, "failed": row.failed, "total": row.total} for row in rows}
+
+        daily_stats = []
+        for i in range(days):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime("%Y-%m-%d")
+            if date_str in stats_by_date:
+                daily_stats.append({
+                    "date": date_str,
+                    "success": stats_by_date[date_str]["success"],
+                    "failed": stats_by_date[date_str]["failed"],
+                    "total": stats_by_date[date_str]["total"],
+                })
+            else:
+                daily_stats.append({
+                    "date": date_str,
+                    "success": 0,
+                    "failed": 0,
+                    "total": 0,
+                })
+
+        return daily_stats
+
     async def cleanup_old_executions(
         self,
         workspace_id: UUID,
