@@ -82,8 +82,4 @@ http:
           - "192.168.0.0/16"
           - "127.0.0.1/32"
 
-    # Dashboard auth
-    dashboard-auth:
-      basicAuth:
-        users:
-          - "${TRAEFIK_DASHBOARD_USER:-admin}:${TRAEFIK_DASHBOARD_PASSWORD_HASH}"
+    # Dashboard auth is defined via docker labels (env vars work there)

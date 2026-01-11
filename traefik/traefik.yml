@@ -48,10 +48,10 @@ serversTransport:
     responseHeaderTimeout: 30s
     idleConnTimeout: 90s
 
+# ACME email set via --certificatesresolvers.letsencrypt.acme.email in docker-compose
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: ${ACME_EMAIL:-admin@cronbox.ru}
       storage: /etc/traefik/acme/acme.json
       httpChallenge:
         entryPoint: web
