@@ -153,7 +153,7 @@ services:
 
   # Postal - Main
   postal:
-    image: ghcr.io/postalserver/postal:3
+    image: ghcr.io/postalserver/postal:3.3.4
     container_name: cronbox-postal
     restart: unless-stopped
     logging: *default-logging
@@ -183,7 +183,7 @@ services:
 
   # Postal - Web
   postal-web:
-    image: ghcr.io/postalserver/postal:3
+    image: ghcr.io/postalserver/postal:3.3.4
     container_name: cronbox-postal-web
     restart: unless-stopped
     logging: *default-logging
@@ -206,7 +206,7 @@ services:
 
   # Postal - Worker
   postal-worker:
-    image: ghcr.io/postalserver/postal:3
+    image: ghcr.io/postalserver/postal:3.3.4
     container_name: cronbox-postal-worker
     restart: unless-stopped
     logging: *default-logging
