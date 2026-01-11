@@ -702,7 +702,7 @@ const sectionComponents: Record<string, () => JSX.Element> = {
 
 export function DocsPage() {
   const { section } = useParams()
-  const location = useLocation()
+  const _location = useLocation()
   const activeSection = section || 'getting-started'
 
   useEffect(() => {
