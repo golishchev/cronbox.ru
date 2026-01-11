@@ -164,6 +164,25 @@ jobs:
             git fetch origin
             git checkout ${{ github.sha }}
 
+            echo "==> Checking infrastructure services..."
+            INFRA_SERVICES="postgres redis traefik postal-mariadb"
+            INFRA_RUNNING=true
+            for service in $INFRA_SERVICES; do
+              if ! docker compose -f docker-compose.prod.yml ps $service --status running -q 2>/dev/null | grep -q .; then
+                echo "Service $service is not running"
+                INFRA_RUNNING=false
+              fi
+            done
+
+            if [ "$INFRA_RUNNING" = false ]; then
+              echo "==> Starting infrastructure services..."
+              docker compose -f docker-compose.prod.yml up -d postgres redis traefik postal-mariadb postal-init postal postal-web postal-worker prometheus grafana redis-exporter postgres-exporter
+              echo "==> Waiting for infrastructure to be healthy..."
+              sleep 30
+            else
+              echo "==> Infrastructure is running"
+            fi
+
             echo "==> Building images..."
             docker compose -f docker-compose.prod.yml build --parallel
 
