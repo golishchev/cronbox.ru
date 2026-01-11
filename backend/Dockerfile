@@ -12,7 +12,8 @@ LABEL description="CronBox Backend API Server"
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_NO_DEV=1
 
 # Install uv package manager
 RUN pip install --no-cache-dir uv
@@ -28,7 +29,8 @@ WORKDIR /app
 COPY --chown=cronbox:cronbox pyproject.toml uv.lock ./
 
 # Install dependencies as root (needed for system packages)
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev && \
+    chown -R cronbox:cronbox /app/.venv
 
 # Copy application code with proper ownership
 COPY --chown=cronbox:cronbox app ./app
