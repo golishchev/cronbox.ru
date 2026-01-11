@@ -42,6 +42,7 @@ dev = [
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.10",
+    "types-pytz>=2024.1.0.0",
 ]
 
 [tool.ruff]
@@ -59,3 +60,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["F401", "F811", "F841"]  # Allow unused imports/variables in tests
 "examples/*" = ["F401"]  # Allow unused imports in examples
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true

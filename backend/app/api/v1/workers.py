@@ -76,8 +76,8 @@ async def create_worker(
 )
 async def get_worker(
     workspace: CurrentWorkspace,
+    db: DB,
     worker_id: UUID = Path(..., description="Worker ID"),
-    db: DB = None,
 ) -> WorkerResponse:
     """Get worker details."""
     worker = await worker_service.get_worker_by_id(db, worker_id, workspace.id)
@@ -98,9 +98,9 @@ async def get_worker(
 )
 async def update_worker(
     workspace: CurrentWorkspace,
+    db: DB,
     data: WorkerUpdate,
     worker_id: UUID = Path(..., description="Worker ID"),
-    db: DB = None,
 ) -> WorkerResponse:
     """Update worker settings."""
     worker = await worker_service.get_worker_by_id(db, worker_id, workspace.id)
@@ -122,8 +122,8 @@ async def update_worker(
 )
 async def delete_worker(
     workspace: CurrentWorkspace,
+    db: DB,
     worker_id: UUID = Path(..., description="Worker ID"),
-    db: DB = None,
 ) -> None:
     """Delete a worker."""
     worker = await worker_service.get_worker_by_id(db, worker_id, workspace.id)
@@ -144,8 +144,8 @@ async def delete_worker(
 )
 async def regenerate_worker_key(
     workspace: CurrentWorkspace,
+    db: DB,
     worker_id: UUID = Path(..., description="Worker ID"),
-    db: DB = None,
 ) -> WorkerCreateResponse:
     """
     Regenerate the API key for a worker.

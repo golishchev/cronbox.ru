@@ -175,7 +175,7 @@ async def get_admin_stats(admin: AdminUser, db: DB):
             Execution.status.in_(["success", "failed"]),
         )
     )
-    success_rate = (successful / total_recent * 100) if total_recent > 0 else 0
+    success_rate = ((successful or 0) / total_recent * 100) if total_recent else 0
 
     # Subscription stats
     active_subs = await db.scalar(
@@ -477,12 +477,12 @@ async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
         select(func.count(Execution.id)).where(Execution.workspace_id == workspace.id)
     )
 
-    # Get subscription plan
+    # Get subscription plan (subscription is per-user, not per-workspace)
     sub = await db.scalar(
         select(Subscription)
         .options(selectinload(Subscription.plan))
         .where(
-            Subscription.workspace_id == workspace.id,
+            Subscription.user_id == workspace.owner_id,
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
         .order_by(Subscription.created_at.desc())
