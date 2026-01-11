@@ -61,12 +61,14 @@ x-logging: &default-logging
 services:
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     container_name: cronbox-traefik
     restart: unless-stopped
     logging: *default-logging
     security_opt:
       - no-new-privileges:true
+    environment:
+      DOCKER_API_VERSION: "1.45"
     command:
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@cronbox.ru}"
     ports:
@@ -91,7 +93,7 @@ services:
 
   # PostgreSQL
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: cronbox-postgres
     restart: unless-stopped
     logging: *default-logging
@@ -103,7 +105,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cronbox}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cronbox} -d ${POSTGRES_DB:-cronbox}"]
     networks:
       - cronbox-network
 
@@ -129,7 +131,7 @@ services:
 
   # Postal - MariaDB
   postal-mariadb:
-    image: mariadb:10.11
+    image: mariadb:11.8
     container_name: cronbox-postal-mariadb
     restart: unless-stopped
     logging: *default-logging
@@ -157,10 +159,16 @@ services:
         fi
         echo 'Running postal initialize...'
         postal initialize
+        if [ -n \"$$POSTAL_ADMIN_EMAIL\" ] && [ -n \"$$POSTAL_ADMIN_PASSWORD\" ]; then
+          echo 'Creating admin user...'
+          printf '%s\n%s\n%s\n%s\n' \"$$POSTAL_ADMIN_EMAIL\" 'Admin' 'User' \"$$POSTAL_ADMIN_PASSWORD\" | postal make-user || true
+        fi
         echo 'Postal initialization complete'
       "
     environment:
       <<: *postal-env
+      POSTAL_ADMIN_EMAIL: ${POSTAL_ADMIN_EMAIL:-admin@cronbox.ru}
+      POSTAL_ADMIN_PASSWORD: ${POSTAL_ADMIN_PASSWORD:-}
     volumes:
       - postal_config:/config
       - postal_data:/opt/postal/storage
@@ -194,7 +202,7 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD-SHELL", "nc -z localhost 25 || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9091/health || exit 1"]
       start_period: 30s
     networks:
       - cronbox-network
@@ -382,7 +390,7 @@ services:
 
   # Prometheus
   prometheus:
-    image: prom/prometheus:v2.47.0
+    image: prom/prometheus:v3.5.0
     container_name: cronbox-prometheus
     restart: unless-stopped
     logging: *default-logging
@@ -406,7 +414,7 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana:10.1.0
+    image: grafana/grafana:12.3.1
     container_name: cronbox-grafana
     restart: unless-stopped
     logging: *default-logging
@@ -432,7 +440,7 @@ services:
 
   # Exporters
   redis-exporter:
-    image: oliver006/redis_exporter:v1.55.0
+    image: oliver006/redis_exporter:v1.80.1
     container_name: cronbox-redis-exporter
     restart: unless-stopped
     logging: *default-logging
@@ -446,7 +454,7 @@ services:
       - cronbox-network
 
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
+    image: prometheuscommunity/postgres-exporter:v0.18.1
     container_name: cronbox-postgres-exporter
     restart: unless-stopped
     logging: *default-logging
