@@ -35,7 +35,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   const { currentWorkspace } = useWorkspaceStore()
   const [_settings, setSettings] = useState<NotificationSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [_isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [testingChannel, setTestingChannel] = useState<string | null>(null)
   const [error, setError] = useState('')
