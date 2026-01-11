@@ -1,11 +1,12 @@
 """Tests for service layer with mocks."""
-import pytest
-from datetime import datetime, timezone, timedelta
-from uuid import uuid4
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
-from app.services.billing import BillingService
+import pytest
+
 from app.models.payment import Payment, PaymentStatus
+from app.services.billing import BillingService
 
 
 class TestBillingService:

@@ -2,7 +2,6 @@
 import hashlib
 import hmac
 from datetime import datetime, timezone
-from typing import Any
 from uuid import UUID
 
 import httpx

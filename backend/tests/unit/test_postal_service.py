@@ -1,9 +1,10 @@
 """Tests for PostalService."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
 import httpx
+import pytest
 
 
 class TestPostalServiceInit:
@@ -99,8 +100,8 @@ class TestPostalServiceSendEmail:
     @patch("app.services.postal.httpx.AsyncClient")
     async def test_send_email_success(self, mock_client_class):
         """Test send_email success."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailType
+        from app.services.postal import PostalService
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
@@ -239,8 +240,8 @@ class TestPostalServiceWebhookSignature:
 
     def test_verify_webhook_signature_valid(self):
         """Test verify returns True for valid signature."""
-        import hmac
         import hashlib
+        import hmac
 
         secret = "test-secret"
         payload = b'{"event": "MessageSent"}'
@@ -328,8 +329,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_sent(self):
         """Test webhook processing for MessageSent event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"
@@ -362,8 +363,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_delivered(self):
         """Test webhook processing for MessageDelivered event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"
@@ -396,8 +397,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_bounced(self):
         """Test webhook processing for MessageBounced event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"
@@ -433,8 +434,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_opened(self):
         """Test webhook processing for MessageLoaded event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"
@@ -467,8 +468,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_clicked(self):
         """Test webhook processing for MessageLinkClicked event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"
@@ -501,8 +502,8 @@ class TestPostalServiceProcessWebhook:
     @pytest.mark.asyncio
     async def test_process_webhook_message_held(self):
         """Test webhook processing for MessageHeld event."""
-        from app.services.postal import PostalService
         from app.models.email_log import EmailStatus
+        from app.services.postal import PostalService
 
         with patch("app.services.postal.settings") as mock_settings:
             mock_settings.postal_api_url = "https://postal.example.com"

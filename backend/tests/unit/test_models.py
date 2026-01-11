@@ -1,20 +1,21 @@
 """Tests for SQLAlchemy models."""
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+
+import pytest
 
 from app.models.cron_task import CronTask, HttpMethod, TaskStatus
 from app.models.delayed_task import DelayedTask
+from app.models.email_log import EmailLog, EmailStatus, EmailType
 from app.models.execution import Execution
-from app.models.user import User
-from app.models.workspace import Workspace
-from app.models.plan import Plan
-from app.models.subscription import Subscription, SubscriptionStatus
-from app.models.payment import Payment, PaymentStatus
-from app.models.worker import Worker, WorkerStatus
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationTemplate
-from app.models.email_log import EmailLog, EmailStatus, EmailType
+from app.models.payment import Payment, PaymentStatus
+from app.models.plan import Plan
+from app.models.subscription import Subscription, SubscriptionStatus
+from app.models.user import User
+from app.models.worker import Worker, WorkerStatus
+from app.models.workspace import Workspace
 
 
 class TestHttpMethod:

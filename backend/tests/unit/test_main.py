@@ -1,6 +1,7 @@
 """Tests for FastAPI application main module."""
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 
 class TestHealthCheck:
@@ -101,7 +102,7 @@ class TestCustomOpenAPI:
 
     def test_custom_openapi_schema(self):
         """Test custom OpenAPI schema generation."""
-        from app.main import custom_openapi, app
+        from app.main import app, custom_openapi
 
         # Clear cached schema
         app.openapi_schema = None
@@ -116,7 +117,7 @@ class TestCustomOpenAPI:
 
     def test_custom_openapi_has_security(self):
         """Test custom OpenAPI has global security."""
-        from app.main import custom_openapi, app
+        from app.main import app, custom_openapi
 
         # Clear cached schema
         app.openapi_schema = None
@@ -128,7 +129,7 @@ class TestCustomOpenAPI:
 
     def test_custom_openapi_has_servers(self):
         """Test custom OpenAPI has servers defined."""
-        from app.main import custom_openapi, app
+        from app.main import app, custom_openapi
 
         # Clear cached schema
         app.openapi_schema = None
@@ -140,7 +141,7 @@ class TestCustomOpenAPI:
 
     def test_custom_openapi_caches_schema(self):
         """Test custom OpenAPI caches schema."""
-        from app.main import custom_openapi, app
+        from app.main import app, custom_openapi
 
         # Clear cached schema
         app.openapi_schema = None

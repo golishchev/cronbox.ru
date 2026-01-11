@@ -25,7 +25,7 @@ class PlanRepository(BaseRepository[Plan]):
         """Get all public active plans."""
         stmt = (
             select(Plan)
-            .where(Plan.is_active == True, Plan.is_public == True)
+            .where(Plan.is_active.is_(True), Plan.is_public.is_(True))
             .order_by(Plan.sort_order)
         )
         result = await self.db.execute(stmt)

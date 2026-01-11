@@ -11,10 +11,10 @@ Tasks can be executed by:
 import asyncio
 from datetime import datetime
 
+import pytz
 import structlog
 from arq import create_pool
 from croniter import croniter
-import pytz
 
 from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository

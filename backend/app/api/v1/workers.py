@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, status
 
-from app.api.deps import CurrentUser, CurrentWorker, CurrentWorkspace, DB
+from app.api.deps import DB, CurrentWorker, CurrentWorkspace
 from app.schemas.worker import (
     WorkerCreate,
     WorkerCreateResponse,

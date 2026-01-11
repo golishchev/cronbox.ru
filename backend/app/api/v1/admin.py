@@ -8,11 +8,20 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, DB
-from app.models import CronTask, DelayedTask, Execution, User, Workspace, Subscription, Payment, Plan
+from app.api.deps import DB, CurrentUser
+from app.models import (
+    CronTask,
+    DelayedTask,
+    Execution,
+    Payment,
+    Plan,
+    Subscription,
+    User,
+    Workspace,
+)
 from app.models.notification_template import NotificationChannel, NotificationTemplate
-from app.models.subscription import SubscriptionStatus
 from app.models.payment import PaymentStatus
+from app.models.subscription import SubscriptionStatus
 from app.services.template_service import template_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -125,10 +134,10 @@ async def get_admin_stats(admin: AdminUser, db: DB):
     # User stats
     total_users = await db.scalar(select(func.count(User.id)))
     active_users = await db.scalar(
-        select(func.count(User.id)).where(User.is_active == True)
+        select(func.count(User.id)).where(User.is_active.is_(True))
     )
     verified_users = await db.scalar(
-        select(func.count(User.id)).where(User.email_verified == True)
+        select(func.count(User.id)).where(User.email_verified.is_(True))
     )
 
     # Workspace stats
@@ -137,7 +146,7 @@ async def get_admin_stats(admin: AdminUser, db: DB):
     # Task stats
     total_cron = await db.scalar(select(func.count(CronTask.id)))
     active_cron = await db.scalar(
-        select(func.count(CronTask.id)).where(CronTask.is_active == True)
+        select(func.count(CronTask.id)).where(CronTask.is_active.is_(True))
     )
     total_delayed = await db.scalar(select(func.count(DelayedTask.id)))
     pending_delayed = await db.scalar(
@@ -450,7 +459,7 @@ async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
     active_cron = await db.scalar(
         select(func.count(CronTask.id)).where(
             CronTask.workspace_id == workspace.id,
-            CronTask.is_active == True,
+            CronTask.is_active.is_(True),
         )
     )
     delayed_count = await db.scalar(

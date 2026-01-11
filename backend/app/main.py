@@ -3,18 +3,16 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.openapi.utils import get_openapi
-
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
-from app.core.redis import redis_client
 from app.core.rate_limiter import RateLimitMiddleware
+from app.core.redis import redis_client
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.database import engine
-
 
 # OpenAPI tags metadata
 tags_metadata = [

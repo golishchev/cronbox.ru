@@ -1,8 +1,9 @@
 """Unit tests for cron tasks API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 def create_mock_workspace(**kwargs):
@@ -151,8 +152,9 @@ class TestGetCronTask:
     @pytest.mark.asyncio
     async def test_get_task_not_found(self):
         """Test getting a non-existent cron task."""
-        from app.api.v1.cron_tasks import get_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import get_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -175,8 +177,9 @@ class TestGetCronTask:
     @pytest.mark.asyncio
     async def test_get_task_wrong_workspace(self):
         """Test getting a task from wrong workspace."""
-        from app.api.v1.cron_tasks import get_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import get_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -203,9 +206,10 @@ class TestCreateCronTask:
     @pytest.mark.asyncio
     async def test_create_task_limit_reached(self):
         """Test creating task when limit reached."""
+        from fastapi import HTTPException
+
         from app.api.v1.cron_tasks import create_cron_task
         from app.schemas.cron_task import CronTaskCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -240,9 +244,10 @@ class TestCreateCronTask:
     @pytest.mark.asyncio
     async def test_create_task_interval_too_frequent(self):
         """Test creating task with too frequent interval."""
+        from fastapi import HTTPException
+
         from app.api.v1.cron_tasks import create_cron_task
         from app.schemas.cron_task import CronTaskCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -355,8 +360,9 @@ class TestDeleteCronTask:
     @pytest.mark.asyncio
     async def test_delete_task_not_found(self):
         """Test deleting non-existent task."""
-        from app.api.v1.cron_tasks import delete_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import delete_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -384,8 +390,9 @@ class TestRunCronTask:
     @pytest.mark.asyncio
     async def test_run_task_not_found(self):
         """Test running non-existent task."""
-        from app.api.v1.cron_tasks import run_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import run_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -408,8 +415,9 @@ class TestRunCronTask:
     @pytest.mark.asyncio
     async def test_run_inactive_task(self):
         """Test running inactive task."""
-        from app.api.v1.cron_tasks import run_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import run_cron_task
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -465,8 +473,9 @@ class TestRunCronTask:
     @pytest.mark.asyncio
     async def test_run_task_enqueue_fails(self):
         """Test running task when enqueue fails."""
-        from app.api.v1.cron_tasks import run_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import run_cron_task
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -498,8 +507,9 @@ class TestPauseCronTask:
     @pytest.mark.asyncio
     async def test_pause_task_not_found(self):
         """Test pausing non-existent task."""
-        from app.api.v1.cron_tasks import pause_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import pause_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -522,8 +532,9 @@ class TestPauseCronTask:
     @pytest.mark.asyncio
     async def test_pause_already_paused(self):
         """Test pausing already paused task."""
-        from app.api.v1.cron_tasks import pause_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import pause_cron_task
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -579,8 +590,9 @@ class TestResumeCronTask:
     @pytest.mark.asyncio
     async def test_resume_task_not_found(self):
         """Test resuming non-existent task."""
-        from app.api.v1.cron_tasks import resume_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import resume_cron_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -603,8 +615,9 @@ class TestResumeCronTask:
     @pytest.mark.asyncio
     async def test_resume_not_paused(self):
         """Test resuming task that is not paused."""
-        from app.api.v1.cron_tasks import resume_cron_task
         from fastapi import HTTPException
+
+        from app.api.v1.cron_tasks import resume_cron_task
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -629,8 +642,9 @@ class TestResumeCronTask:
     @pytest.mark.asyncio
     async def test_resume_task_success(self):
         """Test successfully resuming a paused cron task."""
-        from app.api.v1.cron_tasks import resume_cron_task
         from unittest.mock import ANY
+
+        from app.api.v1.cron_tasks import resume_cron_task
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -662,9 +676,10 @@ class TestUpdateCronTask:
     @pytest.mark.asyncio
     async def test_update_task_not_found(self):
         """Test updating non-existent task."""
+        from fastapi import HTTPException
+
         from app.api.v1.cron_tasks import update_cron_task
         from app.schemas.cron_task import CronTaskUpdate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()

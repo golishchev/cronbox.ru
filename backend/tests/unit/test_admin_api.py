@@ -1,9 +1,9 @@
 """Unit tests for admin API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
+import pytest
 from fastapi import HTTPException
 
 
@@ -136,7 +136,7 @@ class TestUpdateUser:
     @pytest.mark.asyncio
     async def test_update_user_not_found(self):
         """Test updating non-existent user."""
-        from app.api.v1.admin import update_user, UpdateUserRequest
+        from app.api.v1.admin import UpdateUserRequest, update_user
 
         mock_admin = create_mock_admin()
         mock_db = MagicMock()
@@ -156,7 +156,7 @@ class TestUpdateUser:
     @pytest.mark.asyncio
     async def test_update_user_cannot_remove_own_admin(self):
         """Test admin cannot remove their own admin status."""
-        from app.api.v1.admin import update_user, UpdateUserRequest
+        from app.api.v1.admin import UpdateUserRequest, update_user
 
         admin_id = uuid4()
         mock_admin = create_mock_admin(id=admin_id)
@@ -179,7 +179,7 @@ class TestUpdateUser:
     @pytest.mark.asyncio
     async def test_update_user_success(self):
         """Test successfully updating a user."""
-        from app.api.v1.admin import update_user, UpdateUserRequest
+        from app.api.v1.admin import UpdateUserRequest, update_user
 
         admin_id = uuid4()
         mock_admin = create_mock_admin(id=admin_id)

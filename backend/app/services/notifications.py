@@ -1,7 +1,8 @@
 """Main notification orchestrator service."""
+from uuid import UUID
+
 import httpx
 import structlog
-from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,9 +10,9 @@ from app.config import settings as app_settings
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationChannel
 from app.models.workspace import Workspace
-from app.services.telegram import telegram_service
-from app.services.postal import postal_service
 from app.services.email import email_service  # SMTP fallback
+from app.services.postal import postal_service
+from app.services.telegram import telegram_service
 from app.services.template_service import template_service
 
 logger = structlog.get_logger()

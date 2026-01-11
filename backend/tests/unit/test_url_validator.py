@@ -1,16 +1,17 @@
 """Tests for URL validator (SSRF protection)."""
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from app.core.url_validator import (
-    SSRFError,
-    validate_url_for_ssrf,
-    is_url_safe,
-    sanitize_url_for_logging,
-    sanitize_headers_for_logging,
-    _is_ip_blocked,
     BLOCKED_HOSTNAMES,
     BLOCKED_IP_NETWORKS,
+    SSRFError,
+    _is_ip_blocked,
+    is_url_safe,
+    sanitize_headers_for_logging,
+    sanitize_url_for_logging,
+    validate_url_for_ssrf,
 )
 
 

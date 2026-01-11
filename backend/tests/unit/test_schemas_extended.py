@@ -1,55 +1,56 @@
 """Extended tests for Pydantic schemas."""
-import pytest
 from datetime import datetime, timedelta
 from uuid import uuid4
+
+import pytest
 from pydantic import ValidationError
 
 from app.schemas.auth import (
-    TokenResponse,
-    TokenPayload,
+    EmailVerificationRequest,
+    LoginResponse,
+    PasswordChangeRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
-    LoginResponse,
-    PasswordChangeRequest,
-    PasswordResetRequest,
-    PasswordResetConfirm,
-    EmailVerificationRequest,
     TelegramConnectRequest,
     TelegramConnectResponse,
     TelegramLinkRequest,
+    TokenPayload,
+    TokenResponse,
+)
+from app.schemas.billing import (
+    CreatePaymentRequest,
+    PaymentResponse,
+    PlanResponse,
+    SubscriptionResponse,
 )
 from app.schemas.delayed_task import (
     DelayedTaskBase,
     DelayedTaskCreate,
+    DelayedTaskListResponse,
     DelayedTaskResponse,
     DelayedTaskUpdate,
-    DelayedTaskListResponse,
 )
-from app.schemas.workspace import (
-    WorkspaceBase,
-    WorkspaceCreate,
-    WorkspaceUpdate,
-    WorkspaceResponse,
-    WorkspaceWithStats,
-)
-from app.schemas.billing import (
-    PlanResponse,
-    SubscriptionResponse,
-    PaymentResponse,
-    CreatePaymentRequest,
-)
-from app.schemas.user import UserResponse, UserUpdate
-from app.schemas.execution import ExecutionResponse, ExecutionListResponse
+from app.schemas.execution import ExecutionListResponse, ExecutionResponse
 from app.schemas.notification_settings import (
     NotificationSettingsResponse,
     NotificationSettingsUpdate,
 )
+from app.schemas.user import UserResponse, UserUpdate
 from app.schemas.worker import (
     WorkerCreate,
     WorkerResponse,
     WorkerTaskInfo,
     WorkerTaskResult,
+)
+from app.schemas.workspace import (
+    WorkspaceBase,
+    WorkspaceCreate,
+    WorkspaceResponse,
+    WorkspaceUpdate,
+    WorkspaceWithStats,
 )
 
 

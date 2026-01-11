@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.worker import WorkerStatus
 
-
 # === Request schemas ===
 
 

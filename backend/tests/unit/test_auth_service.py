@@ -1,11 +1,12 @@
 """Tests for AuthService."""
-import pytest
-from datetime import datetime, timezone, timedelta
-from uuid import uuid4
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
-from app.services.auth import AuthService
+import pytest
+
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
+from app.services.auth import AuthService
 
 
 class TestAuthServiceRegister:

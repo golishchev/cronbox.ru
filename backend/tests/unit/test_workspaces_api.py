@@ -1,8 +1,9 @@
 """Unit tests for workspaces API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 def create_mock_user(**kwargs):
@@ -107,9 +108,10 @@ class TestCreateWorkspace:
     @pytest.mark.asyncio
     async def test_create_workspace_slug_exists(self):
         """Test creating workspace with existing slug."""
+        from fastapi import HTTPException
+
         from app.api.v1.workspaces import create_workspace
         from app.schemas.workspace import WorkspaceCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = create_mock_user()
@@ -129,9 +131,10 @@ class TestCreateWorkspace:
     @pytest.mark.asyncio
     async def test_create_workspace_limit_reached(self):
         """Test creating workspace when limit reached."""
+        from fastapi import HTTPException
+
         from app.api.v1.workspaces import create_workspace
         from app.schemas.workspace import WorkspaceCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = create_mock_user()

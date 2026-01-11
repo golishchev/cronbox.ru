@@ -1,8 +1,9 @@
 """Unit tests for delayed tasks API endpoints."""
-import pytest
-from uuid import uuid4
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 from app.models.cron_task import TaskStatus
 
@@ -108,8 +109,9 @@ class TestGetDelayedTask:
     @pytest.mark.asyncio
     async def test_get_task_not_found(self):
         """Test getting non-existent task."""
-        from app.api.v1.delayed_tasks import get_delayed_task
         from fastapi import HTTPException
+
+        from app.api.v1.delayed_tasks import get_delayed_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -170,9 +172,10 @@ class TestCreateDelayedTask:
     @pytest.mark.asyncio
     async def test_create_limit_reached(self):
         """Test creating task when monthly limit reached."""
+        from fastapi import HTTPException
+
         from app.api.v1.delayed_tasks import create_delayed_task
         from app.schemas.delayed_task import DelayedTaskCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace(delayed_tasks_this_month=100)
@@ -211,9 +214,10 @@ class TestCreateDelayedTask:
     @pytest.mark.asyncio
     async def test_create_execute_at_in_past(self):
         """Test creating task with execute_at in the past."""
+        from fastapi import HTTPException
+
         from app.api.v1.delayed_tasks import create_delayed_task
         from app.schemas.delayed_task import DelayedTaskCreate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -255,9 +259,10 @@ class TestUpdateDelayedTask:
     @pytest.mark.asyncio
     async def test_update_task_not_found(self):
         """Test updating non-existent task."""
+        from fastapi import HTTPException
+
         from app.api.v1.delayed_tasks import update_delayed_task
         from app.schemas.delayed_task import DelayedTaskUpdate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -282,10 +287,11 @@ class TestUpdateDelayedTask:
     @pytest.mark.asyncio
     async def test_update_non_pending_task(self):
         """Test updating non-pending task fails."""
-        from app.api.v1.delayed_tasks import update_delayed_task
-        from app.schemas.delayed_task import DelayedTaskUpdate
-        from app.models.cron_task import TaskStatus
         from fastapi import HTTPException
+
+        from app.api.v1.delayed_tasks import update_delayed_task
+        from app.models.cron_task import TaskStatus
+        from app.schemas.delayed_task import DelayedTaskUpdate
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -315,10 +321,11 @@ class TestUpdateDelayedTask:
     @pytest.mark.asyncio
     async def test_update_execute_at_in_past(self):
         """Test updating execute_at to past fails."""
-        from app.api.v1.delayed_tasks import update_delayed_task
-        from app.schemas.delayed_task import DelayedTaskUpdate
-        from app.models.cron_task import TaskStatus
         from fastapi import HTTPException
+
+        from app.api.v1.delayed_tasks import update_delayed_task
+        from app.models.cron_task import TaskStatus
+        from app.schemas.delayed_task import DelayedTaskUpdate
 
         mock_db = AsyncMock()
         workspace_id = uuid4()
@@ -354,8 +361,9 @@ class TestCancelDelayedTask:
     @pytest.mark.asyncio
     async def test_cancel_task_not_found(self):
         """Test canceling non-existent task."""
-        from app.api.v1.delayed_tasks import cancel_delayed_task
         from fastapi import HTTPException
+
+        from app.api.v1.delayed_tasks import cancel_delayed_task
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -378,9 +386,10 @@ class TestCancelDelayedTask:
     @pytest.mark.asyncio
     async def test_cancel_non_pending_task(self):
         """Test canceling non-pending task fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.delayed_tasks import cancel_delayed_task
         from app.models.cron_task import TaskStatus
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         workspace_id = uuid4()

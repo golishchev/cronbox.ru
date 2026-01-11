@@ -2,7 +2,7 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, CurrentWorkspace, DB, UserPlan
+from app.api.deps import DB, CurrentUser, CurrentWorkspace, UserPlan
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.schemas.workspace import (
     WorkspaceCreate,
@@ -79,11 +79,12 @@ async def get_workspace(
 ):
     """Get a specific workspace with statistics."""
     # Calculate additional stats
+    from datetime import datetime, timedelta
+
     from app.db.repositories.cron_tasks import CronTaskRepository
     from app.db.repositories.delayed_tasks import DelayedTaskRepository
     from app.db.repositories.executions import ExecutionRepository
     from app.models.cron_task import TaskStatus
-    from datetime import datetime, timedelta
 
     cron_repo = CronTaskRepository(db)
     delayed_repo = DelayedTaskRepository(db)

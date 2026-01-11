@@ -1,12 +1,13 @@
 """Tests for worker tasks module."""
-import pytest
 from datetime import datetime
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
-import httpx
+from uuid import uuid4
 
-from app.workers.tasks import execute_http_task
+import httpx
+import pytest
+
 from app.core.url_validator import SSRFError
+from app.workers.tasks import execute_http_task
 
 
 class TestExecuteHttpTask:
@@ -532,8 +533,8 @@ class TestExecuteCronTask:
     @pytest.mark.asyncio
     async def test_successful_execution(self, mock_db_context):
         """Test successful cron task execution."""
-        from app.workers.tasks import execute_cron_task
         from app.models.cron_task import HttpMethod
+        from app.workers.tasks import execute_cron_task
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -588,8 +589,8 @@ class TestExecuteCronTask:
     @pytest.mark.asyncio
     async def test_failed_execution_with_retry(self, mock_db_context):
         """Test failed cron task execution schedules retry."""
-        from app.workers.tasks import execute_cron_task
         from app.models.cron_task import HttpMethod
+        from app.workers.tasks import execute_cron_task
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -683,8 +684,8 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_task_not_pending(self, mock_db_context):
         """Test execute_delayed_task when task is not pending."""
-        from app.workers.tasks import execute_delayed_task
         from app.models.cron_task import TaskStatus
+        from app.workers.tasks import execute_delayed_task
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -704,8 +705,8 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_successful_execution(self, mock_db_context):
         """Test successful delayed task execution."""
+        from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
-        from app.models.cron_task import TaskStatus, HttpMethod
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -757,8 +758,8 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_task_already_running(self, mock_db_context):
         """Test delayed task that is already running."""
+        from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
-        from app.models.cron_task import TaskStatus, HttpMethod
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -808,8 +809,8 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_failed_execution_with_retry(self, mock_db_context):
         """Test failed delayed task execution schedules retry."""
+        from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
-        from app.models.cron_task import TaskStatus, HttpMethod
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 
@@ -866,8 +867,8 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_failed_execution_max_retries(self, mock_db_context):
         """Test failed delayed task with max retries reached."""
+        from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
-        from app.models.cron_task import TaskStatus, HttpMethod
 
         ctx = {"db_factory": mock_db_context["db_factory"]}
 

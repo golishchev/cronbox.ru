@@ -1,8 +1,9 @@
 """Unit tests for executions API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 from app.models.cron_task import TaskStatus
 
@@ -208,8 +209,9 @@ class TestGetExecution:
     @pytest.mark.asyncio
     async def test_get_execution_not_found(self):
         """Test getting a non-existent execution."""
-        from app.api.v1.executions import get_execution
         from fastapi import HTTPException
+
+        from app.api.v1.executions import get_execution
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -232,8 +234,9 @@ class TestGetExecution:
     @pytest.mark.asyncio
     async def test_get_execution_wrong_workspace(self):
         """Test getting execution from wrong workspace."""
-        from app.api.v1.executions import get_execution
         from fastapi import HTTPException
+
+        from app.api.v1.executions import get_execution
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()

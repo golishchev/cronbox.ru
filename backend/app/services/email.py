@@ -1,8 +1,10 @@
 """Email notification service using SMTP."""
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import aiosmtplib
 import structlog
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
 from app.config import settings
 
 logger = structlog.get_logger()

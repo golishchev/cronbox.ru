@@ -1,17 +1,18 @@
 """Tests for security module."""
-import pytest
-from uuid import uuid4
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+from uuid import uuid4
+
+import pytest
 
 from app.core.security import (
-    verify_password,
-    get_password_hash,
     create_access_token,
+    create_email_verification_token,
     create_refresh_token,
     decode_token,
-    create_email_verification_token,
+    get_password_hash,
     verify_email_token,
+    verify_password,
 )
 
 

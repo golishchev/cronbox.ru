@@ -7,6 +7,7 @@ import sys
 def run_worker():
     """Run the arq worker."""
     from arq import run_worker as arq_run_worker
+
     from app.workers.settings import WorkerSettings
 
     print("Starting CronBox worker...")
