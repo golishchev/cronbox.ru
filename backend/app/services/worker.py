@@ -1,5 +1,4 @@
 """Worker service for external task execution."""
-import json
 from datetime import datetime, timezone
 from uuid import UUID
 

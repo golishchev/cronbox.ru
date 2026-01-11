@@ -13,15 +13,15 @@ from app.config import settings
 # Import all models to register them with SQLAlchemy
 from app.models import (  # noqa: F401
     Base,
-    User,
-    Plan,
-    Workspace,
     CronTask,
     DelayedTask,
     Execution,
-    Subscription,
-    Payment,
     NotificationSettings,
+    Payment,
+    Plan,
+    Subscription,
+    User,
+    Workspace,
 )
 
 # this is the Alembic Config object, which provides

@@ -1,7 +1,8 @@
 """Tests for TemplateService."""
-import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 class TestTemplateServiceGetTemplate:
@@ -10,8 +11,8 @@ class TestTemplateServiceGetTemplate:
     @pytest.mark.asyncio
     async def test_get_template_found(self):
         """Test get_template returns template when found."""
-        from app.services.template_service import TemplateService
         from app.models.notification_template import NotificationChannel
+        from app.services.template_service import TemplateService
 
         service = TemplateService()
         mock_db = AsyncMock()
@@ -32,8 +33,8 @@ class TestTemplateServiceGetTemplate:
     @pytest.mark.asyncio
     async def test_get_template_fallback_to_english(self):
         """Test get_template falls back to English."""
-        from app.services.template_service import TemplateService
         from app.models.notification_template import NotificationChannel
+        from app.services.template_service import TemplateService
 
         service = TemplateService()
         mock_db = AsyncMock()
@@ -61,8 +62,8 @@ class TestTemplateServiceGetTemplate:
     @pytest.mark.asyncio
     async def test_get_template_not_found(self):
         """Test get_template returns None when not found."""
-        from app.services.template_service import TemplateService
         from app.models.notification_template import NotificationChannel
+        from app.services.template_service import TemplateService
 
         service = TemplateService()
         mock_db = AsyncMock()
@@ -247,7 +248,7 @@ class TestTemplateServiceSeedDefaultTemplates:
     @pytest.mark.asyncio
     async def test_seed_creates_new_templates(self):
         """Test seed creates templates that don't exist."""
-        from app.services.template_service import TemplateService, DEFAULT_TEMPLATES
+        from app.services.template_service import DEFAULT_TEMPLATES, TemplateService
 
         service = TemplateService()
         mock_db = AsyncMock()
@@ -405,8 +406,8 @@ class TestTemplateServiceGetDefaultTemplate:
 
     def test_get_default_template_found(self):
         """Test get_default_template returns template data."""
-        from app.services.template_service import TemplateService
         from app.models.notification_template import NotificationChannel
+        from app.services.template_service import TemplateService
 
         service = TemplateService()
 
@@ -420,8 +421,8 @@ class TestTemplateServiceGetDefaultTemplate:
 
     def test_get_default_template_not_found(self):
         """Test get_default_template returns None when not found."""
-        from app.services.template_service import TemplateService
         from app.models.notification_template import NotificationChannel
+        from app.services.template_service import TemplateService
 
         service = TemplateService()
 

@@ -1,17 +1,18 @@
 """Tests for Pydantic schemas."""
-import pytest
 from datetime import datetime, timedelta
 from uuid import uuid4
+
+import pytest
 from pydantic import ValidationError
 
+from app.models.cron_task import HttpMethod, TaskStatus
 from app.schemas.cron_task import (
     CronTaskBase,
     CronTaskCreate,
-    CronTaskUpdate,
     CronTaskResponse,
+    CronTaskUpdate,
     PaginationMeta,
 )
-from app.models.cron_task import HttpMethod, TaskStatus
 
 
 class TestCronTaskBase:

@@ -1,8 +1,9 @@
 """Unit tests for workers API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 def create_mock_worker(**kwargs):
@@ -107,8 +108,9 @@ class TestGetWorker:
     @pytest.mark.asyncio
     async def test_get_worker_not_found(self):
         """Test getting a non-existent worker."""
-        from app.api.v1.workers import get_worker
         from fastapi import HTTPException
+
+        from app.api.v1.workers import get_worker
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -160,9 +162,10 @@ class TestUpdateWorker:
     @pytest.mark.asyncio
     async def test_update_worker_not_found(self):
         """Test updating a non-existent worker."""
+        from fastapi import HTTPException
+
         from app.api.v1.workers import update_worker
         from app.schemas.worker import WorkerUpdate
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -211,8 +214,9 @@ class TestDeleteWorker:
     @pytest.mark.asyncio
     async def test_delete_worker_not_found(self):
         """Test deleting a non-existent worker."""
-        from app.api.v1.workers import delete_worker
         from fastapi import HTTPException
+
+        from app.api.v1.workers import delete_worker
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -259,8 +263,9 @@ class TestRegenerateWorkerKey:
     @pytest.mark.asyncio
     async def test_regenerate_key_not_found(self):
         """Test regenerating key for non-existent worker."""
-        from app.api.v1.workers import regenerate_worker_key
         from fastapi import HTTPException
+
+        from app.api.v1.workers import regenerate_worker_key
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -286,8 +291,8 @@ class TestWorkerHeartbeat:
     async def test_heartbeat_success(self):
         """Test worker heartbeat."""
         from app.api.v1.workers import worker_heartbeat
-        from app.schemas.worker import WorkerHeartbeat
         from app.models.worker import WorkerStatus
+        from app.schemas.worker import WorkerHeartbeat
 
         mock_db = AsyncMock()
         mock_worker = create_mock_worker()
@@ -402,9 +407,10 @@ class TestSubmitTaskResult:
     @pytest.mark.asyncio
     async def test_submit_result_failure(self):
         """Test submitting task result when processing fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.workers import submit_task_result
         from app.schemas.worker import WorkerTaskResult
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_worker = create_mock_worker()

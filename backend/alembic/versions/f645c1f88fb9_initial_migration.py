@@ -1,15 +1,16 @@
 """Initial migration
 
 Revision ID: f645c1f88fb9
-Revises: 
+Revises:
 Create Date: 2026-01-08 00:50:54.769709
 
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'f645c1f88fb9'

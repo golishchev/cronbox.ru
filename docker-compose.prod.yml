@@ -1,18 +1,67 @@
-version: '3.8'
+# CronBox Production Docker Compose
+# Best practices: YAML anchors, healthchecks, resource limits
 
+# ===================
+# Shared configurations
+# ===================
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+  SECRET_KEY: ${SECRET_KEY}
+
+x-backend-base: &backend-base
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  environment:
+    <<: *backend-env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  networks:
+    - cronbox-network
+
+x-postal-env: &postal-env
+  MARIADB_HOST: postal-mariadb
+  MARIADB_DATABASE: postal
+  MARIADB_USERNAME: root
+  MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+  RABBITMQ_HOST: postal-rabbitmq
+  RABBITMQ_USERNAME: postal
+  RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
+  SECRET_KEY: ${POSTAL_SECRET_KEY}
+
+x-healthcheck: &default-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# ===================
+# Services
+# ===================
 services:
   # Traefik Reverse Proxy
   traefik:
     image: traefik:v3.0
     container_name: cronbox-traefik
     restart: unless-stopped
+    logging: *default-logging
     security_opt:
       - no-new-privileges:true
+    command:
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@cronbox.ru}"
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - ACME_EMAIL=${ACME_EMAIL:-admin@cronbox.ru}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -23,17 +72,19 @@ services:
       - cronbox-network
     labels:
       - "traefik.enable=true"
-      # Dashboard
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
       - "traefik.http.routers.dashboard.rule=Host(`traefik.cronbox.ru`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
 
-  # PostgreSQL Database (CronBox)
+  # PostgreSQL
   postgres:
     image: postgres:16-alpine
     container_name: cronbox-postgres
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cronbox}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -41,11 +92,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
+      <<: *default-healthcheck
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cronbox}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - cronbox-network
 
@@ -53,7 +101,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cronbox-redis
-    # Security: Redis with password authentication
+    restart: unless-stopped
+    logging: *default-logging
     command: >
       redis-server
       --appendonly yes
@@ -63,105 +112,88 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
+      <<: *default-healthcheck
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - cronbox-network
 
-  # MariaDB (for Postal)
+  # Postal - MariaDB
   postal-mariadb:
     image: mariadb:10.11
     container_name: cronbox-postal-mariadb
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       MARIADB_DATABASE: postal
       MARIADB_ROOT_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
     volumes:
       - postal_mariadb_data:/var/lib/mysql
     healthcheck:
+      <<: *default-healthcheck
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - cronbox-network
 
-  # RabbitMQ (for Postal)
+  # Postal - RabbitMQ
   postal-rabbitmq:
     image: rabbitmq:3.12-alpine
     container_name: cronbox-postal-rabbitmq
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       RABBITMQ_DEFAULT_USER: postal
       RABBITMQ_DEFAULT_PASS: ${POSTAL_RABBITMQ_PASSWORD}
     volumes:
       - postal_rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
+      <<: *default-healthcheck
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - cronbox-network
 
-  # Postal Mail Server
+  # Postal - Main
   postal:
     image: ghcr.io/postalserver/postal:3
     container_name: cronbox-postal
+    restart: unless-stopped
+    logging: *default-logging
     environment:
+      <<: *postal-env
       POSTAL_FNAME: Admin
       POSTAL_LNAME: User
       POSTAL_EMAIL: ${POSTAL_ADMIN_EMAIL:-admin@cronbox.ru}
       POSTAL_PASSWORD: ${POSTAL_ADMIN_PASSWORD}
-      MARIADB_HOST: postal-mariadb
-      MARIADB_DATABASE: postal
-      MARIADB_USERNAME: root
-      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-      RABBITMQ_HOST: postal-rabbitmq
-      RABBITMQ_USERNAME: postal
-      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
       POSTAL_WEB_HOST: ${POSTAL_WEB_HOST:-postal.cronbox.ru}
       POSTAL_WEB_PROTOCOL: https
       POSTAL_SMTP_HOST: ${POSTAL_SMTP_HOST:-postal.cronbox.ru}
-      SECRET_KEY: ${POSTAL_SECRET_KEY}
     volumes:
       - postal_config:/config
       - postal_data:/opt/postal/storage
     ports:
-      - "25:25"      # SMTP
-      - "465:465"    # SMTPS
-      - "587:587"    # Submission
+      - "25:25"
+      - "465:465"
+      - "587:587"
     depends_on:
       postal-mariadb:
         condition: service_healthy
       postal-rabbitmq:
         condition: service_healthy
-    restart: unless-stopped
     networks:
       - cronbox-network
 
-  # Postal Web Interface
+  # Postal - Web
   postal-web:
     image: ghcr.io/postalserver/postal:3
     container_name: cronbox-postal-web
+    restart: unless-stopped
+    logging: *default-logging
     command: postal web-server
     environment:
-      MARIADB_HOST: postal-mariadb
-      MARIADB_DATABASE: postal
-      MARIADB_USERNAME: root
-      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-      RABBITMQ_HOST: postal-rabbitmq
-      RABBITMQ_USERNAME: postal
-      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
-      SECRET_KEY: ${POSTAL_SECRET_KEY}
+      <<: *postal-env
     volumes:
       - postal_config:/config
     depends_on:
       - postal
-    restart: unless-stopped
     networks:
       - cronbox-network
     labels:
@@ -169,52 +201,40 @@ services:
       - "traefik.http.routers.postal.rule=Host(`postal.cronbox.ru`)"
       - "traefik.http.routers.postal.entrypoints=websecure"
       - "traefik.http.routers.postal.tls.certresolver=letsencrypt"
-      - "traefik.http.services.postal.loadbalancer.server.port=5000"
       - "traefik.http.routers.postal.middlewares=security-headers@file"
+      - "traefik.http.services.postal.loadbalancer.server.port=5000"
 
-  # Postal Worker
+  # Postal - Worker
   postal-worker:
     image: ghcr.io/postalserver/postal:3
     container_name: cronbox-postal-worker
+    restart: unless-stopped
+    logging: *default-logging
     command: postal worker
     environment:
-      MARIADB_HOST: postal-mariadb
-      MARIADB_DATABASE: postal
-      MARIADB_USERNAME: root
-      MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-      RABBITMQ_HOST: postal-rabbitmq
-      RABBITMQ_USERNAME: postal
-      RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
-      SECRET_KEY: ${POSTAL_SECRET_KEY}
+      <<: *postal-env
     volumes:
       - postal_config:/config
       - postal_data:/opt/postal/storage
     depends_on:
       - postal
-    restart: unless-stopped
     networks:
       - cronbox-network
 
   # Backend API
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    <<: *backend-base
+    logging: *default-logging
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      # Security: Redis with password authentication
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-      SECRET_KEY: ${SECRET_KEY}
+      <<: *backend-env
       JWT_SECRET: ${JWT_SECRET}
       YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
       YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      # Postal
       POSTAL_API_URL: http://postal-web:5000
       POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
       POSTAL_WEBHOOK_SECRET: ${POSTAL_WEBHOOK_SECRET}
       USE_POSTAL: "true"
-      # SMTP fallback
       SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -222,50 +242,38 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
       CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru","https://cp.cronbox.ru","https://api.cronbox.ru"]}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     command: >
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    restart: unless-stopped
-    # Graceful shutdown: wait for in-flight requests
     stop_grace_period: 30s
-    networks:
-      - cronbox-network
     labels:
       - "traefik.enable=true"
-      # Main API router
+      # API router
       - "traefik.http.routers.api.rule=Host(`api.cronbox.ru`) && PathPrefix(`/v1`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api.middlewares=api-cors@file,api-rate-limit@file,compress@file"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
-      # Health check for load balancer (zero-downtime)
       - "traefik.http.services.api.loadbalancer.healthcheck.path=/health"
       - "traefik.http.services.api.loadbalancer.healthcheck.interval=10s"
-      - "traefik.http.services.api.loadbalancer.healthcheck.timeout=3s"
-      # Auth endpoints with stricter rate limiting
+      # Auth (stricter rate limit)
       - "traefik.http.routers.api-auth.rule=Host(`api.cronbox.ru`) && PathPrefix(`/v1/auth`)"
       - "traefik.http.routers.api-auth.entrypoints=websecure"
       - "traefik.http.routers.api-auth.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api-auth.middlewares=api-cors@file,auth-rate-limit@file"
       - "traefik.http.routers.api-auth.service=api"
       - "traefik.http.routers.api-auth.priority=100"
-      # Block Swagger docs in production
+      # Block docs in production
       - "traefik.http.routers.api-docs.rule=Host(`api.cronbox.ru`) && (PathPrefix(`/v1/docs`) || PathPrefix(`/v1/redoc`) || Path(`/v1/openapi.json`))"
       - "traefik.http.routers.api-docs.entrypoints=websecure"
       - "traefik.http.routers.api-docs.middlewares=block-docs@file"
       - "traefik.http.routers.api-docs.service=api"
       - "traefik.http.routers.api-docs.priority=200"
-      # Health check router
+      # Health & Metrics
       - "traefik.http.routers.api-health.rule=Host(`api.cronbox.ru`) && Path(`/health`)"
       - "traefik.http.routers.api-health.entrypoints=websecure"
       - "traefik.http.routers.api-health.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api-health.service=api"
-      # Metrics (internal only)
       - "traefik.http.routers.api-metrics.rule=Host(`api.cronbox.ru`) && Path(`/metrics`)"
       - "traefik.http.routers.api-metrics.entrypoints=websecure"
       - "traefik.http.routers.api-metrics.middlewares=internal-only@file"
@@ -277,72 +285,42 @@ services:
         delay: 10s
         order: start-first
         failure_action: rollback
-      rollback_config:
-        parallelism: 1
-        delay: 10s
 
-  # Worker (arq)
+  # Worker
   worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    <<: *backend-base
+    logging: *default-logging
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      # Security: Redis with password authentication
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-      SECRET_KEY: ${SECRET_KEY}
+      <<: *backend-env
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      # Postal
       POSTAL_API_URL: http://postal-web:5000
       POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
       USE_POSTAL: "true"
-      # SMTP fallback
       SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     command: uv run arq app.workers.settings.WorkerSettings
-    restart: unless-stopped
-    networks:
-      - cronbox-network
     deploy:
       replicas: 3
 
   # Scheduler
   scheduler:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    <<: *backend-base
     container_name: cronbox-scheduler
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}
-      # Security: Redis with password authentication
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-      SECRET_KEY: ${SECRET_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    logging: *default-logging
     command: uv run python -m app.workers.scheduler
-    restart: unless-stopped
-    networks:
-      - cronbox-network
 
-  # Frontend (Control Panel - cp.cronbox.ru)
+  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: cronbox-frontend
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - cronbox-network
     labels:
@@ -352,17 +330,17 @@ services:
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.frontend.middlewares=security-headers@file,compress@file"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      # Health check for load balancer
       - "traefik.http.services.frontend.loadbalancer.healthcheck.path=/health"
       - "traefik.http.services.frontend.loadbalancer.healthcheck.interval=30s"
 
-  # Landing Page (cronbox.ru)
+  # Landing
   landing:
     build:
       context: ./landing
       dockerfile: Dockerfile
     container_name: cronbox-landing
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - cronbox-network
     labels:
@@ -372,10 +350,8 @@ services:
       - "traefik.http.routers.landing.tls.certresolver=letsencrypt"
       - "traefik.http.routers.landing.middlewares=security-headers@file,compress@file"
       - "traefik.http.services.landing.loadbalancer.server.port=80"
-      # Health check for load balancer
       - "traefik.http.services.landing.loadbalancer.healthcheck.path=/health"
       - "traefik.http.services.landing.loadbalancer.healthcheck.interval=30s"
-      # Redirect www to non-www
       - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.cronbox\\.ru/(.*)"
       - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://cronbox.ru/$${1}"
       - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
@@ -384,6 +360,8 @@ services:
   prometheus:
     image: prom/prometheus:v2.47.0
     container_name: cronbox-prometheus
+    restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -392,7 +370,6 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=15d'
       - '--web.enable-lifecycle'
-    restart: unless-stopped
     networks:
       - cronbox-network
     labels:
@@ -400,13 +377,15 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.cronbox.ru`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.prometheus.middlewares=dashboard-auth@file"
+      - "traefik.http.routers.prometheus.middlewares=dashboard-auth@docker"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   # Grafana
   grafana:
     image: grafana/grafana:10.1.0
     container_name: cronbox-grafana
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
@@ -416,11 +395,10 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    restart: unless-stopped
-    networks:
-      - cronbox-network
     depends_on:
       - prometheus
+    networks:
+      - cronbox-network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.cronbox.ru`)"
@@ -428,33 +406,33 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
-  # Redis Exporter
+  # Exporters
   redis-exporter:
     image: oliver006/redis_exporter:v1.55.0
     container_name: cronbox-redis-exporter
+    restart: unless-stopped
+    logging: *default-logging
     environment:
-      # Security: Redis with password authentication
       REDIS_ADDR: redis://redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    restart: unless-stopped
-    networks:
-      - cronbox-network
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - cronbox-network
 
-  # Postgres Exporter
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: cronbox-postgres-exporter
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-cronbox}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cronbox}?sslmode=disable
-    restart: unless-stopped
-    networks:
-      - cronbox-network
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - cronbox-network
 
 networks:
   cronbox-network:

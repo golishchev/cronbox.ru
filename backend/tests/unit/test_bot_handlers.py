@@ -1,6 +1,7 @@
 """Tests for Telegram bot handlers."""
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestBotHandlersModule:
@@ -12,6 +13,7 @@ class TestBotHandlersModule:
             mock_settings.telegram_bot_token = None
             # Re-import to test initialization
             import importlib
+
             import app.bot.handlers as handlers
             importlib.reload(handlers)
             # Bot should be None when no token

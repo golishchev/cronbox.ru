@@ -442,9 +442,7 @@ testI18n.use(initReactI18next).init({
   },
 })
 
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  // Add any custom options here
-}
+type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>
 
 function AllProviders({ children }: { children: React.ReactNode }) {
   return <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>

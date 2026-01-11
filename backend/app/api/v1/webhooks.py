@@ -1,8 +1,8 @@
 """Webhook endpoints for external services."""
 import ipaddress
-import structlog
 
 import httpx
+import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -1,7 +1,8 @@
 """Unit tests for notifications API endpoints."""
-import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 def create_mock_workspace(**kwargs):
@@ -94,9 +95,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_settings_not_configured(self):
         """Test sending test notification when settings don't exist."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -118,9 +120,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_telegram_not_enabled(self):
         """Test sending Telegram test when not enabled."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -171,9 +174,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_telegram_send_fails(self):
         """Test Telegram test when send fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -201,9 +205,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_email_not_enabled(self):
         """Test sending email test when not enabled."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -254,9 +259,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_email_send_fails(self):
         """Test email test when send fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -284,9 +290,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_webhook_not_enabled(self):
         """Test sending webhook test when not enabled."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -336,9 +343,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_webhook_send_fails(self):
         """Test webhook test when send fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
@@ -364,9 +372,10 @@ class TestSendTestNotification:
     @pytest.mark.asyncio
     async def test_unknown_channel(self):
         """Test sending test for unknown channel."""
+        from fastapi import HTTPException
+
         from app.api.v1.notifications import send_test_notification
         from app.schemas.notification_settings import TestNotificationRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()

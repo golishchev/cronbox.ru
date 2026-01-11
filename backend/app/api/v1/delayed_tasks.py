@@ -2,7 +2,8 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from app.api.deps import CurrentWorkspace, ActiveSubscriptionWorkspace, DB, UserPlan
+
+from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserPlan
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.models.cron_task import TaskStatus

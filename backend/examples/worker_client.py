@@ -52,7 +52,7 @@ class CronBoxWorker:
     async def start(self):
         """Start the worker."""
         self.running = True
-        print(f"[Worker] Starting CronBox worker...")
+        print("[Worker] Starting CronBox worker...")
         print(f"[Worker] API URL: {self.api_url}")
         print(f"[Worker] Poll interval: {POLL_INTERVAL}s")
         print(f"[Worker] Max concurrent tasks: {MAX_CONCURRENT_TASKS}")

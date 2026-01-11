@@ -4,14 +4,14 @@ from datetime import datetime
 from uuid import UUID
 
 import httpx
+import pytz
 import structlog
 from croniter import croniter
-import pytz
 
 from app.core.url_validator import (
     SSRFError,
-    validate_url_for_ssrf,
     sanitize_url_for_logging,
+    validate_url_for_ssrf,
 )
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository

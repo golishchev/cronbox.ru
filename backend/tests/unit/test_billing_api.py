@@ -1,7 +1,8 @@
 """Unit tests for billing API endpoints."""
-import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 class TestListPlans:
@@ -46,8 +47,9 @@ class TestGetPlan:
     @pytest.mark.asyncio
     async def test_get_plan_not_found(self):
         """Test getting a non-existent plan raises 404."""
-        from app.api.v1.billing import get_plan
         from fastapi import HTTPException
+
+        from app.api.v1.billing import get_plan
 
         mock_db = AsyncMock()
         plan_id = uuid4()
@@ -68,8 +70,9 @@ class TestGetSubscription:
     @pytest.mark.asyncio
     async def test_get_subscription_workspace_not_found(self):
         """Test getting subscription for non-existent workspace."""
-        from app.api.v1.billing import get_subscription
         from fastapi import HTTPException
+
+        from app.api.v1.billing import get_subscription
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -94,8 +97,9 @@ class TestGetSubscription:
     @pytest.mark.asyncio
     async def test_get_subscription_forbidden(self):
         """Test getting subscription for another user's workspace."""
-        from app.api.v1.billing import get_subscription
         from fastapi import HTTPException
+
+        from app.api.v1.billing import get_subscription
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -151,7 +155,7 @@ class TestGetSubscription:
     async def test_get_subscription_with_plan(self):
         """Test getting subscription with plan."""
         from app.api.v1.billing import get_subscription
-        from app.schemas.billing import SubscriptionResponse, PlanResponse
+        from app.schemas.billing import PlanResponse, SubscriptionResponse
 
         mock_db = AsyncMock()
         user_id = uuid4()
@@ -218,9 +222,10 @@ class TestCreateSubscriptionPayment:
     @pytest.mark.asyncio
     async def test_create_payment_workspace_not_found(self):
         """Test creating payment for non-existent workspace."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import create_subscription_payment
         from app.schemas.billing import CreatePaymentRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -249,9 +254,10 @@ class TestCreateSubscriptionPayment:
     @pytest.mark.asyncio
     async def test_create_payment_forbidden(self):
         """Test creating payment for another user's workspace."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import create_subscription_payment
         from app.schemas.billing import CreatePaymentRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -284,9 +290,10 @@ class TestCreateSubscriptionPayment:
     @pytest.mark.asyncio
     async def test_create_payment_not_configured(self):
         """Test creating payment when YooKassa not configured."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import create_subscription_payment
         from app.schemas.billing import CreatePaymentRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         user_id = uuid4()
@@ -322,9 +329,10 @@ class TestCreateSubscriptionPayment:
     @pytest.mark.asyncio
     async def test_create_payment_failed(self):
         """Test creating payment when creation fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import create_subscription_payment
         from app.schemas.billing import CreatePaymentRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         user_id = uuid4()
@@ -405,9 +413,10 @@ class TestCancelSubscription:
     @pytest.mark.asyncio
     async def test_cancel_workspace_not_found(self):
         """Test canceling subscription for non-existent workspace."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import cancel_subscription
         from app.schemas.billing import CancelSubscriptionRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -433,9 +442,10 @@ class TestCancelSubscription:
     @pytest.mark.asyncio
     async def test_cancel_forbidden(self):
         """Test canceling subscription for another user's workspace."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import cancel_subscription
         from app.schemas.billing import CancelSubscriptionRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -465,9 +475,10 @@ class TestCancelSubscription:
     @pytest.mark.asyncio
     async def test_cancel_no_subscription(self):
         """Test canceling when no subscription exists."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import cancel_subscription
         from app.schemas.billing import CancelSubscriptionRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         user_id = uuid4()
@@ -499,9 +510,10 @@ class TestCancelSubscription:
     @pytest.mark.asyncio
     async def test_cancel_failed(self):
         """Test canceling when cancel fails."""
+        from fastapi import HTTPException
+
         from app.api.v1.billing import cancel_subscription
         from app.schemas.billing import CancelSubscriptionRequest
-        from fastapi import HTTPException
 
         mock_db = AsyncMock()
         user_id = uuid4()
@@ -575,8 +587,9 @@ class TestGetPaymentHistory:
     @pytest.mark.asyncio
     async def test_payment_history_workspace_not_found(self):
         """Test getting payment history for non-existent workspace."""
-        from app.api.v1.billing import get_payment_history
         from fastapi import HTTPException
+
+        from app.api.v1.billing import get_payment_history
 
         mock_db = AsyncMock()
         mock_user = MagicMock()
@@ -600,8 +613,9 @@ class TestGetPaymentHistory:
     @pytest.mark.asyncio
     async def test_payment_history_forbidden(self):
         """Test getting payment history for another user's workspace."""
-        from app.api.v1.billing import get_payment_history
         from fastapi import HTTPException
+
+        from app.api.v1.billing import get_payment_history
 
         mock_db = AsyncMock()
         mock_user = MagicMock()

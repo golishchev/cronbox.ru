@@ -1,9 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
+import pytz
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer, field_validator
-import pytz
 
 from app.models.cron_task import HttpMethod, TaskStatus
 

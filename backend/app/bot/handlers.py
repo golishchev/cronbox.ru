@@ -1,7 +1,8 @@
 """Telegram bot command handlers."""
 import re
+
 import structlog
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
@@ -19,6 +20,9 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     """Handle /start command."""
+    if not message.text or not message.from_user:
+        return
+
     # Check if deep link with code
     args = message.text.split(maxsplit=1)
     if len(args) > 1:
@@ -69,6 +73,9 @@ async def cmd_help(message: Message):
 @dp.message(Command("link"))
 async def cmd_link(message: Message):
     """Handle /link command."""
+    if not message.text or not message.from_user:
+        return
+
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
         await message.answer(
@@ -85,6 +92,9 @@ async def cmd_link(message: Message):
 
 async def process_link_code(message: Message, code: str):
     """Process account linking with code."""
+    if not message.from_user:
+        return
+
     # Validate code format (6 digits)
     if not re.match(r"^\d{6}$", code):
         await message.answer(
@@ -138,6 +148,9 @@ async def process_link_code(message: Message, code: str):
 @dp.message(Command("status"))
 async def cmd_status(message: Message):
     """Handle /status command."""
+    if not message.from_user:
+        return
+
     from app.db.repositories.users import UserRepository
 
     async with AsyncSessionLocal() as db:
@@ -164,6 +177,9 @@ async def cmd_status(message: Message):
 @dp.message(Command("unlink"))
 async def cmd_unlink(message: Message):
     """Handle /unlink command."""
+    if not message.from_user:
+        return
+
     from app.db.repositories.users import UserRepository
 
     async with AsyncSessionLocal() as db:

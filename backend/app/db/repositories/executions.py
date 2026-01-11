@@ -121,7 +121,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         avg_stmt = (
             select(func.avg(Execution.duration_ms))
             .select_from(Execution)
-            .where(and_(*base_filter, Execution.duration_ms != None))
+            .where(and_(*base_filter, Execution.duration_ms.is_not(None)))
         )
         avg_result = await self.db.execute(avg_stmt)
         avg_duration = avg_result.scalar_one()

@@ -1,5 +1,9 @@
 """Test configuration and fixtures."""
 import asyncio
+
+# Test database URL (use separate test database)
+# Only replace the database name at the end of the URL, not user/password
+import re
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -11,17 +15,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
-from app.db.database import get_db
-from app.models.base import Base
-from app.main import app
-from app.models.user import User
-from app.models.plan import Plan
-from app.core.security import get_password_hash, create_access_token
 from app.core.redis import redis_client
+from app.core.security import create_access_token, get_password_hash
+from app.db.database import get_db
+from app.main import app
+from app.models.base import Base
+from app.models.plan import Plan
+from app.models.user import User
 
-# Test database URL (use separate test database)
-# Only replace the database name at the end of the URL, not user/password
-import re
 TEST_DATABASE_URL = re.sub(r"/cronbox$", "/cronbox_test", settings.database_url)
 
 

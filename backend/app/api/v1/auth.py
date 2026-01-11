@@ -4,8 +4,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, status
 
-from app.api.deps import CurrentUser, DB
+from app.api.deps import DB, CurrentUser
 from app.config import settings
+from app.db.repositories.users import UserRepository
 from app.schemas.auth import (
     EmailVerificationRequest,
     LoginResponse,
@@ -19,8 +20,7 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.user import UserLogin, UserResponse, UserUpdate
-from app.db.repositories.users import UserRepository
-from app.services.auth import AuthService, TELEGRAM_LINK_EXPIRE
+from app.services.auth import TELEGRAM_LINK_EXPIRE, AuthService
 from app.services.email import email_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])

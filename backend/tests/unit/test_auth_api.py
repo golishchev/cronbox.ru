@@ -1,8 +1,9 @@
 """Unit tests for auth API endpoints."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 def create_mock_user(**kwargs):
@@ -64,8 +65,8 @@ class TestLogin:
     async def test_login_success(self):
         """Test successful login."""
         from app.api.v1.auth import login
-        from app.schemas.user import UserLogin
         from app.schemas.auth import TokenResponse
+        from app.schemas.user import UserLogin
 
         mock_db = AsyncMock()
         mock_user = create_mock_user(email_verified=True)

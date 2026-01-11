@@ -1,7 +1,8 @@
 """Notification template model for multilingual notifications."""
 import enum
 
-from sqlalchemy import Boolean, Enum as SQLEnum, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, String, Text, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 

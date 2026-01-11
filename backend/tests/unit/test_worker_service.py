@@ -1,8 +1,9 @@
 """Tests for WorkerService."""
-import pytest
-from uuid import uuid4
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 class TestWorkerServiceCreateWorker:
@@ -11,8 +12,8 @@ class TestWorkerServiceCreateWorker:
     @pytest.mark.asyncio
     async def test_create_worker_success(self):
         """Test creating a worker."""
-        from app.services.worker import WorkerService
         from app.schemas.worker import WorkerCreate
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -126,8 +127,8 @@ class TestWorkerServiceUpdateWorker:
     @pytest.mark.asyncio
     async def test_update_worker(self):
         """Test updating a worker."""
-        from app.services.worker import WorkerService
         from app.schemas.worker import WorkerUpdate
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -197,8 +198,8 @@ class TestWorkerServiceAuthenticateWorker:
     @pytest.mark.asyncio
     async def test_authenticate_worker_success(self):
         """Test successful worker authentication."""
-        from app.services.worker import WorkerService
         from app.models.worker import Worker
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -223,8 +224,8 @@ class TestWorkerServiceAuthenticateWorker:
     @pytest.mark.asyncio
     async def test_authenticate_worker_invalid_key(self):
         """Test worker authentication with invalid key."""
-        from app.services.worker import WorkerService
         from app.models.worker import Worker
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -248,8 +249,8 @@ class TestWorkerServiceAuthenticateWorker:
     @pytest.mark.asyncio
     async def test_authenticate_worker_no_match(self):
         """Test worker authentication with no matching prefix."""
-        from app.services.worker import WorkerService
         from app.models.worker import Worker
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -272,9 +273,9 @@ class TestWorkerServiceUpdateHeartbeat:
     @pytest.mark.asyncio
     async def test_update_heartbeat(self):
         """Test updating worker heartbeat."""
-        from app.services.worker import WorkerService
-        from app.schemas.worker import WorkerHeartbeat
         from app.models.worker import WorkerStatus
+        from app.schemas.worker import WorkerHeartbeat
+        from app.services.worker import WorkerService
 
         service = WorkerService()
         mock_db = AsyncMock()
@@ -296,8 +297,8 @@ class TestWorkerServiceTaskQueue:
     @pytest.mark.asyncio
     async def test_enqueue_task_for_worker(self):
         """Test enqueueing task for worker."""
-        from app.services.worker import WorkerService
         from app.schemas.worker import WorkerTaskInfo
+        from app.services.worker import WorkerService
 
         service = WorkerService()
 
@@ -326,8 +327,8 @@ class TestWorkerServiceTaskQueue:
     @pytest.mark.asyncio
     async def test_poll_tasks(self):
         """Test polling tasks for worker."""
-        from app.services.worker import WorkerService
         from app.schemas.worker import WorkerTaskInfo
+        from app.services.worker import WorkerService
 
         service = WorkerService()
 
@@ -380,8 +381,8 @@ class TestWorkerServiceProcessTaskResult:
     @pytest.mark.asyncio
     async def test_process_task_result_determines_success(self):
         """Test processing determines success based on error and status_code."""
-        from app.services.worker import WorkerService
         from app.schemas.worker import WorkerTaskResult
+        from app.services.worker import WorkerService
 
         service = WorkerService()
 

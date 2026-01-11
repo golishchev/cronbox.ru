@@ -1,11 +1,11 @@
 from datetime import datetime
 from uuid import UUID
 
+import pytz
 from croniter import croniter
 from fastapi import APIRouter, HTTPException, Query, status
-import pytz
 
-from app.api.deps import CurrentWorkspace, ActiveSubscriptionWorkspace, DB, UserPlan
+from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserPlan
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.schemas.cron_task import (
@@ -249,6 +249,7 @@ async def run_cron_task(
     # Enqueue task for immediate execution via arq
     try:
         from arq import create_pool
+
         from app.workers.settings import get_redis_settings
 
         redis = await create_pool(get_redis_settings())

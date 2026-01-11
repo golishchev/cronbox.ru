@@ -1,7 +1,8 @@
 """Tests for CLI entry points."""
-import pytest
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestRunWorker:

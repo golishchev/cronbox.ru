@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user, get_workspace
+from app.api.deps import get_current_user, get_db, get_workspace
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.notification_settings import (
@@ -12,10 +12,10 @@ from app.schemas.notification_settings import (
     NotificationSettingsUpdate,
     TestNotificationRequest,
 )
-from app.services.notifications import notification_service
-from app.services.telegram import telegram_service
 from app.services.email import email_service
 from app.services.i18n import get_i18n
+from app.services.notifications import notification_service
+from app.services.telegram import telegram_service
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/notifications", tags=["notifications"])
 

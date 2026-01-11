@@ -1,9 +1,10 @@
 """Tests for BillingService."""
-import pytest
-from uuid import uuid4
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
 import httpx
+import pytest
 
 
 class TestBillingServiceInit:
@@ -316,8 +317,8 @@ class TestBillingServiceHandleWebhook:
     @pytest.mark.asyncio
     async def test_handle_webhook_payment_succeeded(self):
         """Test handle_webhook processes successful payment."""
-        from app.services.billing import BillingService
         from app.models.payment import PaymentStatus
+        from app.services.billing import BillingService
 
         with patch("app.services.billing.settings") as mock_settings:
             mock_settings.yookassa_shop_id = "shop-123"

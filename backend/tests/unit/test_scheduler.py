@@ -1,8 +1,9 @@
 """Tests for task scheduler module."""
-import pytest
 from datetime import datetime
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 from app.workers.scheduler import TaskScheduler
 

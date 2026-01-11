@@ -1,8 +1,9 @@
 """Extended tests for service layer."""
-import pytest
 from datetime import datetime, timezone
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 
 class TestTelegramService:
@@ -194,8 +195,8 @@ class TestAuthServiceTokens:
 
     def test_create_tokens(self):
         """Test creating access and refresh tokens."""
-        from app.services.auth import AuthService
         from app.core.security import decode_token
+        from app.services.auth import AuthService
 
         mock_db = AsyncMock()
         service = AuthService(mock_db)

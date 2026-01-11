@@ -1,6 +1,7 @@
 """Notification settings schemas."""
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, HttpUrl
+
+from pydantic import BaseModel
 
 
 class NotificationSettingsBase(BaseModel):

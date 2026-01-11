@@ -1,7 +1,8 @@
 """Tests for webhook API endpoints."""
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 import ipaddress
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestYookassaIPRanges:
@@ -194,8 +195,9 @@ class TestYookassaWebhook:
     @pytest.mark.asyncio
     async def test_webhook_invalid_json(self):
         """Test webhook with invalid JSON."""
-        from app.api.v1.webhooks import yookassa_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import yookassa_webhook
 
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
@@ -216,8 +218,9 @@ class TestYookassaWebhook:
     @pytest.mark.asyncio
     async def test_webhook_missing_event_type(self):
         """Test webhook with missing event type."""
-        from app.api.v1.webhooks import yookassa_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import yookassa_webhook
 
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
@@ -238,8 +241,9 @@ class TestYookassaWebhook:
     @pytest.mark.asyncio
     async def test_webhook_missing_payment_id(self):
         """Test webhook with missing payment ID."""
-        from app.api.v1.webhooks import yookassa_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import yookassa_webhook
 
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
@@ -263,8 +267,9 @@ class TestYookassaWebhook:
     @pytest.mark.asyncio
     async def test_webhook_unauthorized_ip_in_production(self):
         """Test webhook from unauthorized IP in production."""
-        from app.api.v1.webhooks import yookassa_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import yookassa_webhook
 
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
@@ -311,8 +316,9 @@ class TestYookassaWebhook:
     @pytest.mark.asyncio
     async def test_webhook_processing_failed(self):
         """Test webhook when billing service fails."""
-        from app.api.v1.webhooks import yookassa_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import yookassa_webhook
 
         mock_request = MagicMock()
         mock_request.headers.get.return_value = None
@@ -343,8 +349,9 @@ class TestPostalWebhook:
     @pytest.mark.asyncio
     async def test_postal_webhook_missing_signature(self):
         """Test postal webhook with missing signature."""
-        from app.api.v1.webhooks import postal_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import postal_webhook
 
         mock_request = MagicMock()
         mock_request.body = AsyncMock(return_value=b'{"event": "MessageSent"}')
@@ -362,8 +369,9 @@ class TestPostalWebhook:
     @pytest.mark.asyncio
     async def test_postal_webhook_invalid_signature(self):
         """Test postal webhook with invalid signature."""
-        from app.api.v1.webhooks import postal_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import postal_webhook
 
         mock_request = MagicMock()
         mock_request.body = AsyncMock(return_value=b'{"event": "MessageSent"}')
@@ -384,8 +392,9 @@ class TestPostalWebhook:
     @pytest.mark.asyncio
     async def test_postal_webhook_invalid_json(self):
         """Test postal webhook with invalid JSON."""
-        from app.api.v1.webhooks import postal_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import postal_webhook
 
         mock_request = MagicMock()
         mock_request.body = AsyncMock(return_value=b"not json")
@@ -404,8 +413,9 @@ class TestPostalWebhook:
     @pytest.mark.asyncio
     async def test_postal_webhook_missing_event_type(self):
         """Test postal webhook with missing event type."""
-        from app.api.v1.webhooks import postal_webhook
         from fastapi import HTTPException
+
+        from app.api.v1.webhooks import postal_webhook
 
         mock_request = MagicMock()
         mock_request.body = AsyncMock(return_value=b'{}')
