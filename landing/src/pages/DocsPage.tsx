@@ -1,5 +1,6 @@
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useEffect } from 'react'
+import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import {
   Book,
@@ -690,7 +691,7 @@ function BillingSection() {
   )
 }
 
-const sectionComponents: Record<string, () => JSX.Element> = {
+const sectionComponents: Record<string, () => ReactNode> = {
   'getting-started': GettingStartedSection,
   'authentication': AuthenticationSection,
   'cron-tasks': CronTasksSection,
@@ -702,7 +703,6 @@ const sectionComponents: Record<string, () => JSX.Element> = {
 
 export function DocsPage() {
   const { section } = useParams()
-  const location = useLocation()
   const activeSection = section || 'getting-started'
 
   useEffect(() => {

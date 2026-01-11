@@ -139,9 +139,8 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
     setIsSubmitting(true)
     try {
       if (editingPlan) {
-        const updateData: UpdatePlanRequest = { ...formData }
-        delete (updateData as CreatePlanRequest).name // name cannot be updated
-        await updateAdminPlan(editingPlan.id, updateData)
+        const { name: _, ...updateData } = formData // name cannot be updated
+        await updateAdminPlan(editingPlan.id, updateData as UpdatePlanRequest)
         toast({
           title: t('admin.plans.updated'),
           description: t('admin.plans.updatedDescription'),
