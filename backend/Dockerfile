@@ -37,8 +37,10 @@ COPY --chown=cronbox:cronbox app ./app
 COPY --chown=cronbox:cronbox alembic ./alembic
 COPY --chown=cronbox:cronbox alembic.ini ./
 
-# Security: Remove unnecessary files and set permissions
-RUN chmod -R 755 /app && \
+# Create uploads directory and set permissions
+RUN mkdir -p /app/uploads && \
+    chown -R cronbox:cronbox /app/uploads && \
+    chmod -R 755 /app && \
     find /app -type f -name "*.py" -exec chmod 644 {} \;
 
 # Security: Switch to non-root user

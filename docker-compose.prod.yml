@@ -15,6 +15,8 @@ x-backend-base: &backend-base
     dockerfile: Dockerfile
   environment:
     <<: *backend-env
+  volumes:
+    - uploads_data:/app/uploads
   depends_on:
     postgres:
       condition: service_healthy
@@ -25,14 +27,22 @@ x-backend-base: &backend-base
     - cronbox-network
 
 x-postal-env: &postal-env
-  MARIADB_HOST: postal-mariadb
-  MARIADB_DATABASE: postal
-  MARIADB_USERNAME: root
-  MARIADB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-  RABBITMQ_HOST: postal-rabbitmq
-  RABBITMQ_USERNAME: postal
-  RABBITMQ_PASSWORD: ${POSTAL_RABBITMQ_PASSWORD}
+  # Signing key (CRITICAL - required for message signing)
+  POSTAL_SIGNING_KEY_PATH: /config/signing.key
+  # Main database (for Postal metadata)
+  MAIN_DB_HOST: postal-mariadb
+  MAIN_DB_DATABASE: postal
+  MAIN_DB_USERNAME: root
+  MAIN_DB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+  # Message database (for email storage)
+  MESSAGE_DB_HOST: postal-mariadb
+  MESSAGE_DB_USERNAME: root
+  MESSAGE_DB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
+  # Rails
   SECRET_KEY: ${POSTAL_SECRET_KEY}
+  # Wait for MariaDB
+  WAIT_FOR_TARGETS: postal-mariadb:3306
+  WAIT_FOR_TIMEOUT: 90
 
 x-healthcheck: &default-healthcheck
   interval: 10s
@@ -134,24 +144,7 @@ services:
     networks:
       - cronbox-network
 
-  # Postal - RabbitMQ
-  postal-rabbitmq:
-    image: rabbitmq:3.12-alpine
-    container_name: cronbox-postal-rabbitmq
-    restart: unless-stopped
-    logging: *default-logging
-    environment:
-      RABBITMQ_DEFAULT_USER: postal
-      RABBITMQ_DEFAULT_PASS: ${POSTAL_RABBITMQ_PASSWORD}
-    volumes:
-      - postal_rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-    networks:
-      - cronbox-network
-
-  # Postal - Main
+  # Postal - Main (RabbitMQ not needed in Postal v3)
   postal:
     image: ghcr.io/postalserver/postal:3.3.4
     container_name: cronbox-postal
@@ -176,8 +169,6 @@ services:
     depends_on:
       postal-mariadb:
         condition: service_healthy
-      postal-rabbitmq:
-        condition: service_healthy
     networks:
       - cronbox-network
 
@@ -193,7 +184,10 @@ services:
     volumes:
       - postal_config:/config
     depends_on:
-      - postal
+      postal:
+        condition: service_started
+      postal-mariadb:
+        condition: service_healthy
     networks:
       - cronbox-network
     labels:
@@ -217,7 +211,10 @@ services:
       - postal_config:/config
       - postal_data:/opt/postal/storage
     depends_on:
-      - postal
+      postal:
+        condition: service_started
+      postal-mariadb:
+        condition: service_healthy
     networks:
       - cronbox-network
 
@@ -441,8 +438,8 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
   postal_mariadb_data:
-  postal_rabbitmq_data:
   postal_config:
   postal_data:
   prometheus_data:
