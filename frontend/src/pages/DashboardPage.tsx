@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getWorkspaces, getWorkspace, createWorkspace } from '@/api/workspaces'
-import { getExecutions } from '@/api/executions'
+import { getExecutions, getDailyExecutionStats } from '@/api/executions'
 import { getErrorMessage } from '@/api/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -139,10 +139,22 @@ export function DashboardPage() {
       try {
         const response = await getExecutions(currentWorkspace.id, { limit: 10 })
         setRecentExecutions(response.executions)
+      } catch {
+        // Ignore errors
+      }
+    }
 
-        // Calculate daily stats for last 7 days
-        const last7Days = calculateDailyStats(response.executions)
-        setDailyStats(last7Days)
+    const loadDailyStats = async () => {
+      if (!currentWorkspace) return
+      try {
+        const stats = await getDailyExecutionStats(currentWorkspace.id, 7)
+        // Convert date to localized weekday name for chart display
+        const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+        const formattedStats = stats.map((s) => ({
+          ...s,
+          date: new Date(s.date + 'T00:00:00').toLocaleDateString(locale, { weekday: 'short' }),
+        }))
+        setDailyStats(formattedStats)
       } catch {
         // Ignore errors
       }
@@ -150,40 +162,8 @@ export function DashboardPage() {
 
     loadStats()
     loadRecentExecutions()
-  }, [currentWorkspace])
-
-  const calculateDailyStats = (executions: Execution[]): DailyStats[] => {
-    const stats: Record<string, DailyStats> = {}
-    const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-
-    // Initialize last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
-      stats[dateStr] = {
-        date: date.toLocaleDateString(locale, { weekday: 'short' }),
-        success: 0,
-        failed: 0,
-        total: 0,
-      }
-    }
-
-    // Count executions
-    executions.forEach((exec) => {
-      const dateStr = exec.started_at.split('T')[0]
-      if (stats[dateStr]) {
-        stats[dateStr].total++
-        if (exec.status === 'success') {
-          stats[dateStr].success++
-        } else if (exec.status === 'failed') {
-          stats[dateStr].failed++
-        }
-      }
-    })
-
-    return Object.values(stats)
-  }
+    loadDailyStats()
+  }, [currentWorkspace, i18n.language])
 
   const getStatusBadge = (status: TaskStatus) => {
     switch (status) {

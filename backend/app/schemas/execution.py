@@ -62,3 +62,18 @@ class ExecutionStats(BaseModel):
     failed: int
     success_rate: float
     avg_duration_ms: float | None
+
+
+class DailyExecutionStats(BaseModel):
+    """Schema for daily execution statistics."""
+
+    date: str  # YYYY-MM-DD format
+    success: int
+    failed: int
+    total: int
+
+
+class DailyExecutionStatsResponse(BaseModel):
+    """Schema for daily execution statistics list response."""
+
+    stats: list[DailyExecutionStats]
