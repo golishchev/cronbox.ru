@@ -30,23 +30,19 @@ LABEL maintainer="CronBox Team"
 LABEL version="1.0"
 LABEL description="CronBox Frontend"
 
-# Security: Create non-root user
-RUN addgroup -g 1000 -S cronbox && \
-    adduser -u 1000 -S cronbox -G cronbox
-
 # Install serve globally
 RUN npm install -g serve@14
 
 WORKDIR /app
 
-# Copy built assets with proper ownership
-COPY --from=builder --chown=cronbox:cronbox /app/dist /app
+# Copy built assets (node user already exists with uid 1000)
+COPY --from=builder --chown=node:node /app/dist /app
 
 # Create health endpoint file
-RUN echo "OK" > /app/health
+RUN echo "OK" > /app/health && chown node:node /app/health
 
 # Security: Switch to non-root user
-USER cronbox
+USER node
 
 # Expose port
 EXPOSE 3000
