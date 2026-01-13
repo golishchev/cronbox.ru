@@ -93,7 +93,7 @@ services:
 
   # PostgreSQL
   postgres:
-    image: postgres:17-alpine
+    image: postgres:16-alpine
     container_name: cronbox-postgres
     restart: unless-stopped
     logging: *default-logging
@@ -335,6 +335,9 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
     command: uv run arq app.workers.settings.WorkerSettings
+    # Disable healthcheck - worker has no HTTP server
+    healthcheck:
+      disable: true
     deploy:
       replicas: 3
 
@@ -344,6 +347,9 @@ services:
     container_name: cronbox-scheduler
     logging: *default-logging
     command: uv run python -m app.workers.scheduler
+    # Disable healthcheck - scheduler has no HTTP server
+    healthcheck:
+      disable: true
 
   # Frontend
   frontend:
