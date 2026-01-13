@@ -50,14 +50,14 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
       const response = await register({ name, email, password })
       authLogin(response.user, response.tokens.access_token, response.tokens.refresh_token)
       toast({
-        title: 'Account created!',
-        description: 'Welcome to CronBox',
+        title: t('auth.accountCreated'),
+        description: t('auth.welcomeToCronBox'),
         variant: 'success',
       })
       onNavigate('dashboard')
     } catch (err) {
       toast({
-        title: 'Registration failed',
+        title: t('auth.registrationFailed'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })

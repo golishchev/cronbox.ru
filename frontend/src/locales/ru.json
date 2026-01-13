@@ -60,7 +60,10 @@
     "alreadyHaveAccount": "Уже есть аккаунт?",
     "confirmPassword": "Подтвердите пароль",
     "passwordsNotMatch": "Пароли не совпадают",
-    "passwordTooShort": "Пароль должен содержать минимум 8 символов"
+    "passwordTooShort": "Пароль должен содержать минимум 8 символов",
+    "accountCreated": "Аккаунт создан!",
+    "welcomeToCronBox": "Добро пожаловать в CronBox",
+    "registrationFailed": "Ошибка регистрации"
   },
   "nav": {
     "main": "Основное",

@@ -60,7 +60,10 @@
     "alreadyHaveAccount": "Already have an account?",
     "confirmPassword": "Confirm Password",
     "passwordsNotMatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 8 characters"
+    "passwordTooShort": "Password must be at least 8 characters",
+    "accountCreated": "Account created!",
+    "welcomeToCronBox": "Welcome to CronBox",
+    "registrationFailed": "Registration failed"
   },
   "nav": {
     "main": "Main",
