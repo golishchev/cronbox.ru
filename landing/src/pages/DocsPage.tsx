@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
@@ -24,7 +24,7 @@ const sections = [
 ]
 
 const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: string }) => (
-  <pre className={`language-${language} rounded-lg bg-gray-900 p-4 overflow-x-auto text-sm`}>
+  <pre className={`language-${language} rounded-lg bg-gray-900 p-4 overflow-x-auto max-w-full text-sm`}>
     <code className="text-gray-300">{code}</code>
   </pre>
 )
@@ -703,6 +703,7 @@ const sectionComponents: Record<string, () => ReactNode> = {
 
 export function DocsPage() {
   const { section } = useParams()
+  const navigate = useNavigate()
   const activeSection = section || 'getting-started'
 
   useEffect(() => {
@@ -747,7 +748,7 @@ export function DocsPage() {
             <select
               value={activeSection}
               onChange={(e) => {
-                window.location.href = `/docs/${e.target.value}`
+                navigate(`/docs/${e.target.value}`)
               }}
               className="mt-1 block w-full rounded-lg border-gray-300 py-2 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-primary-500"
             >

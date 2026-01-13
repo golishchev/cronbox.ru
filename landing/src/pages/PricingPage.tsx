@@ -1,81 +1,30 @@
-import { CheckCircle2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
+import { getPlans, type Plan } from '@/api/billing'
 
-const plans = [
-  {
-    name: 'Free',
-    price: '0',
-    description: 'Для тестирования и личных проектов',
-    features: [
-      'До 5 cron-задач',
-      'До 10 отложенных задач в день',
-      'Минимальный интервал: 15 минут',
-      '100 выполнений в день',
-      'Email-уведомления',
-      'История за 7 дней',
-    ],
-    cta: 'Начать бесплатно',
-    href: 'https://cp.cronbox.ru/#/register',
-    featured: false,
-  },
-  {
-    name: 'Starter',
-    price: '490',
-    description: 'Для небольших проектов и стартапов',
-    features: [
-      'До 25 cron-задач',
-      'До 100 отложенных задач в день',
-      'Минимальный интервал: 1 минута',
-      '1 000 выполнений в день',
-      'Email + Telegram уведомления',
-      'История за 30 дней',
-      'API-доступ',
-      'Приоритетная поддержка',
-    ],
-    cta: 'Выбрать Starter',
-    href: 'https://cp.cronbox.ru/#/register?plan=starter',
-    featured: false,
-  },
-  {
-    name: 'Professional',
-    price: '1 490',
-    description: 'Для растущих компаний',
-    features: [
-      'До 100 cron-задач',
-      'До 500 отложенных задач в день',
-      'Минимальный интервал: 30 секунд',
-      '10 000 выполнений в день',
-      'Все каналы уведомлений',
-      'История за 90 дней',
-      'Webhooks',
-      'Приоритетная очередь',
-      'SLA 99.9%',
-    ],
-    cta: 'Выбрать Professional',
-    href: 'https://cp.cronbox.ru/#/register?plan=professional',
-    featured: true,
-  },
-  {
-    name: 'Enterprise',
-    price: 'по запросу',
-    description: 'Для крупных компаний',
-    features: [
-      'Неограниченные cron-задачи',
-      'Неограниченные отложенные задачи',
-      'Минимальный интервал: 10 секунд',
-      'Неограниченные выполнения',
-      'Все каналы уведомлений',
-      'Бессрочная история',
-      'Выделенные воркеры',
-      'Персональный менеджер',
-      'SLA 99.99%',
-      'On-premise установка',
-    ],
-    cta: 'Связаться с нами',
-    href: 'mailto:sales@cronbox.ru',
-    featured: false,
-  },
-]
+// Enterprise plan - not stored in DB, always shown
+const enterprisePlan = {
+  name: 'Enterprise',
+  display_name: 'Enterprise',
+  price: 'по запросу',
+  description: 'Для крупных компаний',
+  features: [
+    'Неограниченные cron-задачи',
+    'Неограниченные отложенные задачи',
+    'Минимальный интервал: 10 секунд',
+    'Неограниченные выполнения',
+    'Все каналы уведомлений',
+    'Бессрочная история',
+    'Выделенные воркеры',
+    'Персональный менеджер',
+    'SLA 99.99%',
+    'On-premise установка',
+  ],
+  cta: 'Связаться с нами',
+  href: 'mailto:sales@cronbox.ru',
+  featured: false,
+}
 
 const faqs = [
   {
@@ -89,11 +38,6 @@ const faqs = [
       'Да, вы можете повысить или понизить тариф в любой момент. При повышении разница будет рассчитана пропорционально. При понижении изменения вступят в силу со следующего периода.',
   },
   {
-    question: 'Есть ли пробный период для платных тарифов?',
-    answer:
-      'Да, все платные тарифы включают 7-дневный пробный период. Оплата списывается только после окончания пробного периода.',
-  },
-  {
     question: 'Какие способы оплаты поддерживаются?',
     answer:
       'Мы принимаем оплату банковскими картами (Visa, MasterCard, МИР), через СБП (Система быстрых платежей), а также для юридических лиц возможна оплата по счету.',
@@ -105,7 +49,88 @@ const faqs = [
   },
 ]
 
+function formatPrice(priceInKopeks: number): string {
+  const priceInRubles = priceInKopeks / 100
+  return priceInRubles.toLocaleString('ru-RU')
+}
+
+function formatInterval(minutes: number): string {
+  if (minutes < 1) {
+    return `${Math.round(minutes * 60)} секунд`
+  }
+  if (minutes === 1) {
+    return '1 минута'
+  }
+  return `${minutes} минут`
+}
+
+function generateFeatures(plan: Plan): string[] {
+  const features: string[] = []
+
+  features.push(`До ${plan.max_cron_tasks} cron-задач`)
+  features.push(`До ${plan.max_delayed_tasks_per_month} отложенных задач в месяц`)
+  features.push(`Минимальный интервал: ${formatInterval(plan.min_cron_interval_minutes)}`)
+  features.push(`До ${plan.max_workspaces} ${plan.max_workspaces === 1 ? 'рабочее пространство' : 'рабочих пространств'}`)
+  features.push(`История за ${plan.max_execution_history_days} дней`)
+
+  if (plan.email_notifications && plan.telegram_notifications) {
+    features.push('Email + Telegram уведомления')
+  } else if (plan.email_notifications) {
+    features.push('Email-уведомления')
+  }
+
+  if (plan.webhook_callbacks) {
+    features.push('Webhooks')
+  }
+
+  if (plan.retry_on_failure) {
+    features.push('Авто-повтор при ошибке')
+  }
+
+  return features
+}
+
+function getPlanCta(plan: Plan): string {
+  if (plan.price_monthly === 0) {
+    return 'Начать бесплатно'
+  }
+  return `Выбрать ${plan.display_name}`
+}
+
+function getPlanHref(plan: Plan): string {
+  if (plan.price_monthly === 0) {
+    return 'https://cp.cronbox.ru/#/register'
+  }
+  return `https://cp.cronbox.ru/#/register?plan=${plan.name.toLowerCase()}`
+}
+
 export function PricingPage() {
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const data = await getPlans()
+        // Sort by sort_order and filter only public active plans
+        const sortedPlans = data
+          .filter((p) => p.is_active && p.is_public)
+          .sort((a, b) => a.sort_order - b.sort_order)
+        setPlans(sortedPlans)
+      } catch (err) {
+        console.error('Failed to fetch plans:', err)
+        setError('Не удалось загрузить тарифы')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPlans()
+  }, [])
+
+  // Determine which plan should be featured (middle plan or highest non-enterprise)
+  const featuredPlanName = plans.length >= 2 ? plans[Math.floor(plans.length / 2)]?.name : null
+
   return (
     <div className="bg-white">
       {/* Header */}
@@ -123,42 +148,90 @@ export function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={clsx(
-                  'relative rounded-2xl border p-8',
-                  plan.featured
-                    ? 'border-primary-600 bg-primary-50 shadow-lg ring-2 ring-primary-600'
-                    : 'border-gray-200 bg-white shadow-sm'
-                )}
-              >
-                {plan.featured && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center rounded-full bg-primary-600 px-4 py-1 text-sm font-medium text-white">
-                      Популярный
-                    </span>
-                  </div>
-                )}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-20 text-red-600">{error}</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+              {plans.map((plan) => {
+                const isFree = plan.price_monthly === 0
+                const isFeatured = plan.name === featuredPlanName
+                const features = generateFeatures(plan)
 
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                  <div className="mt-4 flex items-baseline justify-center gap-x-1">
-                    {plan.price === 'по запросу' ? (
-                      <span className="text-2xl font-bold text-gray-900">{plan.price}</span>
-                    ) : (
-                      <>
-                        <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                        <span className="text-gray-600">/мес</span>
-                      </>
+                return (
+                  <div
+                    key={plan.id}
+                    className={clsx(
+                      'relative rounded-2xl border p-8',
+                      isFeatured
+                        ? 'border-primary-600 bg-primary-50 shadow-lg ring-2 ring-primary-600'
+                        : 'border-gray-200 bg-white shadow-sm'
                     )}
+                  >
+                    {isFeatured && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <span className="inline-flex items-center rounded-full bg-primary-600 px-4 py-1 text-sm font-medium text-white">
+                          Популярный
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold text-gray-900">{plan.display_name}</h3>
+                      <div className="mt-4 flex items-baseline justify-center gap-x-1">
+                        {isFree ? (
+                          <span className="text-4xl font-bold text-gray-900">0</span>
+                        ) : (
+                          <>
+                            <span className="text-4xl font-bold text-gray-900">
+                              {formatPrice(plan.price_monthly)}
+                            </span>
+                            <span className="text-gray-600">₽/мес</span>
+                          </>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+                    </div>
+
+                    <ul className="mt-8 space-y-3">
+                      {features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <a
+                      href={getPlanHref(plan)}
+                      className={clsx(
+                        'mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors',
+                        isFeatured
+                          ? 'bg-primary-600 text-white hover:bg-primary-700'
+                          : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      )}
+                    >
+                      {getPlanCta(plan)}
+                    </a>
                   </div>
-                  <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+                )
+              })}
+
+              {/* Enterprise plan - always shown */}
+              <div className="relative rounded-2xl border p-8 border-gray-200 bg-white shadow-sm">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900">{enterprisePlan.display_name}</h3>
+                  <div className="mt-4 flex items-baseline justify-center gap-x-1">
+                    <span className="text-2xl font-bold text-gray-900">{enterprisePlan.price}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">{enterprisePlan.description}</p>
                 </div>
 
                 <ul className="mt-8 space-y-3">
-                  {plan.features.map((feature) => (
+                  {enterprisePlan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-gray-700">{feature}</span>
@@ -167,19 +240,14 @@ export function PricingPage() {
                 </ul>
 
                 <a
-                  href={plan.href}
-                  className={clsx(
-                    'mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors',
-                    plan.featured
-                      ? 'bg-primary-600 text-white hover:bg-primary-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  )}
+                  href={enterprisePlan.href}
+                  className="mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200"
                 >
-                  {plan.cta}
+                  {enterprisePlan.cta}
                 </a>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 

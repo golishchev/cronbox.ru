@@ -8,6 +8,7 @@ from app.api.deps import DB, CurrentUser
 from app.config import settings
 from app.db.repositories.users import UserRepository
 from app.schemas.auth import (
+    DeleteAccountRequest,
     EmailVerificationRequest,
     LoginResponse,
     PasswordChangeRequest,
@@ -314,3 +315,24 @@ async def delete_avatar(current_user: CurrentUser, db: DB):
     # Update user
     user_repo = UserRepository(db)
     await user_repo.update(current_user, avatar_url=None)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    data: DeleteAccountRequest,
+    current_user: CurrentUser,
+    db: DB,
+):
+    """Soft-delete user account.
+
+    Requires typing 'delete' as confirmation.
+    This deactivates the account but preserves data.
+    """
+    if data.confirmation.lower() != "delete":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Type 'delete' to confirm account deletion",
+        )
+
+    user_repo = UserRepository(db)
+    await user_repo.update(current_user, is_active=False)

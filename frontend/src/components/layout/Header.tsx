@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/uiStore'
 import { updateProfile } from '@/api/auth'
 import { createWorkspace, deleteWorkspace } from '@/api/workspaces'
 import { getErrorMessage } from '@/api/client'
+import { getAssetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -276,7 +277,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 {user?.avatar_url && (
-                  <AvatarImage src={user.avatar_url} alt={user.name} />
+                  <AvatarImage src={getAssetUrl(user.avatar_url)} alt={user.name} />
                 )}
                 <AvatarFallback className="text-sm">{initials}</AvatarFallback>
               </Avatar>

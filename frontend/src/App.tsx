@@ -72,6 +72,7 @@ function App() {
       const allRoutes = [...AUTH_ROUTES, ...PROTECTED_ROUTES]
       if (allRoutes.includes(hash)) {
         setRoute(hash as Route)
+        window.scrollTo(0, 0)
       }
     }
 
@@ -107,6 +108,7 @@ function App() {
   const navigate = (to: string) => {
     setRoute(to as Route)
     window.location.hash = to
+    window.scrollTo(0, 0)
   }
 
   if (!isAuthenticated) {

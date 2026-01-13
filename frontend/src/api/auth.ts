@@ -64,3 +64,7 @@ export async function uploadAvatar(file: File): Promise<User> {
 export async function deleteAvatar(): Promise<void> {
   await apiClient.delete('/auth/me/avatar')
 }
+
+export async function deleteAccount(confirmation: string): Promise<void> {
+  await apiClient.delete('/auth/me', { data: { confirmation } })
+}
