@@ -17,8 +17,8 @@ export function PrivacyPage() {
             CronBox (далее — «Сервис»), расположенного по адресу cronbox.ru.
           </p>
           <p>
-            Оператором персональных данных является ИП Голышев Александр Сергеевич,
-            ИНН 123456789012 (далее — «Оператор»).
+            Оператором персональных данных является ИП Голищев Дмитрий Викторович,
+            ИНН 263107925047 (далее — «Оператор»).
           </p>
           <p>
             Использование Сервиса означает безоговорочное согласие Пользователя с
@@ -147,12 +147,15 @@ export function PrivacyPage() {
           <ul>
             <li>
               Email:{' '}
-              <a href="mailto:privacy@cronbox.ru" className="text-primary-600">
-                privacy@cronbox.ru
+              <a href="mailto:support@cronbox.ru" className="text-primary-600">
+                support@cronbox.ru
               </a>
             </li>
             <li>
-              Адрес: Российская Федерация, г. Москва
+              Telegram:{' '}
+              <a href="https://t.me/cronbox" className="text-primary-600">
+                @cronbox
+              </a>
             </li>
           </ul>
         </div>

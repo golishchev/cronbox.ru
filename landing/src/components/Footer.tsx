@@ -14,7 +14,7 @@ const navigation = {
   ],
   support: [
     { name: 'support@cronbox.ru', href: 'mailto:support@cronbox.ru', icon: Mail },
-    { name: 'Telegram', href: 'https://t.me/cronbox_support', icon: MessageCircle },
+    { name: 'Telegram', href: 'https://t.me/cronbox', icon: MessageCircle },
   ],
 }
 
@@ -97,7 +97,7 @@ export function Footer() {
               &copy; {new Date().getFullYear()} CronBox. Все права защищены.
             </p>
             <p className="text-sm text-gray-400">
-              ИП Голышев Александр Сергеевич, ИНН 123456789012
+              ИП Голищев Дмитрий Викторович, ИНН 263107925047
             </p>
           </div>
         </div>

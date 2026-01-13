@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
@@ -24,7 +24,7 @@ const sections = [
 ]
 
 const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: string }) => (
-  <pre className={`language-${language} rounded-lg bg-gray-900 p-4 overflow-x-auto max-w-full text-sm`}>
+  <pre className={`language-${language} rounded-lg bg-gray-900 p-4 overflow-x-auto text-sm`}>
     <code className="text-gray-300">{code}</code>
   </pre>
 )
@@ -703,7 +703,6 @@ const sectionComponents: Record<string, () => ReactNode> = {
 
 export function DocsPage() {
   const { section } = useParams()
-  const navigate = useNavigate()
   const activeSection = section || 'getting-started'
 
   useEffect(() => {
@@ -714,8 +713,26 @@ export function DocsPage() {
 
   return (
     <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex gap-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Mobile section selector */}
+        <div className="lg:hidden mb-6">
+          <label className="text-sm font-medium text-gray-700">Раздел</label>
+          <select
+            value={activeSection}
+            onChange={(e) => {
+              window.location.href = `/docs/${e.target.value}`
+            }}
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            {sections.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="lg:flex lg:gap-12">
           {/* Sidebar */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24">
@@ -741,24 +758,6 @@ export function DocsPage() {
               </nav>
             </div>
           </aside>
-
-          {/* Mobile section selector */}
-          <div className="lg:hidden mb-8 w-full">
-            <label className="text-sm font-medium text-gray-700">Раздел</label>
-            <select
-              value={activeSection}
-              onChange={(e) => {
-                navigate(`/docs/${e.target.value}`)
-              }}
-              className="mt-1 block w-full rounded-lg border-gray-300 py-2 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-            >
-              {sections.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
 
           {/* Content */}
           <main className="flex-1 min-w-0">
