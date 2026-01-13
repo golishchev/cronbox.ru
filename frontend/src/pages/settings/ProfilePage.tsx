@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
-import { updateProfile, connectTelegram, disconnectTelegram, uploadAvatar, deleteAvatar, deleteAccount } from '@/api/auth'
+import { updateProfile, connectTelegram, disconnectTelegram, uploadAvatar, deleteAvatar, deleteAccount, sendEmailVerification } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { getAssetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Loader2, Save, User, Globe, MessageSquare, CheckCircle, XCircle, Copy, ExternalLink, Camera, Trash2, AlertTriangle } from 'lucide-react'
+import { Loader2, Save, User, Globe, MessageSquare, CheckCircle, XCircle, Copy, ExternalLink, Camera, Trash2, AlertTriangle, Mail } from 'lucide-react'
 import type { TelegramConnectResponse } from '@/types'
 
 interface ProfilePageProps {
@@ -52,6 +52,10 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
   const [telegramData, setTelegramData] = useState<TelegramConnectResponse | null>(null)
   const [telegramError, setTelegramError] = useState('')
   const [codeCopied, setCodeCopied] = useState(false)
+
+  // Email verification state
+  const [emailVerificationLoading, setEmailVerificationLoading] = useState(false)
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false)
 
   // Delete account state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -174,6 +178,22 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
       await navigator.clipboard.writeText(`/link ${telegramData.code}`)
       setCodeCopied(true)
       setTimeout(() => setCodeCopied(false), 2000)
+    }
+  }
+
+  const handleSendEmailVerification = async () => {
+    setEmailVerificationLoading(true)
+    setError('')
+
+    try {
+      await sendEmailVerification()
+      setEmailVerificationSent(true)
+      setSuccess(t('profile.verificationEmailSent'))
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setEmailVerificationLoading(false)
     }
   }
 
@@ -360,6 +380,26 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
                 <>
                   <XCircle className="h-4 w-4 text-yellow-500" />
                   <span className="text-yellow-600">{t('profile.emailNotVerified')}</span>
+                  {emailVerificationSent ? (
+                    <span className="text-sm text-muted-foreground">
+                      ({t('profile.verificationEmailSentShort')})
+                    </span>
+                  ) : (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-blue-500"
+                      onClick={handleSendEmailVerification}
+                      disabled={emailVerificationLoading}
+                    >
+                      {emailVerificationLoading ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Mail className="mr-1 h-3 w-3" />
+                      )}
+                      {t('profile.verifyEmail')}
+                    </Button>
+                  )}
                 </>
               )}
             </div>

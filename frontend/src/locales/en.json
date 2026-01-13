@@ -63,7 +63,13 @@
     "passwordTooShort": "Password must be at least 8 characters",
     "accountCreated": "Account created!",
     "welcomeToCronBox": "Welcome to CronBox",
-    "registrationFailed": "Registration failed"
+    "registrationFailed": "Registration failed",
+    "verifyEmailTitle": "Email Verification",
+    "verifyEmailProcessing": "Verifying your email...",
+    "verifyEmailSuccess": "Your email has been verified successfully!",
+    "verifyEmailError": "Failed to verify email",
+    "verifyEmailNoToken": "Verification token is missing",
+    "goToDashboard": "Go to Dashboard"
   },
   "nav": {
     "main": "Main",
@@ -277,7 +283,10 @@
     "deleteAccountTitle": "Delete Account",
     "deleteAccountWarning": "Are you sure you want to delete your account? Your account will be deactivated and you will lose access to all your data. This action cannot be undone.",
     "deleteAccountConfirmLabel": "Type \"delete\" to confirm",
-    "deleteAccountConfirm": "Delete My Account"
+    "deleteAccountConfirm": "Delete My Account",
+    "verifyEmail": "Verify",
+    "verificationEmailSent": "Verification email has been sent to your inbox",
+    "verificationEmailSentShort": "email sent"
   },
   "billing": {
     "title": "Billing",

@@ -68,3 +68,12 @@ export async function deleteAvatar(): Promise<void> {
 export async function deleteAccount(confirmation: string): Promise<void> {
   await apiClient.delete('/auth/me', { data: { confirmation } })
 }
+
+export async function sendEmailVerification(): Promise<void> {
+  await apiClient.post('/auth/send-verification')
+}
+
+export async function verifyEmail(token: string): Promise<User> {
+  const response = await apiClient.post<User>('/auth/verify-email', { token })
+  return response.data
+}
