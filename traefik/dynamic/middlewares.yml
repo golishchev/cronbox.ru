@@ -33,6 +33,17 @@ http:
           ipStrategy:
             depth: 1
 
+    # Rate limiting for public endpoints like /billing/plans (landing page APIs)
+    # 30 req/min = 0.5 req/s, burst 10 for normal browsing
+    public-rate-limit:
+      rateLimit:
+        average: 1
+        burst: 10
+        period: 2s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
     # Gzip compression
     compress:
       compress:

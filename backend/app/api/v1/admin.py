@@ -22,6 +22,7 @@ from app.models import (
 from app.models.notification_template import NotificationChannel, NotificationTemplate
 from app.models.payment import PaymentStatus
 from app.models.subscription import SubscriptionStatus
+from app.services.billing import billing_service
 from app.services.template_service import template_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -749,6 +750,9 @@ async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
     await db.commit()
     await db.refresh(plan)
 
+    # Invalidate plans cache
+    await billing_service.invalidate_plans_cache()
+
     return PlanListItem(
         id=str(plan.id),
         name=plan.name,
@@ -827,6 +831,9 @@ async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRe
     await db.commit()
     await db.refresh(plan)
 
+    # Invalidate plans cache
+    await billing_service.invalidate_plans_cache()
+
     subs_count = await db.scalar(
         select(func.count(Subscription.id)).where(
             Subscription.plan_id == plan.id,
@@ -881,6 +888,9 @@ async def delete_plan(admin: AdminUser, db: DB, plan_id: str):
 
     await db.delete(plan)
     await db.commit()
+
+    # Invalidate plans cache
+    await billing_service.invalidate_plans_cache()
 
 
 # ============== Notification Templates ==============
