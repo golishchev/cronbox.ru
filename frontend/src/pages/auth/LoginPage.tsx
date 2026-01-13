@@ -29,14 +29,14 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       const response = await login({ email, password })
       authLogin(response.user, response.tokens.access_token, response.tokens.refresh_token)
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in',
+        title: t('auth.welcomeBack'),
+        description: t('auth.loginSuccess'),
         variant: 'success',
       })
       onNavigate('dashboard')
     } catch (err) {
       toast({
-        title: 'Sign in failed',
+        title: t('auth.loginFailed'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })

@@ -69,7 +69,9 @@
     "verifyEmailSuccess": "Your email has been verified successfully!",
     "verifyEmailError": "Failed to verify email",
     "verifyEmailNoToken": "Verification token is missing",
-    "goToDashboard": "Go to Dashboard"
+    "goToDashboard": "Go to Dashboard",
+    "loginSuccess": "You have successfully signed in",
+    "loginFailed": "Sign in failed"
   },
   "nav": {
     "main": "Main",
