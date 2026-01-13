@@ -217,7 +217,7 @@ services:
     environment:
       <<: *postal-env
       BIND_ADDRESS: "0.0.0.0"
-      WEB_HOSTNAME: postal.cronbox.ru
+      POSTAL_WEB_HOSTNAME: postal.cronbox.ru
     volumes:
       - postal_config:/config
     depends_on:
