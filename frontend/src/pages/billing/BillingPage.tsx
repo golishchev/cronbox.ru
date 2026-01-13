@@ -31,7 +31,6 @@ import {
   Subscription,
   Payment,
 } from '@/api/billing'
-import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { cn } from '@/lib/utils'
 
 interface BillingPageProps {
@@ -40,7 +39,6 @@ interface BillingPageProps {
 
 export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
   const [plans, setPlans] = useState<Plan[]>([])
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
@@ -53,10 +51,8 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (currentWorkspace) {
-      loadBillingData()
-    }
-  }, [currentWorkspace])
+    loadBillingData()
+  }, [])
 
   const loadBillingData = async () => {
     setLoading(true)
