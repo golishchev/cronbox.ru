@@ -277,7 +277,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 {user?.avatar_url && (
-                  <AvatarImage src={getAssetUrl(user.avatar_url)} alt={user.name} />
+                  <AvatarImage src={`${getAssetUrl(user.avatar_url)}?t=${new Date(user.updated_at || Date.now()).getTime()}`} alt={user.name} />
                 )}
                 <AvatarFallback className="text-sm">{initials}</AvatarFallback>
               </Avatar>

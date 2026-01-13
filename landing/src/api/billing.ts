@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.cronbox.ru/v1'
 
 export interface Plan {
   id: string
