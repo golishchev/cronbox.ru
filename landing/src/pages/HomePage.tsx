@@ -69,7 +69,6 @@ const benefits = [
   'Детальная статистика',
   'Мгновенные уведомления',
   'REST API',
-  'Поддержка 24/7',
 ]
 
 export function HomePage() {

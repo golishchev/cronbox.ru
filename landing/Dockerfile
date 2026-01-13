@@ -9,14 +9,18 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with cache mount (survives image prune)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build arguments for environment variables (baked into the build)
+ARG VITE_API_URL=https://api.cronbox.ru/v1
+
+# Build the application with environment variable
+RUN VITE_API_URL=${VITE_API_URL} npm run build
 
 # Production stage - using serve instead of nginx
 FROM node:20-alpine

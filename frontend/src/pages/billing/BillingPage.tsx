@@ -31,7 +31,6 @@ import {
   Subscription,
   Payment,
 } from '@/api/billing'
-import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { cn } from '@/lib/utils'
 
 interface BillingPageProps {
@@ -40,7 +39,6 @@ interface BillingPageProps {
 
 export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
   const [plans, setPlans] = useState<Plan[]>([])
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
@@ -53,10 +51,8 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (currentWorkspace) {
-      loadBillingData()
-    }
-  }, [currentWorkspace])
+    loadBillingData()
+  }, [])
 
   const loadBillingData = async () => {
     setLoading(true)
@@ -156,6 +152,16 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   }
 
   const currentPlanId = subscription?.plan_id || plans.find(p => p.name === 'free')?.id
+  const currentPlan = plans.find(p => p.id === currentPlanId)
+  const getCurrentPlanPrice = () => {
+    if (!currentPlan) return 0
+    return billingPeriod === 'yearly' ? currentPlan.price_yearly : currentPlan.price_monthly
+  }
+
+  const isDowngrade = (plan: Plan) => {
+    const planPrice = billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly
+    return planPrice < getCurrentPlanPrice()
+  }
 
   if (loading) {
     return (
@@ -352,7 +358,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                     }}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    {t('billing.upgrade')}
+                    {isDowngrade(plan) ? t('billing.downgrade') : t('billing.upgrade')}
                   </Button>
                 )}
               </CardFooter>
@@ -396,7 +402,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('billing.upgradeTo', { plan: selectedPlan?.display_name })}</DialogTitle>
+            <DialogTitle>
+              {selectedPlan && isDowngrade(selectedPlan)
+                ? t('billing.downgradeTo', { plan: selectedPlan?.display_name })
+                : t('billing.upgradeTo', { plan: selectedPlan?.display_name })}
+            </DialogTitle>
             <DialogDescription>
               {t('billing.upgradeDescription')}
             </DialogDescription>

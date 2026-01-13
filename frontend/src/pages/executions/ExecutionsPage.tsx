@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
+import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { translateApiError } from '@/lib/translateApiError'
 import type { Execution, ExecutionDetail, PaginationMeta, TaskStatus } from '@/types'
 
@@ -47,7 +48,7 @@ interface ExecutionsPageProps {
 
 export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
+  const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [executions, setExecutions] = useState<Execution[]>([])
   const [pagination, setPagination] = useState<PaginationMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -154,6 +155,10 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
       return <Badge variant="destructive">{code}</Badge>
     }
     return <Badge variant="secondary">{code}</Badge>
+  }
+
+  if (workspaces.length === 0) {
+    return <NoWorkspaceState />
   }
 
   if (!currentWorkspace) {

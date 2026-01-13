@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { DelayedTaskForm } from '@/components/delayed/DelayedTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
+import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { getErrorMessage } from '@/api/client'
 import type { DelayedTask, PaginationMeta, TaskStatus } from '@/types'
 
@@ -50,7 +51,7 @@ interface DelayedTasksPageProps {
 
 export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
+  const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [tasks, setTasks] = useState<DelayedTask[]>([])
   const [pagination, setPagination] = useState<PaginationMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -168,6 +169,10 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     if (diffDays > 0) return t('delayedTasks.inDaysHours', { days: diffDays, hours: diffHours % 24 })
     if (diffHours > 0) return t('delayedTasks.inHoursMinutes', { hours: diffHours, minutes: diffMins % 60 })
     return t('delayedTasks.inMinutes', { minutes: diffMins })
+  }
+
+  if (workspaces.length === 0) {
+    return <NoWorkspaceState />
   }
 
   if (!currentWorkspace) {

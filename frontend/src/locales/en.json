@@ -60,7 +60,10 @@
     "alreadyHaveAccount": "Already have an account?",
     "confirmPassword": "Confirm Password",
     "passwordsNotMatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 8 characters"
+    "passwordTooShort": "Password must be at least 8 characters",
+    "accountCreated": "Account created!",
+    "welcomeToCronBox": "Welcome to CronBox",
+    "registrationFailed": "Registration failed"
   },
   "nav": {
     "main": "Main",
@@ -266,7 +269,15 @@
     "copyCode": "Copy command",
     "codeExpires": "Code expires in {{minutes}} minutes",
     "saveChanges": "Save Changes",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDescription": "Irreversible actions for your account",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDescription": "Permanently deactivate your account",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountWarning": "Are you sure you want to delete your account? Your account will be deactivated and you will lose access to all your data. This action cannot be undone.",
+    "deleteAccountConfirmLabel": "Type \"delete\" to confirm",
+    "deleteAccountConfirm": "Delete My Account"
   },
   "billing": {
     "title": "Billing",
@@ -296,6 +307,8 @@
     "paymentHistory": "Payment History",
     "amount": "Amount",
     "upgradeTo": "Upgrade to {{plan}}",
+    "downgrade": "Downgrade",
+    "downgradeTo": "Downgrade to {{plan}}",
     "upgradeDescription": "You will be redirected to the payment page to complete your subscription.",
     "billingPeriod": "Billing",
     "proceedToPayment": "Proceed to Payment",
@@ -412,6 +425,12 @@
     "userUpdatedDescription": "{{email}} has been updated",
     "errorUpdatingUser": "Error updating user",
     "emailVerified": "Email Verified",
+    "assignPlan": "Assign Plan",
+    "assignPlanDescription": "Assign a subscription plan without payment",
+    "selectPlan": "Select plan",
+    "duration": "Duration",
+    "days": "days",
+    "forever": "Forever",
     "owner": "Owner",
     "plan": "Plan",
     "pending": "pending",

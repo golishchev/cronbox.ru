@@ -1,7 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import type { ApiError } from '@/types'
 
-const API_BASE_URL = '/v1'
+// Use environment variable for API URL, fallback to relative path for dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/v1'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

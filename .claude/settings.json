@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "deployment-validation@claude-code-workflows": true
+  }
+}

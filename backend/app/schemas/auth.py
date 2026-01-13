@@ -94,3 +94,9 @@ class TelegramLinkRequest(BaseModel):
     code: str
     telegram_id: int
     telegram_username: str | None = None
+
+
+class DeleteAccountRequest(BaseModel):
+    """Schema for account deletion confirmation."""
+
+    confirmation: str = Field(..., description="Must be 'delete' to confirm account deletion")

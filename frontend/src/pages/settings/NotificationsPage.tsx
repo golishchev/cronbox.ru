@@ -8,6 +8,7 @@ import {
   NotificationSettings,
 } from '@/api/notifications'
 import { getErrorMessage } from '@/api/client'
+import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +33,7 @@ interface NotificationsPageProps {
 
 export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
+  const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [_settings, setSettings] = useState<NotificationSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [_isSaving, setIsSaving] = useState(false)
@@ -208,6 +209,10 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
 
   const removeEmailAddress = (email: string) => {
     setEmailAddresses(emailAddresses.filter(e => e !== email))
+  }
+
+  if (workspaces.length === 0) {
+    return <NoWorkspaceState />
   }
 
   if (!currentWorkspace) {

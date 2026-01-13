@@ -60,7 +60,10 @@
     "alreadyHaveAccount": "Уже есть аккаунт?",
     "confirmPassword": "Подтвердите пароль",
     "passwordsNotMatch": "Пароли не совпадают",
-    "passwordTooShort": "Пароль должен содержать минимум 8 символов"
+    "passwordTooShort": "Пароль должен содержать минимум 8 символов",
+    "accountCreated": "Аккаунт создан!",
+    "welcomeToCronBox": "Добро пожаловать в CronBox",
+    "registrationFailed": "Ошибка регистрации"
   },
   "nav": {
     "main": "Основное",
@@ -266,7 +269,15 @@
     "copyCode": "Скопировать команду",
     "codeExpires": "Код действителен {{minutes}} минут",
     "saveChanges": "Сохранить изменения",
-    "saving": "Сохранение..."
+    "saving": "Сохранение...",
+    "dangerZone": "Опасная зона",
+    "dangerZoneDescription": "Необратимые действия с вашим аккаунтом",
+    "deleteAccount": "Удалить аккаунт",
+    "deleteAccountDescription": "Деактивировать аккаунт навсегда",
+    "deleteAccountTitle": "Удаление аккаунта",
+    "deleteAccountWarning": "Вы уверены, что хотите удалить свой аккаунт? Ваш аккаунт будет деактивирован, и вы потеряете доступ ко всем данным. Это действие нельзя отменить.",
+    "deleteAccountConfirmLabel": "Введите \"delete\" для подтверждения",
+    "deleteAccountConfirm": "Удалить мой аккаунт"
   },
   "billing": {
     "title": "Оплата",
@@ -296,6 +307,8 @@
     "paymentHistory": "История платежей",
     "amount": "Сумма",
     "upgradeTo": "Улучшить до {{plan}}",
+    "downgrade": "Понизить",
+    "downgradeTo": "Понизить до {{plan}}",
     "upgradeDescription": "Вы будете перенаправлены на страницу оплаты",
     "billingPeriod": "Период оплаты",
     "proceedToPayment": "Перейти к оплате",
@@ -534,6 +547,12 @@
     "owner": "Владелец",
     "plan": "План",
     "pending": "ожидание",
+    "assignPlan": "Назначить тариф",
+    "assignPlanDescription": "Назначить тарифный план без оплаты",
+    "selectPlan": "Выберите тариф",
+    "duration": "Срок",
+    "days": "дн.",
+    "forever": "Навсегда",
     "templates": {
       "title": "Шаблоны уведомлений",
       "subtitle": "Управление шаблонами email и Telegram уведомлений",

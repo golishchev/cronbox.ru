@@ -1,12 +1,9 @@
 """Test configuration and fixtures."""
-import asyncio
-
 # Test database URL (use separate test database)
 # Only replace the database name at the end of the URL, not user/password
 import re
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -26,15 +23,7 @@ from app.models.user import User
 TEST_DATABASE_URL = re.sub(r"/cronbox$", "/cronbox_test", settings.database_url)
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(loop_scope="session", scope="session")
 async def engine():
     """Create test database engine."""
     engine = create_async_engine(

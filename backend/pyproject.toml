@@ -34,6 +34,17 @@ dependencies = [
 cronbox-worker = "app.cli:run_worker"
 cronbox-scheduler = "app.cli:run_scheduler"
 cronbox-server = "app.cli:run_server"
+cronbox-bot = "app.cli:run_bot"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [dependency-groups]
 dev = [

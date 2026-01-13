@@ -1,6 +1,8 @@
 import { useEffect, useState, Suspense, lazy } from 'react'
 import { useAuthStore } from '@/stores/authStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getCurrentUser } from '@/api/auth'
+import { getWorkspaces } from '@/api/workspaces'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Toaster } from '@/components/ui/toaster'
 import { Loader2 } from 'lucide-react'
@@ -39,6 +41,7 @@ function PageLoader() {
 
 function App() {
   const { isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore()
+  const { setWorkspaces, setCurrentWorkspace, currentWorkspace } = useWorkspaceStore()
   const [route, setRoute] = useState<Route>('login')
 
   useEffect(() => {
@@ -48,6 +51,14 @@ function App() {
         try {
           const user = await getCurrentUser()
           setUser(user)
+
+          // Load workspaces after successful auth
+          const workspaces = await getWorkspaces()
+          setWorkspaces(workspaces)
+          if (workspaces.length > 0 && !currentWorkspace) {
+            setCurrentWorkspace(workspaces[0])
+          }
+
           const hash = window.location.hash.slice(1) || 'dashboard'
           if (PROTECTED_ROUTES.includes(hash)) {
             setRoute(hash as Route)
@@ -63,7 +74,7 @@ function App() {
     }
 
     checkAuth()
-  }, [setUser, setLoading, logout])
+  }, [setUser, setLoading, logout, setWorkspaces, setCurrentWorkspace, currentWorkspace])
 
   // Handle hash-based routing
   useEffect(() => {
@@ -72,6 +83,7 @@ function App() {
       const allRoutes = [...AUTH_ROUTES, ...PROTECTED_ROUTES]
       if (allRoutes.includes(hash)) {
         setRoute(hash as Route)
+        window.scrollTo(0, 0)
       }
     }
 
@@ -107,6 +119,7 @@ function App() {
   const navigate = (to: string) => {
     setRoute(to as Route)
     window.location.hash = to
+    window.scrollTo(0, 0)
   }
 
   if (!isAuthenticated) {

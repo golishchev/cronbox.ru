@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
-import { updateProfile, connectTelegram, disconnectTelegram, uploadAvatar, deleteAvatar } from '@/api/auth'
+import { updateProfile, connectTelegram, disconnectTelegram, uploadAvatar, deleteAvatar, deleteAccount } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
+import { getAssetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +16,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, Save, User, Globe, MessageSquare, CheckCircle, XCircle, Copy, ExternalLink, Camera, Trash2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Loader2, Save, User, Globe, MessageSquare, CheckCircle, XCircle, Copy, ExternalLink, Camera, Trash2, AlertTriangle } from 'lucide-react'
 import type { TelegramConnectResponse } from '@/types'
 
 interface ProfilePageProps {
@@ -34,12 +45,19 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
   // Avatar state
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const [avatarKey, setAvatarKey] = useState(Date.now())
 
   // Telegram connection state
   const [telegramLoading, setTelegramLoading] = useState(false)
   const [telegramData, setTelegramData] = useState<TelegramConnectResponse | null>(null)
   const [telegramError, setTelegramError] = useState('')
   const [codeCopied, setCodeCopied] = useState(false)
+
+  // Delete account state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const { logout: logoutStore } = useAuthStore()
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -86,6 +104,7 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
     try {
       const updatedUser = await uploadAvatar(file)
       updateUser(updatedUser)
+      setAvatarKey(Date.now())
       setSuccess(t('profile.avatarUploaded'))
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
@@ -158,6 +177,25 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
     }
   }
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation.toLowerCase() !== 'delete') {
+      return
+    }
+
+    setDeleteLoading(true)
+    try {
+      await deleteAccount(deleteConfirmation)
+      logoutStore()
+      window.location.hash = 'login'
+    } catch (err) {
+      setError(getErrorMessage(err))
+      setDeleteDialogOpen(false)
+    } finally {
+      setDeleteLoading(false)
+      setDeleteConfirmation('')
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -195,7 +233,10 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
             <div className="relative">
               <Avatar className="h-24 w-24">
                 {user?.avatar_url && (
-                  <AvatarImage src={user.avatar_url} alt={user.name} />
+                  <AvatarImage
+                    src={`${getAssetUrl(user.avatar_url)}?t=${avatarKey}`}
+                    alt={user.name}
+                  />
                 )}
                 <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
               </Avatar>
@@ -452,6 +493,73 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
           {isSaving ? t('profile.saving') : t('profile.saveChanges')}
         </Button>
       </div>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            {t('profile.dangerZone')}
+          </CardTitle>
+          <CardDescription>
+            {t('profile.dangerZoneDescription')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{t('profile.deleteAccount')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('profile.deleteAccountDescription')}
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('profile.deleteAccount')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Account Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('profile.deleteAccountTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('profile.deleteAccountWarning')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="delete-confirmation" className="text-sm">
+              {t('profile.deleteAccountConfirmLabel')}
+            </Label>
+            <Input
+              id="delete-confirmation"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="delete"
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading || deleteConfirmation.toLowerCase() !== 'delete'}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('profile.deleteAccountConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -56,12 +56,12 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     email_from: str = "CronBox <noreply@cronbox.ru>"
 
-    # Postal (primary email service)
+    # Postal (optional, disabled by default)
     postal_api_url: str = ""  # e.g., https://postal.example.com
     postal_api_key: str = ""  # API credential key
     postal_webhook_secret: str = ""  # For webhook signature verification
     postal_server_key: str = ""  # Server key for sending
-    use_postal: bool = True  # Use Postal instead of SMTP
+    use_postal: bool = False  # Set to True to use Postal instead of SMTP
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
