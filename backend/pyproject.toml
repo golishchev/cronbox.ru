@@ -36,6 +36,9 @@ cronbox-scheduler = "app.cli:run_scheduler"
 cronbox-server = "app.cli:run_server"
 cronbox-bot = "app.cli:run_bot"
 
+[tool.uv]
+package = true
+
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
