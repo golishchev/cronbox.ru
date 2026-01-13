@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { CronTaskForm } from '@/components/cron/CronTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
+import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { getErrorMessage } from '@/api/client'
 import type { CronTask } from '@/types'
 import cronstrue from 'cronstrue'
@@ -42,7 +43,7 @@ interface CronTasksPageProps {
 
 export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
+  const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [tasks, setTasks] = useState<CronTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -174,6 +175,10 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     if (!nextRunAt) return t('cronTasks.notScheduled')
     const date = new Date(nextRunAt)
     return date.toLocaleString()
+  }
+
+  if (workspaces.length === 0) {
+    return <NoWorkspaceState />
   }
 
   if (!currentWorkspace) {

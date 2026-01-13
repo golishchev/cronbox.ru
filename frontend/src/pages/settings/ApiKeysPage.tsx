@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getWorkers, createWorker, deleteWorker, regenerateWorkerKey } from '@/api/workers'
 import { getErrorMessage } from '@/api/client'
+import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +46,7 @@ interface ApiKeysPageProps {
 
 export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
   const { t } = useTranslation()
-  const { currentWorkspace } = useWorkspaceStore()
+  const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -236,6 +237,10 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
     const diffHours = Math.floor(diffMins / 60)
     if (diffHours < 24) return t('apiKeys.hoursAgo', { hours: diffHours })
     return date.toLocaleDateString()
+  }
+
+  if (workspaces.length === 0) {
+    return <NoWorkspaceState />
   }
 
   if (!currentWorkspace) {
