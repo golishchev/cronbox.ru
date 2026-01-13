@@ -187,7 +187,7 @@ jobs:
             echo "==> Zero-downtime deployment..."
             docker compose -f docker-compose.prod.yml up -d --no-deps api
             sleep 3
-            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler frontend landing
+            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot frontend landing
 
             echo "==> Cleaning up old images (older than 7 days)..."
             docker image prune -f --filter "until=168h"
