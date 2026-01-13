@@ -189,8 +189,8 @@ jobs:
             sleep 3
             docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler frontend landing
 
-            echo "==> Cleaning up old images..."
-            docker image prune -f
+            echo "==> Cleaning up old images (older than 7 days)..."
+            docker image prune -f --filter "until=168h"
 
             echo "==> Health check..."
             curl -sf --retry 3 --retry-delay 2 https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"

@@ -13,6 +13,9 @@ x-backend-base: &backend-base
   build:
     context: ./backend
     dockerfile: Dockerfile
+    cache_from:
+      - cronboxru-api:latest
+  image: cronboxru-api:latest
   environment:
     <<: *backend-env
   volumes:
@@ -211,6 +214,9 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://api.cronbox.ru/v1}
+      cache_from:
+        - cronboxru-frontend:latest
+    image: cronboxru-frontend:latest
     container_name: cronbox-frontend
     restart: unless-stopped
     logging: *default-logging
@@ -231,6 +237,9 @@ services:
     build:
       context: ./landing
       dockerfile: Dockerfile
+      cache_from:
+        - cronboxru-landing:latest
+    image: cronboxru-landing:latest
     container_name: cronbox-landing
     restart: unless-stopped
     logging: *default-logging
