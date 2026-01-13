@@ -6,7 +6,7 @@ export function OfferPage() {
           Публичная оферта
         </h1>
         <p className="mt-4 text-sm text-gray-500">
-          Дата последнего обновления: 1 января 2024 года
+          Дата последнего обновления: 13 января 2026 года
         </p>
 
         <div className="mt-8 prose prose-gray max-w-none">
@@ -105,8 +105,8 @@ export function OfferPage() {
           </p>
           <p>
             6.2. Заявление на возврат направляется на email{' '}
-            <a href="mailto:billing@cronbox.ru" className="text-primary-600">
-              billing@cronbox.ru
+            <a href="mailto:support@cronbox.ru" className="text-primary-600">
+              support@cronbox.ru
             </a>{' '}
             с указанием причины и реквизитов для возврата.
           </p>
@@ -192,7 +192,7 @@ export function OfferPage() {
               <br />
               Email: support@cronbox.ru
               <br />
-              Telegram: t.me/cronbox
+              Telegram: @cronbox
             </p>
           </div>
         </div>

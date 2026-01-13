@@ -6,7 +6,7 @@ export function TermsPage() {
           Условия использования
         </h1>
         <p className="mt-4 text-sm text-gray-500">
-          Дата последнего обновления: 1 января 2024 года
+          Дата последнего обновления: 13 января 2026 года
         </p>
 
         <div className="mt-8 prose prose-gray max-w-none">

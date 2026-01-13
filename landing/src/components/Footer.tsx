@@ -14,7 +14,7 @@ const navigation = {
   ],
   support: [
     { name: 'support@cronbox.ru', href: 'mailto:support@cronbox.ru', icon: Mail },
-    { name: 'Telegram', href: 'https://t.me/cronbox', icon: MessageCircle },
+    { name: '@cronbox', href: 'https://t.me/cronbox', icon: MessageCircle },
   ],
 }
 

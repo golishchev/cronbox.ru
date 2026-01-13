@@ -22,7 +22,7 @@ const enterprisePlan = {
     'On-premise установка',
   ],
   cta: 'Связаться с нами',
-  href: 'mailto:sales@cronbox.ru',
+  href: 'mailto:support@cronbox.ru',
   featured: false,
 }
 
@@ -279,7 +279,7 @@ export function PricingPage() {
             Свяжитесь с нами, и мы поможем выбрать подходящий тариф
           </p>
           <a
-            href="mailto:sales@cronbox.ru"
+            href="mailto:support@cronbox.ru"
             className="mt-6 inline-flex items-center rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white hover:bg-primary-700 transition-colors"
           >
             Написать нам

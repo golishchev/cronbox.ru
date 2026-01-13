@@ -6,7 +6,7 @@ export function PrivacyPage() {
           Политика конфиденциальности
         </h1>
         <p className="mt-4 text-sm text-gray-500">
-          Дата последнего обновления: 1 января 2024 года
+          Дата последнего обновления: 13 января 2026 года
         </p>
 
         <div className="mt-8 prose prose-gray max-w-none">
@@ -121,8 +121,8 @@ export function PrivacyPage() {
           </ul>
           <p>
             Для реализации указанных прав направьте запрос на адрес{' '}
-            <a href="mailto:privacy@cronbox.ru" className="text-primary-600">
-              privacy@cronbox.ru
+            <a href="mailto:support@cronbox.ru" className="text-primary-600">
+              support@cronbox.ru
             </a>
             .
           </p>
