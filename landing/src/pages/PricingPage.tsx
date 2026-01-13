@@ -64,14 +64,22 @@ function formatInterval(minutes: number): string {
   return `${minutes} минут`
 }
 
+function pluralize(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few
+  return many
+}
+
 function generateFeatures(plan: Plan): string[] {
   const features: string[] = []
 
   features.push(`До ${plan.max_cron_tasks} cron-задач`)
   features.push(`До ${plan.max_delayed_tasks_per_month} отложенных задач в месяц`)
   features.push(`Минимальный интервал: ${formatInterval(plan.min_cron_interval_minutes)}`)
-  features.push(`До ${plan.max_workspaces} ${plan.max_workspaces === 1 ? 'рабочее пространство' : 'рабочих пространств'}`)
-  features.push(`История за ${plan.max_execution_history_days} дней`)
+  features.push(`${plan.max_workspaces} ${pluralize(plan.max_workspaces, 'рабочее пространство', 'рабочих пространства', 'рабочих пространств')}`)
+  features.push(`История за ${plan.max_execution_history_days} ${pluralize(plan.max_execution_history_days, 'день', 'дня', 'дней')}`)
 
   if (plan.email_notifications && plan.telegram_notifications) {
     features.push('Email + Telegram уведомления')
@@ -163,7 +171,7 @@ export function PricingPage() {
                   <div
                     key={plan.id}
                     className={clsx(
-                      'relative rounded-2xl border p-8',
+                      'relative rounded-2xl border p-8 flex flex-col',
                       isFeatured
                         ? 'border-primary-600 bg-primary-50 shadow-lg ring-2 ring-primary-600'
                         : 'border-gray-200 bg-white shadow-sm'
@@ -194,7 +202,7 @@ export function PricingPage() {
                       <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
                     </div>
 
-                    <ul className="mt-8 space-y-3">
+                    <ul className="mt-8 space-y-3 flex-1">
                       {features.map((feature) => (
                         <li key={feature} className="flex items-start gap-3">
                           <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
@@ -219,7 +227,7 @@ export function PricingPage() {
               })}
 
               {/* Enterprise plan - always shown */}
-              <div className="relative rounded-2xl border p-8 border-gray-200 bg-white shadow-sm">
+              <div className="relative rounded-2xl border p-8 border-gray-200 bg-white shadow-sm flex flex-col">
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-gray-900">{enterprisePlan.display_name}</h3>
                   <div className="mt-4 flex items-baseline justify-center gap-x-1">
@@ -228,7 +236,7 @@ export function PricingPage() {
                   <p className="mt-2 text-sm text-gray-600">{enterprisePlan.description}</p>
                 </div>
 
-                <ul className="mt-8 space-y-3">
+                <ul className="mt-8 space-y-3 flex-1">
                   {enterprisePlan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />

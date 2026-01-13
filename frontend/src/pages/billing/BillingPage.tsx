@@ -268,7 +268,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
             <Card
               key={plan.id}
               className={cn(
-                'relative',
+                'relative flex flex-col',
                 isCurrentPlan && 'border-primary'
               )}
             >
@@ -281,7 +281,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 <CardTitle>{plan.display_name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1">
                 <div>
                   <span className="text-3xl font-bold">
                     {isFree ? t('billing.free') : formatPrice(price)}
@@ -304,11 +304,11 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_workspaces} {plan.max_workspaces > 1 ? t('billing.workspacesPlural') : t('billing.workspaces')}</span>
+                    <span>{plan.max_workspaces} {t('billing.workspaces', { count: plan.max_workspaces })}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_execution_history_days} {t('billing.daysHistory')}</span>
+                    <span>{plan.max_execution_history_days} {t('billing.daysHistory', { count: plan.max_execution_history_days })}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
