@@ -26,30 +26,6 @@ x-backend-base: &backend-base
   networks:
     - cronbox-network
 
-x-postal-env: &postal-env
-  # Signing key (CRITICAL - required for message signing)
-  POSTAL_SIGNING_KEY_PATH: /config/signing.key
-  # Main database (for Postal metadata)
-  MAIN_DB_HOST: postal-mariadb
-  MAIN_DB_DATABASE: postal
-  MAIN_DB_USERNAME: root
-  MAIN_DB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-  # Message database (for email storage)
-  MESSAGE_DB_HOST: postal-mariadb
-  MESSAGE_DB_USERNAME: root
-  MESSAGE_DB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-  # Rails
-  SECRET_KEY: ${POSTAL_SECRET_KEY}
-  # DNS settings for SPF/DKIM/tracking
-  POSTAL_DNS_SPF_INCLUDE: spf.mail.cronbox.ru
-  POSTAL_DNS_RETURN_PATH_DOMAIN: rp.mail.cronbox.ru
-  POSTAL_DNS_TRACK_DOMAIN: track.mail.cronbox.ru
-  POSTAL_DNS_HELO_HOSTNAME: mail.cronbox.ru
-  POSTAL_DNS_MX_RECORDS: "[\"mail.cronbox.ru\"]"
-  # Wait for MariaDB
-  WAIT_FOR_TARGETS: postal-mariadb:3306
-  WAIT_FOR_TIMEOUT: 90
-
 x-healthcheck: &default-healthcheck
   interval: 10s
   timeout: 5s
@@ -135,132 +111,6 @@ services:
     networks:
       - cronbox-network
 
-  # Postal - MariaDB
-  postal-mariadb:
-    image: mariadb:11.8
-    container_name: cronbox-postal-mariadb
-    restart: unless-stopped
-    logging: *default-logging
-    environment:
-      MARIADB_DATABASE: postal
-      MARIADB_ROOT_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
-    volumes:
-      - postal_mariadb_data:/var/lib/mysql
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-    networks:
-      - cronbox-network
-
-  # Postal - Init (runs once to initialize DB and generate signing key)
-  postal-init:
-    image: ghcr.io/postalserver/postal:3.3.4
-    container_name: cronbox-postal-init
-    logging: *default-logging
-    command: >
-      sh -c "
-        if [ ! -f /config/signing.key ]; then
-          echo 'Generating signing key...'
-          openssl genrsa -out /config/signing.key 2048
-        fi
-        echo 'Running postal initialize...'
-        postal initialize
-        if [ -n \"$$POSTAL_ADMIN_EMAIL\" ] && [ -n \"$$POSTAL_ADMIN_PASSWORD\" ]; then
-          echo 'Creating admin user...'
-          printf '%s\n%s\n%s\n%s\n' \"$$POSTAL_ADMIN_EMAIL\" 'Admin' 'User' \"$$POSTAL_ADMIN_PASSWORD\" | postal make-user || true
-        fi
-        echo 'Postal initialization complete'
-      "
-    environment:
-      <<: *postal-env
-      POSTAL_ADMIN_EMAIL: ${POSTAL_ADMIN_EMAIL:-admin@cronbox.ru}
-      POSTAL_ADMIN_PASSWORD: ${POSTAL_ADMIN_PASSWORD:-}
-    volumes:
-      - postal_config:/config
-      - postal_data:/opt/postal/storage
-    depends_on:
-      postal-mariadb:
-        condition: service_healthy
-    networks:
-      - cronbox-network
-    restart: "no"
-
-  # Postal - SMTP Server
-  postal:
-    image: ghcr.io/postalserver/postal:3.3.4
-    container_name: cronbox-postal
-    restart: unless-stopped
-    logging: *default-logging
-    command: postal smtp-server
-    cap_add:
-      - NET_BIND_SERVICE
-    environment:
-      <<: *postal-env
-    volumes:
-      - postal_config:/config
-      - postal_data:/opt/postal/storage
-    ports:
-      - "25:25"
-    depends_on:
-      postal-init:
-        condition: service_completed_successfully
-      postal-mariadb:
-        condition: service_healthy
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:9091/health || exit 1"]
-      start_period: 30s
-    networks:
-      - cronbox-network
-
-  # Postal - Web
-  postal-web:
-    image: ghcr.io/postalserver/postal:3.3.4
-    container_name: cronbox-postal-web
-    restart: unless-stopped
-    logging: *default-logging
-    command: postal web-server
-    environment:
-      <<: *postal-env
-      BIND_ADDRESS: "0.0.0.0"
-      POSTAL_WEB_HOSTNAME: postal.cronbox.ru
-    volumes:
-      - postal_config:/config
-    depends_on:
-      postal-init:
-        condition: service_completed_successfully
-      postal-mariadb:
-        condition: service_healthy
-    networks:
-      - cronbox-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.postal.rule=Host(`postal.cronbox.ru`)"
-      - "traefik.http.routers.postal.entrypoints=websecure"
-      - "traefik.http.routers.postal.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.postal.middlewares=security-headers@file"
-      - "traefik.http.services.postal.loadbalancer.server.port=5000"
-
-  # Postal - Worker
-  postal-worker:
-    image: ghcr.io/postalserver/postal:3.3.4
-    container_name: cronbox-postal-worker
-    restart: unless-stopped
-    logging: *default-logging
-    command: postal worker
-    environment:
-      <<: *postal-env
-    volumes:
-      - postal_config:/config
-      - postal_data:/opt/postal/storage
-    depends_on:
-      postal-init:
-        condition: service_completed_successfully
-      postal-mariadb:
-        condition: service_healthy
-    networks:
-      - cronbox-network
-
   # Backend API
   api:
     <<: *backend-base
@@ -271,14 +121,11 @@ services:
       YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
       YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      POSTAL_API_URL: http://postal-web:5000
-      POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
-      POSTAL_WEBHOOK_SECRET: ${POSTAL_WEBHOOK_SECRET}
-      USE_POSTAL: "true"
-      SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
+      # SMTP settings
+      SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
       CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru","https://cp.cronbox.ru","https://api.cronbox.ru"]}
@@ -333,13 +180,11 @@ services:
     environment:
       <<: *backend-env
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      POSTAL_API_URL: http://postal-web:5000
-      POSTAL_SERVER_KEY: ${POSTAL_SERVER_KEY}
-      USE_POSTAL: "true"
-      SMTP_HOST: ${SMTP_HOST:-smtp.yandex.ru}
+      # SMTP settings
+      SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
     command: uv run arq app.workers.settings.WorkerSettings
@@ -490,9 +335,6 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
-  postal_mariadb_data:
-  postal_config:
-  postal_data:
   prometheus_data:
   grafana_data:
   traefik_acme:
