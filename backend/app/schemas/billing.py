@@ -31,6 +31,11 @@ class PlanResponse(BaseModel):
     custom_headers: bool
     retry_on_failure: bool
 
+    # Visibility
+    is_active: bool
+    is_public: bool
+    sort_order: int
+
     class Config:
         from_attributes = True
 

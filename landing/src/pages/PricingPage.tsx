@@ -113,10 +113,8 @@ export function PricingPage() {
     async function fetchPlans() {
       try {
         const data = await getPlans()
-        // Sort by sort_order and filter only public active plans
-        const sortedPlans = data
-          .filter((p) => p.is_active && p.is_public)
-          .sort((a, b) => a.sort_order - b.sort_order)
+        // API already filters by is_active and is_public, just sort by sort_order
+        const sortedPlans = data.sort((a, b) => a.sort_order - b.sort_order)
         setPlans(sortedPlans)
       } catch (err) {
         console.error('Failed to fetch plans:', err)
