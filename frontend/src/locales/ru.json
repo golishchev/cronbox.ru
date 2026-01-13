@@ -69,7 +69,9 @@
     "verifyEmailSuccess": "Ваш email успешно подтверждён!",
     "verifyEmailError": "Не удалось подтвердить email",
     "verifyEmailNoToken": "Токен подтверждения отсутствует",
-    "goToDashboard": "Перейти в панель управления"
+    "goToDashboard": "Перейти в панель управления",
+    "loginSuccess": "Вы успешно вошли в систему",
+    "loginFailed": "Ошибка входа"
   },
   "nav": {
     "main": "Основное",
