@@ -25,6 +25,9 @@ logger = structlog.get_logger()
 EMAIL_VERIFY_PREFIX = "email_verify:"
 PASSWORD_RESET_PREFIX = "password_reset:"
 TELEGRAM_LINK_PREFIX = "telegram_link:"
+OTP_PREFIX = "otp:"
+OTP_ATTEMPTS_PREFIX = "otp_attempts:"
+OTP_COOLDOWN_PREFIX = "otp_cooldown:"
 
 # Token expiration times (in seconds)
 EMAIL_VERIFY_EXPIRE = 24 * 60 * 60  # 24 hours
@@ -312,6 +315,119 @@ class AuthService:
         user = await self.user_repo.update(user, telegram_id=None, telegram_username=None)
         logger.info("Telegram account unlinked", user_id=str(user.id))
         return user
+
+    async def request_otp(self, email: str) -> tuple[str, int]:
+        """
+        Request OTP code for passwordless login.
+
+        Returns (code, expires_in) tuple.
+        Code should be sent via email to the user.
+        Raises BadRequestError if rate limited.
+        """
+        email_lower = email.lower()
+
+        # Check cooldown (rate limiting)
+        cooldown_key = f"{OTP_COOLDOWN_PREFIX}{email_lower}"
+        if await redis_client.exists(cooldown_key):
+            ttl = await redis_client.ttl(cooldown_key)
+            raise BadRequestError(f"Please wait {ttl} seconds before requesting a new code")
+
+        # Generate OTP code
+        code = "".join([str(secrets.randbelow(10)) for _ in range(settings.otp_code_length)])
+
+        # Store OTP in Redis
+        otp_key = f"{OTP_PREFIX}{email_lower}"
+        expire_seconds = settings.otp_expire_minutes * 60
+        await redis_client.set(otp_key, code, expire=expire_seconds)
+
+        # Reset attempts counter
+        attempts_key = f"{OTP_ATTEMPTS_PREFIX}{email_lower}"
+        await redis_client.delete(attempts_key)
+
+        # Set cooldown
+        await redis_client.set(
+            cooldown_key, "1", expire=settings.otp_request_cooldown_seconds
+        )
+
+        logger.info("OTP code generated", email=email_lower)
+        return code, expire_seconds
+
+    async def verify_otp(self, email: str, code: str) -> tuple[User, TokenResponse]:
+        """
+        Verify OTP code and login/register user.
+
+        Returns user and tokens on success.
+        Raises UnauthorizedError on invalid/expired code.
+        """
+        email_lower = email.lower()
+        otp_key = f"{OTP_PREFIX}{email_lower}"
+        attempts_key = f"{OTP_ATTEMPTS_PREFIX}{email_lower}"
+
+        # Check attempts
+        attempts = await redis_client.get(attempts_key)
+        current_attempts = int(attempts) if attempts else 0
+
+        if current_attempts >= settings.otp_max_attempts:
+            # Delete the OTP to force requesting a new one
+            await redis_client.delete(otp_key)
+            await redis_client.delete(attempts_key)
+            raise UnauthorizedError("Too many failed attempts. Please request a new code.")
+
+        # Get stored OTP
+        stored_code = await redis_client.get(otp_key)
+
+        if not stored_code:
+            raise UnauthorizedError("Invalid or expired code")
+
+        # Timing-safe comparison
+        if not secrets.compare_digest(code, stored_code):
+            # Increment attempts
+            await redis_client.incr(attempts_key)
+            await redis_client.expire(attempts_key, settings.otp_expire_minutes * 60)
+            remaining = settings.otp_max_attempts - current_attempts - 1
+            logger.warning(
+                "Invalid OTP attempt",
+                email=email_lower,
+                attempts=current_attempts + 1,
+                remaining=remaining,
+            )
+            raise UnauthorizedError(f"Invalid code. {remaining} attempts remaining.")
+
+        # OTP is valid - delete it (one-time use)
+        await redis_client.delete(otp_key)
+        await redis_client.delete(attempts_key)
+
+        # Get or create user
+        user = await self.user_repo.get_by_email(email_lower)
+
+        if not user:
+            # Create new user (passwordless registration)
+            # Generate a random password hash (user won't know it, OTP-only login)
+            random_password = secrets.token_urlsafe(32)
+            password_hash = get_password_hash(random_password)
+
+            # Extract name from email (before @)
+            name = email_lower.split("@")[0].replace(".", " ").title()
+
+            user = await self.user_repo.create_user(
+                email=email_lower,
+                password_hash=password_hash,
+                name=name,
+            )
+            logger.info("New user created via OTP", user_id=str(user.id))
+
+        if not user.is_active:
+            raise UnauthorizedError("Account is disabled")
+
+        # Auto-verify email since they received the OTP
+        if not user.email_verified:
+            user = await self.user_repo.verify_email(user)
+
+        # Generate tokens
+        tokens = self._create_tokens(user)
+
+        logger.info("User logged in via OTP", user_id=str(user.id))
+        return user, tokens
 
     def _create_tokens(self, user: User) -> TokenResponse:
         """Create access and refresh tokens for user."""

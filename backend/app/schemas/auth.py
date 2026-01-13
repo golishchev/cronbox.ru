@@ -100,3 +100,23 @@ class DeleteAccountRequest(BaseModel):
     """Schema for account deletion confirmation."""
 
     confirmation: str = Field(..., description="Must be 'delete' to confirm account deletion")
+
+
+class OTPRequest(BaseModel):
+    """Schema for requesting OTP code."""
+
+    email: EmailStr
+
+
+class OTPVerify(BaseModel):
+    """Schema for verifying OTP code."""
+
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class OTPResponse(BaseModel):
+    """Schema for OTP request response."""
+
+    message: str
+    expires_in: int  # seconds

@@ -37,6 +37,21 @@ export interface AuthResponse {
   tokens: TokenResponse
 }
 
+// OTP types
+export interface OTPRequestData {
+  email: string
+}
+
+export interface OTPVerifyData {
+  email: string
+  code: string
+}
+
+export interface OTPResponse {
+  message: string
+  expires_in: number
+}
+
 // Workspace types
 export interface Workspace {
   id: string

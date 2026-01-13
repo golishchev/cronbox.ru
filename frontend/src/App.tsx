@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react'
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
 const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })))
+const OTPLoginPage = lazy(() => import('@/pages/auth/OTPLoginPage').then(m => ({ default: m.OTPLoginPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const CronTasksPage = lazy(() => import('@/pages/cron/CronTasksPage').then(m => ({ default: m.CronTasksPage })))
 const DelayedTasksPage = lazy(() => import('@/pages/delayed/DelayedTasksPage').then(m => ({ default: m.DelayedTasksPage })))
@@ -27,9 +28,9 @@ const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 const AdminNotificationTemplatesPage = lazy(() => import('@/pages/admin/AdminNotificationTemplatesPage').then(m => ({ default: m.AdminNotificationTemplatesPage })))
 
-type Route = 'login' | 'register' | 'verify-email' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
+type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
 
-const AUTH_ROUTES = ['login', 'register', 'verify-email']
+const AUTH_ROUTES = ['login', 'register', 'verify-email', 'otp-login']
 const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
 
 function PageLoader() {
@@ -151,14 +152,21 @@ function App() {
   }
 
   if (!isAuthenticated) {
+    const renderAuthPage = () => {
+      switch (route) {
+        case 'register':
+          return <RegisterPage onNavigate={navigate} />
+        case 'otp-login':
+          return <OTPLoginPage onNavigate={navigate} />
+        default:
+          return <LoginPage onNavigate={navigate} />
+      }
+    }
+
     return (
       <>
         <Suspense fallback={<PageLoader />}>
-          {route === 'register' ? (
-            <RegisterPage onNavigate={navigate} />
-          ) : (
-            <LoginPage onNavigate={navigate} />
-          )}
+          {renderAuthPage()}
         </Suspense>
         <Toaster />
       </>

@@ -9,6 +9,9 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
+# OTP email expiration in minutes (for display purposes)
+OTP_EXPIRE_MINUTES = settings.otp_expire_minutes
+
 
 class EmailService:
     """Service for sending email notifications via SMTP."""
@@ -213,6 +216,45 @@ Type: {task_type}
 {f'Duration: {duration_ms}ms' if duration_ms else ''}
 
 This is an automated notification from CronBox.
+"""
+
+        return await self.send_email(to, subject, html, text)
+
+    async def send_otp_email(
+        self,
+        to: str,
+        code: str,
+        expire_minutes: int | None = None,
+    ) -> bool:
+        """Send OTP code email for passwordless login."""
+        if expire_minutes is None:
+            expire_minutes = OTP_EXPIRE_MINUTES
+
+        subject = f"[CronBox] Ваш код входа: {code}"
+
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Код для входа в CronBox</h2>
+            <p>Ваш код для входа:</p>
+            <div style="margin: 24px 0; padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;">{code}</span>
+            </div>
+            <p style="color: #666;">
+                Код действителен {expire_minutes} минут.
+            </p>
+            <p style="margin-top: 24px; color: #666; font-size: 12px;">
+                Если вы не запрашивали вход в CronBox, просто проигнорируйте это письмо.
+            </p>
+        </div>
+        """
+
+        text = f"""Код для входа в CronBox
+
+Ваш код для входа: {code}
+
+Код действителен {expire_minutes} минут.
+
+Если вы не запрашивали вход в CronBox, просто проигнорируйте это письмо.
 """
 
         return await self.send_email(to, subject, html, text)
