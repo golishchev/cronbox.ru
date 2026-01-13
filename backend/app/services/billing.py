@@ -1,7 +1,8 @@
 """Billing service for YooKassa integration."""
 import json
-import uuid
+import uuid as uuid_module
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 import httpx
 import structlog
@@ -48,6 +49,8 @@ class BillingService:
                     # Reconstruct Plan objects from cached data
                     plans = []
                     for data in plans_data:
+                        # Convert id string to UUID
+                        data["id"] = UUID(data["id"])
                         plan = Plan(**data)
                         plans.append(plan)
                     return plans
@@ -108,13 +111,13 @@ class BillingService:
         result = await db.execute(select(Plan).where(Plan.name == name))
         return result.scalar_one_or_none()
 
-    async def get_plan_by_id(self, db: AsyncSession, plan_id: uuid.UUID) -> Plan | None:
+    async def get_plan_by_id(self, db: AsyncSession, plan_id: uuid_module.UUID) -> Plan | None:
         """Get a plan by ID."""
         result = await db.execute(select(Plan).where(Plan.id == plan_id))
         return result.scalar_one_or_none()
 
     async def get_user_subscription(
-        self, db: AsyncSession, user_id: uuid.UUID
+        self, db: AsyncSession, user_id: uuid_module.UUID
     ) -> Subscription | None:
         """Get user's subscription."""
         result = await db.execute(
@@ -122,7 +125,7 @@ class BillingService:
         )
         return result.scalar_one_or_none()
 
-    async def get_user_plan(self, db: AsyncSession, user_id: uuid.UUID) -> Plan:
+    async def get_user_plan(self, db: AsyncSession, user_id: uuid_module.UUID) -> Plan:
         """Get user's current plan (from subscription or free)."""
         subscription = await self.get_user_subscription(db, user_id)
         if subscription and subscription.status in (
@@ -141,8 +144,8 @@ class BillingService:
     async def create_payment(
         self,
         db: AsyncSession,
-        user_id: uuid.UUID,
-        plan_id: uuid.UUID,
+        user_id: uuid_module.UUID,
+        plan_id: uuid_module.UUID,
         billing_period: str = "monthly",  # 'monthly' or 'yearly'
         return_url: str | None = None,
     ) -> Payment | None:
@@ -196,7 +199,7 @@ class BillingService:
         await db.flush()
 
         # Create YooKassa payment
-        idempotence_key = str(uuid.uuid4())
+        idempotence_key = str(uuid_module.uuid4())
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -359,8 +362,8 @@ class BillingService:
             # Create or update subscription
             await self._create_or_update_subscription(
                 db,
-                user_id=uuid.UUID(user_id),
-                plan_id=uuid.UUID(plan_id),
+                user_id=uuid_module.UUID(user_id),
+                plan_id=uuid_module.UUID(plan_id),
                 billing_period=billing_period,
                 payment_method_id=payment_method.get("id") if payment_method else None,
             )
@@ -394,8 +397,8 @@ class BillingService:
     async def _create_or_update_subscription(
         self,
         db: AsyncSession,
-        user_id: uuid.UUID,
-        plan_id: uuid.UUID,
+        user_id: uuid_module.UUID,
+        plan_id: uuid_module.UUID,
         billing_period: str,
         payment_method_id: str | None = None,
     ) -> Subscription:
@@ -449,7 +452,7 @@ class BillingService:
     async def cancel_subscription(
         self,
         db: AsyncSession,
-        user_id: uuid.UUID,
+        user_id: uuid_module.UUID,
         immediately: bool = False,
     ) -> bool:
         """Cancel a user's subscription."""
@@ -484,7 +487,7 @@ class BillingService:
         return True
 
     async def _get_oldest_workspace(
-        self, db: AsyncSession, user_id: uuid.UUID
+        self, db: AsyncSession, user_id: uuid_module.UUID
     ) -> Workspace | None:
         """Get user's oldest workspace by created_at."""
         result = await db.execute(
@@ -496,8 +499,8 @@ class BillingService:
         return result.scalar_one_or_none()
 
     async def _block_excess_workspaces(
-        self, db: AsyncSession, user_id: uuid.UUID, max_workspaces: int
-    ) -> list[uuid.UUID]:
+        self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int
+    ) -> list[uuid_module.UUID]:
         """Block workspaces exceeding the limit. Returns list of blocked workspace IDs."""
         result = await db.execute(
             select(Workspace)
@@ -534,7 +537,7 @@ class BillingService:
         return blocked_ids
 
     async def _unblock_user_workspaces(
-        self, db: AsyncSession, user_id: uuid.UUID, max_workspaces: int
+        self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int
     ) -> int:
         """Unblock workspaces up to the plan limit. Returns count of unblocked."""
         # Count currently active workspaces
@@ -579,7 +582,7 @@ class BillingService:
         return unblocked
 
     async def _pause_workspace_tasks(
-        self, db: AsyncSession, workspace_id: uuid.UUID
+        self, db: AsyncSession, workspace_id: uuid_module.UUID
     ) -> int:
         """Pause all active cron tasks in a workspace."""
         from app.db.repositories.cron_tasks import CronTaskRepository
@@ -605,7 +608,7 @@ class BillingService:
         return count
 
     async def _resume_workspace_tasks(
-        self, db: AsyncSession, workspace_id: uuid.UUID
+        self, db: AsyncSession, workspace_id: uuid_module.UUID
     ) -> int:
         """Resume paused tasks in a workspace."""
         from app.db.repositories.cron_tasks import CronTaskRepository
@@ -635,7 +638,7 @@ class BillingService:
     async def get_payment_history(
         self,
         db: AsyncSession,
-        user_id: uuid.UUID,
+        user_id: uuid_module.UUID,
         limit: int = 20,
         offset: int = 0,
     ) -> list[Payment]:
@@ -668,7 +671,7 @@ class BillingService:
         return list(result.scalars().all())
 
     async def auto_pause_excess_tasks(
-        self, db: AsyncSession, workspace_id: uuid.UUID, max_tasks: int
+        self, db: AsyncSession, workspace_id: uuid_module.UUID, max_tasks: int
     ) -> int:
         """Pause cron tasks exceeding the limit. Returns count of paused tasks."""
         from app.db.repositories.cron_tasks import CronTaskRepository
@@ -704,7 +707,7 @@ class BillingService:
 
     async def check_expired_subscriptions(
         self, db: AsyncSession
-    ) -> list[tuple[uuid.UUID, int, int]]:
+    ) -> list[tuple[uuid_module.UUID, int, int]]:
         """Check and mark expired subscriptions.
 
         Returns list of (user_id, paused_tasks_count, blocked_workspaces_count).
@@ -720,7 +723,7 @@ class BillingService:
         )
         subscriptions = result.scalars().all()
 
-        affected_users: list[tuple[uuid.UUID, int, int]] = []
+        affected_users: list[tuple[uuid_module.UUID, int, int]] = []
         free_plan = await self.get_plan_by_name(db, "free")
 
         for subscription in subscriptions:
