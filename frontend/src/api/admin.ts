@@ -86,6 +86,15 @@ export async function updateAdminUser(userId: string, data: UpdateUserRequest): 
   await apiClient.patch(`/admin/users/${userId}`, data)
 }
 
+export interface AssignPlanRequest {
+  plan_id: string
+  duration_days?: number
+}
+
+export async function assignUserPlan(userId: string, data: AssignPlanRequest): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/subscription`, data)
+}
+
 export async function getAdminWorkspaces(params?: {
   page?: number
   page_size?: number

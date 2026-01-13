@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getAdminUsers, updateAdminUser, AdminUser } from '@/api/admin'
+import { getAdminUsers, updateAdminUser, assignUserPlan, getAdminPlans, AdminUser, AdminPlan } from '@/api/admin'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,13 @@ import { TableSkeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Users,
   Search,
   ChevronLeft,
@@ -49,11 +56,14 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [updateLoading, setUpdateLoading] = useState(false)
+  const [plans, setPlans] = useState<AdminPlan[]>([])
 
   // Edit form state
   const [editIsActive, setEditIsActive] = useState(true)
   const [editIsSuperuser, setEditIsSuperuser] = useState(false)
   const [editEmailVerified, setEditEmailVerified] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('')
+  const [planDuration, setPlanDuration] = useState<number>(30)
 
   const loadUsers = async () => {
     setIsLoading(true)
@@ -80,11 +90,25 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
     loadUsers()
   }, [page, search])
 
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const response = await getAdminPlans()
+        setPlans(response.plans)
+      } catch (err) {
+        console.error('Failed to load plans:', err)
+      }
+    }
+    loadPlans()
+  }, [])
+
   const handleEdit = (user: AdminUser) => {
     setEditingUser(user)
     setEditIsActive(user.is_active)
     setEditIsSuperuser(user.is_superuser)
     setEditEmailVerified(user.email_verified)
+    setSelectedPlanId('')
+    setPlanDuration(30)
   }
 
   const handleSave = async () => {
@@ -97,6 +121,15 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
         is_superuser: editIsSuperuser,
         email_verified: editEmailVerified,
       })
+
+      // Assign plan if selected
+      if (selectedPlanId) {
+        await assignUserPlan(editingUser.id, {
+          plan_id: selectedPlanId,
+          duration_days: planDuration,
+        })
+      }
+
       toast({
         title: t('admin.userUpdated'),
         description: t('admin.userUpdatedDescription', { email: editingUser.email }),
@@ -302,6 +335,43 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                 checked={editIsSuperuser}
                 onCheckedChange={setEditIsSuperuser}
               />
+            </div>
+
+            {/* Plan Assignment */}
+            <div className="border-t pt-4 mt-4">
+              <Label className="text-base font-medium">{t('admin.assignPlan')}</Label>
+              <p className="text-sm text-muted-foreground mb-3">{t('admin.assignPlanDescription')}</p>
+              <div className="space-y-3">
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('admin.selectPlan')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.display_name} {plan.price_monthly > 0 && `(${plan.price_monthly / 100} ₽/мес)`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPlanId && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="duration" className="whitespace-nowrap">{t('admin.duration')}</Label>
+                    <Select value={planDuration.toString()} onValueChange={(v) => setPlanDuration(Number(v))}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30">30 {t('admin.days')}</SelectItem>
+                        <SelectItem value="90">90 {t('admin.days')}</SelectItem>
+                        <SelectItem value="180">180 {t('admin.days')}</SelectItem>
+                        <SelectItem value="365">365 {t('admin.days')}</SelectItem>
+                        <SelectItem value="36500">{t('admin.forever')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>

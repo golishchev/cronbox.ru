@@ -537,6 +537,12 @@
     "owner": "Владелец",
     "plan": "План",
     "pending": "ожидание",
+    "assignPlan": "Назначить тариф",
+    "assignPlanDescription": "Назначить тарифный план без оплаты",
+    "selectPlan": "Выберите тариф",
+    "duration": "Срок",
+    "days": "дн.",
+    "forever": "Навсегда",
     "templates": {
       "title": "Шаблоны уведомлений",
       "subtitle": "Управление шаблонами email и Telegram уведомлений",

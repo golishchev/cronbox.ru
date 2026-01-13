@@ -123,6 +123,13 @@ class UpdateUserRequest(BaseModel):
     email_verified: bool | None = None
 
 
+class AssignPlanRequest(BaseModel):
+    """Request to assign a plan to user."""
+
+    plan_id: str
+    duration_days: int = 30  # Default 30 days
+
+
 @router.get("/stats", response_model=AdminStatsResponse)
 async def get_admin_stats(admin: AdminUser, db: DB):
     """Get admin dashboard statistics."""
@@ -327,6 +334,51 @@ async def update_user(admin: AdminUser, db: DB, user_id: str, data: UpdateUserRe
     await db.refresh(user)
 
     return {"message": "User updated successfully"}
+
+
+@router.post("/users/{user_id}/subscription")
+async def assign_user_plan(
+    admin: AdminUser,
+    db: DB,
+    user_id: str,
+    data: AssignPlanRequest,
+):
+    """Assign a plan to user (creates subscription without payment)."""
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    plan = await db.get(Plan, data.plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # Deactivate existing active subscriptions
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+    )
+    existing_subs = result.scalars().all()
+    for sub in existing_subs:
+        sub.status = SubscriptionStatus.CANCELLED
+
+    # Create new subscription
+    now = datetime.utcnow()
+    subscription = Subscription(
+        user_id=user.id,
+        plan_id=plan.id,
+        status=SubscriptionStatus.ACTIVE,
+        current_period_start=now,
+        current_period_end=now + timedelta(days=data.duration_days),
+        cancel_at_period_end=False,
+    )
+    db.add(subscription)
+    await db.commit()
+
+    return {
+        "message": f"Plan '{plan.display_name}' assigned to user for {data.duration_days} days"
+    }
 
 
 class WorkspaceDetailResponse(BaseModel):
