@@ -40,6 +40,12 @@ x-postal-env: &postal-env
   MESSAGE_DB_PASSWORD: ${POSTAL_MARIADB_ROOT_PASSWORD}
   # Rails
   SECRET_KEY: ${POSTAL_SECRET_KEY}
+  # DNS settings for SPF/DKIM/tracking
+  POSTAL_DNS_SPF_INCLUDE: spf.mail.cronbox.ru
+  POSTAL_DNS_RETURN_PATH_DOMAIN: rp.mail.cronbox.ru
+  POSTAL_DNS_TRACK_DOMAIN: track.mail.cronbox.ru
+  POSTAL_DNS_HELO_HOSTNAME: mail.cronbox.ru
+  POSTAL_DNS_MX_RECORDS: "[\"mail.cronbox.ru\"]"
   # Wait for MariaDB
   WAIT_FOR_TARGETS: postal-mariadb:3306
   WAIT_FOR_TIMEOUT: 90
