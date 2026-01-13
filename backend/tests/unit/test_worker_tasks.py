@@ -469,14 +469,16 @@ class TestExecuteCronTask:
         mock_db_factory = MagicMock()
         mock_db_factory.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_db_factory.return_value.__aexit__ = AsyncMock(return_value=None)
-        return {"db_factory": mock_db_factory, "db": mock_db}
+        mock_redis = AsyncMock()
+        mock_redis.enqueue_job = AsyncMock(return_value=None)
+        return {"db_factory": mock_db_factory, "db": mock_db, "redis": mock_redis}
 
     @pytest.mark.asyncio
     async def test_task_not_found(self, mock_db_context):
         """Test execute_cron_task when task not found."""
         from app.workers.tasks import execute_cron_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         with patch("app.workers.tasks.CronTaskRepository") as mock_repo_class:
             mock_repo = AsyncMock()
@@ -493,7 +495,7 @@ class TestExecuteCronTask:
         """Test execute_cron_task when task is not active."""
         from app.workers.tasks import execute_cron_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         mock_task = MagicMock()
         mock_task.is_active = False
@@ -514,7 +516,7 @@ class TestExecuteCronTask:
         """Test execute_cron_task when task is paused."""
         from app.workers.tasks import execute_cron_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         mock_task = MagicMock()
         mock_task.is_active = True
@@ -536,7 +538,7 @@ class TestExecuteCronTask:
         from app.models.cron_task import HttpMethod
         from app.workers.tasks import execute_cron_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
@@ -592,7 +594,7 @@ class TestExecuteCronTask:
         from app.models.cron_task import HttpMethod
         from app.workers.tasks import execute_cron_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
@@ -614,42 +616,44 @@ class TestExecuteCronTask:
         mock_execution = MagicMock()
         mock_execution.id = uuid4()
 
+        mock_redis = mock_db_context["redis"]
+
         with patch("app.workers.tasks.CronTaskRepository") as mock_cron_repo_class:
             with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
                 with patch("app.workers.tasks.execute_http_task") as mock_execute:
-                    with patch("arq.create_pool") as mock_create_pool:
-                        mock_cron_repo = AsyncMock()
-                        mock_cron_repo.get_by_id.return_value = mock_task
-                        mock_cron_repo_class.return_value = mock_cron_repo
+                    mock_cron_repo = AsyncMock()
+                    mock_cron_repo.get_by_id.return_value = mock_task
+                    mock_cron_repo_class.return_value = mock_cron_repo
 
-                        mock_exec_repo = AsyncMock()
-                        mock_exec_repo.create_execution.return_value = mock_execution
-                        mock_exec_repo_class.return_value = mock_exec_repo
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
 
-                        mock_execute.return_value = {
-                            "success": False,
-                            "status_code": 500,
-                            "headers": {},
-                            "body": "Error",
-                            "size_bytes": 5,
-                            "duration_ms": 100,
-                            "error": "Server error",
-                            "error_type": "server_error",
-                        }
+                    mock_execute.return_value = {
+                        "success": False,
+                        "status_code": 500,
+                        "headers": {},
+                        "body": "Error",
+                        "size_bytes": 5,
+                        "duration_ms": 100,
+                        "error": "Server error",
+                        "error_type": "server_error",
+                    }
 
-                        mock_redis = AsyncMock()
-                        mock_create_pool.return_value = mock_redis
+                    result = await execute_cron_task(
+                        ctx, task_id=str(task_id), retry_attempt=0
+                    )
 
-                        result = await execute_cron_task(
-                            ctx, task_id=str(task_id), retry_attempt=0
-                        )
-
-                        assert result["success"] is False
-                        mock_redis.enqueue_job.assert_called_once()
-                        # Verify retry was scheduled with correct params
-                        call_args = mock_redis.enqueue_job.call_args
-                        assert call_args[0][0] == "execute_cron_task"
-                        assert call_args[1]["retry_attempt"] == 1
+                    assert result["success"] is False
+                    # Verify retry was scheduled (enqueue_job called for retry)
+                    mock_redis.enqueue_job.assert_called()
+                    # Find the retry call
+                    retry_calls = [
+                        call for call in mock_redis.enqueue_job.call_args_list
+                        if call[0][0] == "execute_cron_task"
+                    ]
+                    assert len(retry_calls) == 1
+                    assert retry_calls[0][1]["retry_attempt"] == 1
 
 
 class TestExecuteDelayedTask:
@@ -662,14 +666,16 @@ class TestExecuteDelayedTask:
         mock_db_factory = MagicMock()
         mock_db_factory.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_db_factory.return_value.__aexit__ = AsyncMock(return_value=None)
-        return {"db_factory": mock_db_factory, "db": mock_db}
+        mock_redis = AsyncMock()
+        mock_redis.enqueue_job = AsyncMock(return_value=None)
+        return {"db_factory": mock_db_factory, "db": mock_db, "redis": mock_redis}
 
     @pytest.mark.asyncio
     async def test_task_not_found(self, mock_db_context):
         """Test execute_delayed_task when task not found."""
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         with patch("app.workers.tasks.DelayedTaskRepository") as mock_repo_class:
             mock_repo = AsyncMock()
@@ -687,7 +693,7 @@ class TestExecuteDelayedTask:
         from app.models.cron_task import TaskStatus
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         mock_task = MagicMock()
         mock_task.status = TaskStatus.SUCCESS  # Already completed
@@ -708,7 +714,7 @@ class TestExecuteDelayedTask:
         from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
@@ -761,7 +767,7 @@ class TestExecuteDelayedTask:
         from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
@@ -812,7 +818,7 @@ class TestExecuteDelayedTask:
         from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
@@ -831,38 +837,41 @@ class TestExecuteDelayedTask:
 
         mock_execution = MagicMock()
 
+        mock_redis = mock_db_context["redis"]
+
         with patch("app.workers.tasks.DelayedTaskRepository") as mock_delayed_repo_class:
             with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
                 with patch("app.workers.tasks.execute_http_task") as mock_execute:
-                    with patch("arq.create_pool") as mock_create_pool:
-                        mock_delayed_repo = AsyncMock()
-                        mock_delayed_repo.get_by_id.return_value = mock_task
-                        mock_delayed_repo_class.return_value = mock_delayed_repo
+                    mock_delayed_repo = AsyncMock()
+                    mock_delayed_repo.get_by_id.return_value = mock_task
+                    mock_delayed_repo_class.return_value = mock_delayed_repo
 
-                        mock_exec_repo = AsyncMock()
-                        mock_exec_repo.create_execution.return_value = mock_execution
-                        mock_exec_repo_class.return_value = mock_exec_repo
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
 
-                        mock_execute.return_value = {
-                            "success": False,
-                            "status_code": 500,
-                            "headers": {},
-                            "body": "Error",
-                            "size_bytes": 5,
-                            "duration_ms": 100,
-                            "error": "Server error",
-                        }
+                    mock_execute.return_value = {
+                        "success": False,
+                        "status_code": 500,
+                        "headers": {},
+                        "body": "Error",
+                        "size_bytes": 5,
+                        "duration_ms": 100,
+                        "error": "Server error",
+                    }
 
-                        mock_redis = AsyncMock()
-                        mock_create_pool.return_value = mock_redis
+                    result = await execute_delayed_task(
+                        ctx, task_id=str(task_id), retry_attempt=0
+                    )
 
-                        result = await execute_delayed_task(
-                            ctx, task_id=str(task_id), retry_attempt=0
-                        )
-
-                        assert result["success"] is False
-                        mock_delayed_repo.increment_retry.assert_called_once()
-                        mock_redis.enqueue_job.assert_called_once()
+                    assert result["success"] is False
+                    mock_delayed_repo.increment_retry.assert_called_once()
+                    # Verify retry was scheduled
+                    retry_calls = [
+                        call for call in mock_redis.enqueue_job.call_args_list
+                        if call[0][0] == "execute_delayed_task"
+                    ]
+                    assert len(retry_calls) == 1
 
     @pytest.mark.asyncio
     async def test_failed_execution_max_retries(self, mock_db_context):
@@ -870,7 +879,7 @@ class TestExecuteDelayedTask:
         from app.models.cron_task import HttpMethod, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
-        ctx = {"db_factory": mock_db_context["db_factory"]}
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
 
         task_id = uuid4()
         mock_task = MagicMock()
