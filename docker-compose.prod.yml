@@ -216,6 +216,7 @@ services:
     command: postal web-server
     environment:
       <<: *postal-env
+      BIND_ADDRESS: "0.0.0.0"
     volumes:
       - postal_config:/config
     depends_on:
