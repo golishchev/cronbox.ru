@@ -63,7 +63,13 @@
     "passwordTooShort": "Пароль должен содержать минимум 8 символов",
     "accountCreated": "Аккаунт создан!",
     "welcomeToCronBox": "Добро пожаловать в CronBox",
-    "registrationFailed": "Ошибка регистрации"
+    "registrationFailed": "Ошибка регистрации",
+    "verifyEmailTitle": "Подтверждение email",
+    "verifyEmailProcessing": "Проверяем ваш email...",
+    "verifyEmailSuccess": "Ваш email успешно подтверждён!",
+    "verifyEmailError": "Не удалось подтвердить email",
+    "verifyEmailNoToken": "Токен подтверждения отсутствует",
+    "goToDashboard": "Перейти в панель управления"
   },
   "nav": {
     "main": "Основное",
@@ -277,7 +283,10 @@
     "deleteAccountTitle": "Удаление аккаунта",
     "deleteAccountWarning": "Вы уверены, что хотите удалить свой аккаунт? Ваш аккаунт будет деактивирован, и вы потеряете доступ ко всем данным. Это действие нельзя отменить.",
     "deleteAccountConfirmLabel": "Введите \"delete\" для подтверждения",
-    "deleteAccountConfirm": "Удалить мой аккаунт"
+    "deleteAccountConfirm": "Удалить мой аккаунт",
+    "verifyEmail": "Подтвердить",
+    "verificationEmailSent": "Письмо с подтверждением отправлено на вашу почту",
+    "verificationEmailSentShort": "письмо отправлено"
   },
   "billing": {
     "title": "Оплата",

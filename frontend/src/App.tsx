@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react'
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
+const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const CronTasksPage = lazy(() => import('@/pages/cron/CronTasksPage').then(m => ({ default: m.CronTasksPage })))
 const DelayedTasksPage = lazy(() => import('@/pages/delayed/DelayedTasksPage').then(m => ({ default: m.DelayedTasksPage })))
@@ -26,9 +27,9 @@ const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 const AdminNotificationTemplatesPage = lazy(() => import('@/pages/admin/AdminNotificationTemplatesPage').then(m => ({ default: m.AdminNotificationTemplatesPage })))
 
-type Route = 'login' | 'register' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
+type Route = 'login' | 'register' | 'verify-email' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
 
-const AUTH_ROUTES = ['login', 'register']
+const AUTH_ROUTES = ['login', 'register', 'verify-email']
 const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
 
 function PageLoader() {
@@ -43,6 +44,7 @@ function App() {
   const { isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore()
   const { setWorkspaces, setCurrentWorkspace, currentWorkspace } = useWorkspaceStore()
   const [route, setRoute] = useState<Route>('login')
+  const [verifyEmailToken, setVerifyEmailToken] = useState<string>('')
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -79,11 +81,24 @@ function App() {
   // Handle hash-based routing
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(1) || 'login'
+      const fullHash = window.location.hash.slice(1) || 'login'
+      // Parse route and query params (e.g., "verify-email?token=abc")
+      const [hash, queryString] = fullHash.split('?')
+      const routePath = hash.split('/').filter(Boolean)[0] || 'login'
+
       const allRoutes = [...AUTH_ROUTES, ...PROTECTED_ROUTES]
-      if (allRoutes.includes(hash)) {
-        setRoute(hash as Route)
+      if (allRoutes.includes(routePath)) {
+        setRoute(routePath as Route)
         window.scrollTo(0, 0)
+
+        // Extract token for verify-email route
+        if (routePath === 'verify-email' && queryString) {
+          const params = new URLSearchParams(queryString)
+          const token = params.get('token')
+          if (token) {
+            setVerifyEmailToken(token)
+          }
+        }
       }
     }
 
@@ -95,7 +110,8 @@ function App() {
   // Redirect based on auth state
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated && AUTH_ROUTES.includes(route)) {
+      // Don't redirect verify-email - it works both authenticated and not
+      if (isAuthenticated && AUTH_ROUTES.includes(route) && route !== 'verify-email') {
         setRoute('dashboard')
         window.location.hash = 'dashboard'
       } else if (!isAuthenticated && PROTECTED_ROUTES.includes(route)) {
@@ -120,6 +136,18 @@ function App() {
     setRoute(to as Route)
     window.location.hash = to
     window.scrollTo(0, 0)
+  }
+
+  // Show verify-email page for both authenticated and non-authenticated users
+  if (route === 'verify-email') {
+    return (
+      <>
+        <Suspense fallback={<PageLoader />}>
+          <VerifyEmailPage token={verifyEmailToken} onNavigate={navigate} />
+        </Suspense>
+        <Toaster />
+      </>
+    )
   }
 
   if (!isAuthenticated) {
