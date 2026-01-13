@@ -216,6 +216,9 @@ services:
       <<: *backend-env
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     command: uv run cronbox-bot
+    # Disable healthcheck - bot has no HTTP server
+    healthcheck:
+      disable: true
 
   # Frontend
   frontend:
