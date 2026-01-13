@@ -71,7 +71,27 @@
     "verifyEmailNoToken": "Verification token is missing",
     "goToDashboard": "Go to Dashboard",
     "loginSuccess": "You have successfully signed in",
-    "loginFailed": "Sign in failed"
+    "loginFailed": "Sign in failed",
+    "otp": {
+      "title": "Sign in with Email",
+      "enterEmail": "Enter your email to receive a login code",
+      "enterCode": "Enter the 6-digit code sent to your email",
+      "sendCode": "Send Code",
+      "sending": "Sending...",
+      "code": "Verification Code",
+      "verify": "Verify & Sign In",
+      "codeSent": "Code Sent",
+      "checkEmail": "Check your email for the login code",
+      "newCodeSent": "A new code has been sent to your email",
+      "invalidCode": "Invalid Code",
+      "sentTo": "Code sent to",
+      "expiresIn": "Code expires in",
+      "resendCode": "Resend Code",
+      "changeEmail": "Change Email",
+      "orUsePassword": "Or sign in with password",
+      "loginWithEmail": "Sign in with Email Code",
+      "or": "or"
+    }
   },
   "nav": {
     "main": "Main",

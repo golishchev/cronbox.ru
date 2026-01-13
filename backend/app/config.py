@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     # Account lockout
     max_failed_login_attempts: int = 5
     account_lockout_minutes: int = 15
+
+    # OTP settings
+    otp_code_length: int = 6
+    otp_expire_minutes: int = 5
+    otp_max_attempts: int = 5
+    otp_request_cooldown_seconds: int = 60
+
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30

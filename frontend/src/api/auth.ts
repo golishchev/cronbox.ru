@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { AuthResponse, LoginRequest, RegisterRequest, TelegramConnectResponse, User } from '@/types'
+import type { AuthResponse, LoginRequest, OTPRequestData, OTPResponse, OTPVerifyData, RegisterRequest, TelegramConnectResponse, User } from '@/types'
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
   const response = await apiClient.post<AuthResponse>('/auth/login', data)
@@ -75,5 +75,15 @@ export async function sendEmailVerification(): Promise<void> {
 
 export async function verifyEmail(token: string): Promise<User> {
   const response = await apiClient.post<User>('/auth/verify-email', { token })
+  return response.data
+}
+
+export async function requestOTP(data: OTPRequestData): Promise<OTPResponse> {
+  const response = await apiClient.post<OTPResponse>('/auth/otp/request', data)
+  return response.data
+}
+
+export async function verifyOTP(data: OTPVerifyData): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>('/auth/otp/verify', data)
   return response.data
 }

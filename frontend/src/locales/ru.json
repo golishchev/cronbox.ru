@@ -71,7 +71,27 @@
     "verifyEmailNoToken": "Токен подтверждения отсутствует",
     "goToDashboard": "Перейти в панель управления",
     "loginSuccess": "Вы успешно вошли в систему",
-    "loginFailed": "Ошибка входа"
+    "loginFailed": "Ошибка входа",
+    "otp": {
+      "title": "Вход по email",
+      "enterEmail": "Введите email для получения кода входа",
+      "enterCode": "Введите 6-значный код, отправленный на ваш email",
+      "sendCode": "Отправить код",
+      "sending": "Отправка...",
+      "code": "Код подтверждения",
+      "verify": "Подтвердить и войти",
+      "codeSent": "Код отправлен",
+      "checkEmail": "Проверьте вашу почту",
+      "newCodeSent": "Новый код отправлен на вашу почту",
+      "invalidCode": "Неверный код",
+      "sentTo": "Код отправлен на",
+      "expiresIn": "Код истекает через",
+      "resendCode": "Отправить код повторно",
+      "changeEmail": "Изменить email",
+      "orUsePassword": "Или войти с паролем",
+      "loginWithEmail": "Войти по коду из email",
+      "or": "или"
+    }
   },
   "nav": {
     "main": "Основное",

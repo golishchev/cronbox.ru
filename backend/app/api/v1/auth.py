@@ -11,6 +11,9 @@ from app.schemas.auth import (
     DeleteAccountRequest,
     EmailVerificationRequest,
     LoginResponse,
+    OTPRequest,
+    OTPResponse,
+    OTPVerify,
     PasswordChangeRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
@@ -59,6 +62,55 @@ async def login(data: UserLogin, db: DB):
     user, tokens = await auth_service.login(
         email=data.email,
         password=data.password,
+    )
+
+    return LoginResponse(
+        user=UserResponse.model_validate(user),
+        tokens=tokens,
+    )
+
+
+@router.post("/otp/request", response_model=OTPResponse)
+async def request_otp(
+    data: OTPRequest,
+    db: DB,
+    background_tasks: BackgroundTasks,
+):
+    """Request OTP code for passwordless login.
+
+    Sends a 6-digit code to the provided email address.
+    The code is valid for 5 minutes.
+    """
+    auth_service = AuthService(db)
+    code, expires_in = await auth_service.request_otp(data.email)
+
+    # Send OTP email in background
+    async def send_email():
+        await email_service.send_otp_email(
+            to=data.email,
+            code=code,
+            expire_minutes=settings.otp_expire_minutes,
+        )
+
+    background_tasks.add_task(send_email)
+
+    return OTPResponse(
+        message="Code sent to your email",
+        expires_in=expires_in,
+    )
+
+
+@router.post("/otp/verify", response_model=LoginResponse)
+async def verify_otp(data: OTPVerify, db: DB):
+    """Verify OTP code and login.
+
+    If the user doesn't exist, a new account will be created automatically.
+    Email will be marked as verified.
+    """
+    auth_service = AuthService(db)
+    user, tokens = await auth_service.verify_otp(
+        email=data.email,
+        code=data.code,
     )
 
     return LoginResponse(
