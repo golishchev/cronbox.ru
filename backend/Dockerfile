@@ -28,8 +28,9 @@ WORKDIR /app
 # Copy dependency files first (for better layer caching)
 COPY --chown=cronbox:cronbox pyproject.toml uv.lock ./
 
-# Install dependencies as root (needed for system packages)
-RUN uv sync --frozen --no-dev && \
+# Install dependencies with cache mount (survives image prune)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev && \
     chown -R cronbox:cronbox /app/.venv
 
 # Copy application code with proper ownership

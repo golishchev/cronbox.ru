@@ -13,8 +13,9 @@ WORKDIR /app
 # Copy package files first (for better layer caching)
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci --ignore-scripts
+# Install dependencies with cache mount (survives image prune)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 
 # Copy source code
 COPY . .
