@@ -1,12 +1,10 @@
 # GitHub Actions CI/CD Pipeline for CronBox
-# Tests on PR, deploys on push to main
+# Tests and deploys on push to main
 
 name: CI/CD
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 env:
@@ -165,7 +163,7 @@ jobs:
             git checkout ${{ github.sha }}
 
             echo "==> Checking infrastructure services..."
-            INFRA_SERVICES="postgres redis traefik postal-mariadb"
+            INFRA_SERVICES="postgres redis traefik"
             INFRA_RUNNING=true
             for service in $INFRA_SERVICES; do
               if ! docker compose -f docker-compose.prod.yml ps $service --status running -q 2>/dev/null | grep -q .; then
@@ -176,7 +174,7 @@ jobs:
 
             if [ "$INFRA_RUNNING" = false ]; then
               echo "==> Starting infrastructure services..."
-              docker compose -f docker-compose.prod.yml up -d postgres redis traefik postal-mariadb postal-init postal postal-web postal-worker prometheus grafana redis-exporter postgres-exporter
+              docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
               echo "==> Waiting for infrastructure to be healthy..."
               sleep 30
             else
