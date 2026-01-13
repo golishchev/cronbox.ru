@@ -108,6 +108,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # Auth endpoints with stricter rate limits (path prefix -> requests per minute)
     AUTH_RATE_LIMITS: dict[str, int] = {}
 
+    # Public endpoints with stricter rate limits (to prevent DDoS on landing page APIs)
+    PUBLIC_ENDPOINTS: set[str] = {
+        "/v1/billing/plans",
+    }
+
     def __init__(self, app, default_requests_per_minute: int = 100):
         super().__init__(app)
         self.default_limiter = RateLimiter(
@@ -129,6 +134,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 requests_per_minute=limit,
                 key_prefix=f"ratelimit:auth:{path.replace('/', '_')}"
             )
+
+        # Rate limiter for public endpoints (stricter than default)
+        self.public_limiter = RateLimiter(
+            requests_per_minute=settings.public_rate_limit,
+            key_prefix="ratelimit:public"
+        )
 
     def _get_auth_limiter(self, path: str) -> RateLimiter | None:
         """Get rate limiter for auth endpoint if applicable."""
@@ -166,6 +177,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         headers={
                             "Retry-After": "60",
                             "X-RateLimit-Limit": str(auth_limiter.requests_per_minute),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": str(60),
+                        },
+                    )
+            except Exception:
+                pass  # Continue with default rate limiting
+
+        # Check for public endpoint rate limiting (stricter than default, IP-based)
+        if path in self.PUBLIC_ENDPOINTS:
+            ip_identifier = self._get_ip_identifier(request)
+            try:
+                is_allowed, count, remaining = await self.public_limiter.is_allowed(
+                    ip_identifier
+                )
+                if not is_allowed:
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "error": "rate_limit_exceeded",
+                            "message": "Too many requests. Please try again later.",
+                            "retry_after": 60,
+                        },
+                        headers={
+                            "Retry-After": "60",
+                            "X-RateLimit-Limit": str(self.public_limiter.requests_per_minute),
                             "X-RateLimit-Remaining": "0",
                             "X-RateLimit-Reset": str(60),
                         },

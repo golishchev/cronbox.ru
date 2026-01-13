@@ -1,4 +1,5 @@
 """Billing service for YooKassa integration."""
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -8,12 +9,17 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.redis import redis_client
 from app.models.payment import Payment, PaymentStatus
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.workspace import Workspace
 
 logger = structlog.get_logger()
+
+# Cache key for public plans
+PLANS_CACHE_KEY = "cache:plans:public"
+PLANS_CACHE_TTL = 3600  # 1 hour
 
 
 class BillingService:
@@ -32,13 +38,70 @@ class BillingService:
         return (self.shop_id, self.secret_key)
 
     async def get_plans(self, db: AsyncSession, only_public: bool = True) -> list[Plan]:
-        """Get all available plans."""
+        """Get all available plans with Redis caching for public plans."""
+        # Try cache for public plans only
+        if only_public:
+            try:
+                cached = await redis_client.get(PLANS_CACHE_KEY)
+                if cached:
+                    plans_data = json.loads(cached)
+                    # Reconstruct Plan objects from cached data
+                    plans = []
+                    for data in plans_data:
+                        plan = Plan(**data)
+                        plans.append(plan)
+                    return plans
+            except Exception as e:
+                logger.warning("Failed to get plans from cache", error=str(e))
+
+        # Fetch from database
         query = select(Plan).where(Plan.is_active.is_(True))
         if only_public:
             query = query.where(Plan.is_public.is_(True))
         query = query.order_by(Plan.sort_order)
         result = await db.execute(query)
-        return list(result.scalars().all())
+        plans = list(result.scalars().all())
+
+        # Cache public plans
+        if only_public and plans:
+            try:
+                plans_data = [
+                    {
+                        "id": str(p.id),
+                        "name": p.name,
+                        "display_name": p.display_name,
+                        "description": p.description,
+                        "price_monthly": p.price_monthly,
+                        "price_yearly": p.price_yearly,
+                        "max_cron_tasks": p.max_cron_tasks,
+                        "max_delayed_tasks_per_month": p.max_delayed_tasks_per_month,
+                        "max_workspaces": p.max_workspaces,
+                        "max_execution_history_days": p.max_execution_history_days,
+                        "min_cron_interval_minutes": p.min_cron_interval_minutes,
+                        "telegram_notifications": p.telegram_notifications,
+                        "email_notifications": p.email_notifications,
+                        "webhook_callbacks": p.webhook_callbacks,
+                        "custom_headers": p.custom_headers,
+                        "retry_on_failure": p.retry_on_failure,
+                        "is_active": p.is_active,
+                        "is_public": p.is_public,
+                        "sort_order": p.sort_order,
+                    }
+                    for p in plans
+                ]
+                await redis_client.set(PLANS_CACHE_KEY, json.dumps(plans_data), expire=PLANS_CACHE_TTL)
+            except Exception as e:
+                logger.warning("Failed to cache plans", error=str(e))
+
+        return plans
+
+    async def invalidate_plans_cache(self) -> None:
+        """Invalidate the plans cache. Call this after any plan modification."""
+        try:
+            await redis_client.delete(PLANS_CACHE_KEY)
+            logger.info("Plans cache invalidated")
+        except Exception as e:
+            logger.warning("Failed to invalidate plans cache", error=str(e))
 
     async def get_plan_by_name(self, db: AsyncSession, name: str) -> Plan | None:
         """Get a plan by name."""

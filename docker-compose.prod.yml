@@ -151,6 +151,13 @@ services:
       - "traefik.http.routers.api-auth.middlewares=api-cors@file,auth-rate-limit@file"
       - "traefik.http.routers.api-auth.service=api"
       - "traefik.http.routers.api-auth.priority=100"
+      # Public billing/plans endpoint (stricter rate limit for DDoS protection)
+      - "traefik.http.routers.api-public.rule=Host(`api.cronbox.ru`) && Path(`/v1/billing/plans`)"
+      - "traefik.http.routers.api-public.entrypoints=websecure"
+      - "traefik.http.routers.api-public.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-public.middlewares=api-cors@file,public-rate-limit@file,compress@file"
+      - "traefik.http.routers.api-public.service=api"
+      - "traefik.http.routers.api-public.priority=110"
       # Block docs in production
       - "traefik.http.routers.api-docs.rule=Host(`api.cronbox.ru`) && (PathPrefix(`/v1/docs`) || PathPrefix(`/v1/redoc`) || Path(`/v1/openapi.json`))"
       - "traefik.http.routers.api-docs.entrypoints=websecure"
