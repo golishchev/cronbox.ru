@@ -35,7 +35,8 @@ import { TableSkeleton } from '@/components/ui/skeleton'
 import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { getErrorMessage } from '@/api/client'
 import type { CronTask } from '@/types'
-import cronstrue from 'cronstrue'
+import cronstrue from 'cronstrue/i18n'
+import i18n from 'i18next'
 
 interface CronTasksPageProps {
   onNavigate: (route: string) => void
@@ -165,7 +166,8 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
 
   const formatCronExpression = (schedule: string) => {
     try {
-      return cronstrue.toString(schedule, { use24HourTimeFormat: true })
+      const locale = i18n.language === 'ru' ? 'ru' : 'en'
+      return cronstrue.toString(schedule, { use24HourTimeFormat: true, locale })
     } catch {
       return schedule
     }

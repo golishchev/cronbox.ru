@@ -7,6 +7,7 @@ from app.workers.tasks import (
     execute_cron_task,
     execute_delayed_task,
     execute_http_task,
+    send_task_notification,
 )
 
 
@@ -44,21 +45,32 @@ class WorkerSettings:
         execute_http_task,
         execute_cron_task,
         execute_delayed_task,
+        send_task_notification,
     ]
 
     # Startup and shutdown hooks
     @staticmethod
     async def on_startup(ctx: dict) -> None:
         """Called on worker startup."""
+        from arq import create_pool
+
         from app.db.database import async_session_factory
 
         # Initialize database session factory
         ctx["db_factory"] = async_session_factory
+
+        # Initialize shared Redis pool for enqueuing jobs
+        ctx["redis"] = await create_pool(get_redis_settings())
+
         print("Worker started successfully")
 
     @staticmethod
     async def on_shutdown(ctx: dict) -> None:
         """Called on worker shutdown."""
+        # Close shared Redis pool
+        if "redis" in ctx:
+            await ctx["redis"].close(close_connection_pool=True)
+
         print("Worker shutting down...")
 
     @staticmethod
