@@ -356,6 +356,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://api.cronbox.ru/v1}
     container_name: cronbox-frontend
     restart: unless-stopped
     logging: *default-logging

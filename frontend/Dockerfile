@@ -19,6 +19,10 @@ RUN npm ci --ignore-scripts
 # Copy source code
 COPY . .
 
+# Accept API URL from build args
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Build the application
 RUN npm run build
 
