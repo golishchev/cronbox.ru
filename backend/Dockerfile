@@ -37,11 +37,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY --chown=cronbox:cronbox app ./app
 COPY --chown=cronbox:cronbox alembic ./alembic
 COPY --chown=cronbox:cronbox alembic.ini ./
+COPY --chown=cronbox:cronbox README.md ./
+
+# Set ownership before install to allow egg-info creation
+RUN chown -R cronbox:cronbox /app
 
 # Install project (with entry points) after copying all source files
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev && \
-    chown -R cronbox:cronbox /app/.venv
+    chown -R cronbox:cronbox /app
 
 # Create uploads directory and set permissions
 RUN mkdir -p /app/uploads && \
