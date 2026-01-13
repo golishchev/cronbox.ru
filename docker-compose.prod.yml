@@ -157,6 +157,12 @@ services:
       - "traefik.http.routers.api-docs.middlewares=block-docs@file"
       - "traefik.http.routers.api-docs.service=api"
       - "traefik.http.routers.api-docs.priority=200"
+      # Static uploads (avatars)
+      - "traefik.http.routers.api-uploads.rule=Host(`api.cronbox.ru`) && PathPrefix(`/uploads`)"
+      - "traefik.http.routers.api-uploads.entrypoints=websecure"
+      - "traefik.http.routers.api-uploads.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-uploads.middlewares=compress@file"
+      - "traefik.http.routers.api-uploads.service=api"
       # Health & Metrics
       - "traefik.http.routers.api-health.rule=Host(`api.cronbox.ru`) && Path(`/health`)"
       - "traefik.http.routers.api-health.entrypoints=websecure"
