@@ -16,17 +16,13 @@ class TestPlans:
         # API returns a list (may be empty if no plans configured)
         assert isinstance(data, list)
 
-    async def test_get_plan(self, authenticated_client: AsyncClient):
-        """Test getting a specific plan."""
-        # First get list to find a plan ID
-        list_response = await authenticated_client.get("/v1/billing/plans")
-        if list_response.json():
-            plan_id = list_response.json()[0]["id"]
-            response = await authenticated_client.get(f"/v1/billing/plans/{plan_id}")
-            assert response.status_code == 200
-            data = response.json()
-            assert "name" in data
-            assert "max_cron_tasks" in data
+    async def test_get_plan(self, authenticated_client: AsyncClient, free_plan):
+        """Test getting a specific plan by ID."""
+        response = await authenticated_client.get(f"/v1/billing/plans/{free_plan.id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "free"
+        assert "max_cron_tasks" in data
 
     async def test_get_nonexistent_plan(self, authenticated_client: AsyncClient):
         """Test getting a non-existent plan."""
