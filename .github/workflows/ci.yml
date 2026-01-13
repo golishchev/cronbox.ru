@@ -209,16 +209,17 @@ jobs:
             git checkout ${{ github.sha }}
 
             echo "==> Checking infrastructure services..."
-            INFRA_SERVICES="postgres redis traefik"
-            INFRA_RUNNING=true
-            for service in $INFRA_SERVICES; do
-              if ! docker compose -f docker-compose.prod.yml ps $service --status running -q 2>/dev/null | grep -q .; then
+            RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
+            NEED_INFRA=false
+
+            for service in postgres redis traefik; do
+              if ! echo "$RUNNING_SERVICES" | grep -q "^${service}$"; then
                 echo "Service $service is not running"
-                INFRA_RUNNING=false
+                NEED_INFRA=true
               fi
             done
 
-            if [ "$INFRA_RUNNING" = false ]; then
+            if [ "$NEED_INFRA" = true ]; then
               echo "==> Starting infrastructure services..."
               docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
               echo "==> Waiting for infrastructure to be healthy..."
