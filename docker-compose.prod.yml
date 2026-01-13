@@ -207,6 +207,16 @@ services:
     healthcheck:
       disable: true
 
+  # Telegram Bot
+  bot:
+    <<: *backend-base
+    container_name: cronbox-bot
+    logging: *default-logging
+    environment:
+      <<: *backend-env
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    command: uv run cronbox-bot
+
   # Frontend
   frontend:
     build:
