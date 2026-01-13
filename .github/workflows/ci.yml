@@ -184,19 +184,17 @@ jobs:
             fi
 
             echo "==> Building images..."
-            docker compose -f docker-compose.prod.yml build --parallel
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --parallel
 
             echo "==> Zero-downtime deployment..."
-            docker compose -f docker-compose.prod.yml up -d --no-deps --build api
-            sleep 10
-            docker compose -f docker-compose.prod.yml up -d --no-deps --build worker scheduler
-            docker compose -f docker-compose.prod.yml up -d --no-deps --build frontend landing
+            docker compose -f docker-compose.prod.yml up -d --no-deps api
+            sleep 3
+            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler frontend landing
 
             echo "==> Cleaning up old images..."
             docker image prune -f
 
             echo "==> Health check..."
-            sleep 5
-            curl -sf https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
+            curl -sf --retry 3 --retry-delay 2 https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
 
             echo "==> Deployment complete!"

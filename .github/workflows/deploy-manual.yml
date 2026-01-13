@@ -47,10 +47,12 @@ jobs:
             fi
 
             echo "==> Building images..."
-            docker compose -f docker-compose.prod.yml build --parallel
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --parallel
 
             echo "==> Restarting services..."
-            docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d --no-deps api
+            sleep 3
+            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler frontend landing
 
             echo "==> Cleaning up..."
             docker image prune -f
