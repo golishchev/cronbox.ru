@@ -137,7 +137,7 @@ async def send_verification_email(
     token = await auth_service.send_email_verification(current_user)
 
     # Send email in background
-    verification_url = f"{settings.cors_origins[0]}/#/verify-email?token={token}"
+    verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
 
     async def send_email():
         html = f"""
