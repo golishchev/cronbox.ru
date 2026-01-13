@@ -1,12 +1,10 @@
 # GitHub Actions CI/CD Pipeline for CronBox
-# Tests on PR, deploys on push to main
+# Tests and deploys on push to main
 
 name: CI/CD
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 env:
