@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { getCronTasks, deleteCronTask, pauseCronTask, resumeCronTask, runCronTask } from '@/api/cronTasks'
+import { getCronTasks, deleteCronTask, pauseCronTask, resumeCronTask, runCronTask, copyCronTask } from '@/api/cronTasks'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
@@ -29,6 +29,7 @@ import {
   Trash2,
   Edit,
   Loader2,
+  Copy,
 } from 'lucide-react'
 import { CronTaskForm } from '@/components/cron/CronTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -140,6 +141,28 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.failedToDeleteTask'),
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleCopy = async (task: CronTask) => {
+    if (!currentWorkspace) return
+    setActionLoading(task.id)
+    try {
+      const newTask = await copyCronTask(currentWorkspace.id, task.id)
+      toast({
+        title: t('cronTasks.taskCopied'),
+        description: t('cronTasks.taskCopiedDescription', { name: newTask.name }),
+        variant: 'success',
+      })
+      await loadTasks()
+    } catch (err) {
+      toast({
+        title: t('cronTasks.failedToCopyTask'),
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -287,15 +310,24 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
                         variant="ghost"
                         size="icon"
                         onClick={() => setEditingTask(task)}
-                        title="Edit"
+                        title={t('common.edit')}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleCopy(task)}
+                        disabled={actionLoading === task.id}
+                        title={t('cronTasks.copyTask')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setDeletingTask(task)}
-                        title="Delete"
+                        title={t('common.delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { getDelayedTasks, cancelDelayedTask } from '@/api/delayedTasks'
+import { getDelayedTasks, cancelDelayedTask, rescheduleDelayedTask, copyDelayedTask } from '@/api/delayedTasks'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
@@ -38,7 +38,11 @@ import {
   Clock,
   AlertCircle,
   Pencil,
+  RotateCcw,
+  Copy,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { DelayedTaskForm } from '@/components/delayed/DelayedTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { NoWorkspaceState } from '@/components/NoWorkspaceState'
@@ -58,6 +62,10 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingTask, setEditingTask] = useState<DelayedTask | null>(null)
   const [cancelingTask, setCancelingTask] = useState<DelayedTask | null>(null)
+  const [reschedulingTask, setReschedulingTask] = useState<DelayedTask | null>(null)
+  const [rescheduleDateTime, setRescheduleDateTime] = useState('')
+  const [copyingTask, setCopyingTask] = useState<DelayedTask | null>(null)
+  const [copyDateTime, setCopyDateTime] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('pending')
 
@@ -106,6 +114,78 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const handleReschedule = async () => {
+    if (!currentWorkspace || !reschedulingTask || !rescheduleDateTime) return
+    const taskName = reschedulingTask.name || t('executions.unnamedTask')
+    setActionLoading(reschedulingTask.id)
+    try {
+      await rescheduleDelayedTask(currentWorkspace.id, reschedulingTask.id, {
+        execute_at: new Date(rescheduleDateTime).toISOString(),
+      })
+      setReschedulingTask(null)
+      setRescheduleDateTime('')
+      toast({
+        title: t('delayedTasks.taskRescheduled'),
+        description: t('delayedTasks.taskRescheduledDescription', { name: taskName }),
+        variant: 'success',
+      })
+      await loadTasks()
+    } catch (err) {
+      toast({
+        title: t('delayedTasks.failedToRescheduleTask'),
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const openRescheduleDialog = (task: DelayedTask) => {
+    // Set default datetime to 1 hour from now
+    const defaultTime = new Date()
+    defaultTime.setHours(defaultTime.getHours() + 1)
+    defaultTime.setMinutes(0, 0, 0)
+    setRescheduleDateTime(defaultTime.toISOString().slice(0, 16))
+    setReschedulingTask(task)
+  }
+
+  const handleCopy = async () => {
+    if (!currentWorkspace || !copyingTask || !copyDateTime) return
+    const taskName = copyingTask.name || t('executions.unnamedTask')
+    setActionLoading(copyingTask.id)
+    try {
+      const newTask = await copyDelayedTask(currentWorkspace.id, copyingTask.id, {
+        execute_at: new Date(copyDateTime).toISOString(),
+      })
+      setCopyingTask(null)
+      setCopyDateTime('')
+      toast({
+        title: t('delayedTasks.taskCopied'),
+        description: t('delayedTasks.taskCopiedDescription', { name: newTask.name || taskName }),
+        variant: 'success',
+      })
+      await loadTasks()
+    } catch (err) {
+      toast({
+        title: t('delayedTasks.failedToCopyTask'),
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const openCopyDialog = (task: DelayedTask) => {
+    // Set default datetime to 1 hour from now
+    const defaultTime = new Date()
+    defaultTime.setHours(defaultTime.getHours() + 1)
+    defaultTime.setMinutes(0, 0, 0)
+    setCopyDateTime(defaultTime.toISOString().slice(0, 16))
+    setCopyingTask(task)
   }
 
   const getStatusBadge = (status: TaskStatus) => {
@@ -289,32 +369,58 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
                   </TableCell>
                   <TableCell>{getStatusBadge(task.status)}</TableCell>
                   <TableCell className="text-right">
-                    {task.status === 'pending' && (
-                      <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1">
+                      {task.status === 'pending' && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingTask(task)}
+                            disabled={actionLoading === task.id}
+                            title={t('common.edit')}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setCancelingTask(task)}
+                            disabled={actionLoading === task.id}
+                            title={t('common.cancel')}
+                          >
+                            {actionLoading === task.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </>
+                      )}
+                      {['success', 'failed', 'cancelled'].includes(task.status) && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditingTask(task)}
+                          onClick={() => openRescheduleDialog(task)}
                           disabled={actionLoading === task.id}
-                          title={t('common.edit')}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setCancelingTask(task)}
-                          disabled={actionLoading === task.id}
-                          title={t('common.cancel')}
+                          title={t('delayedTasks.reschedule')}
                         >
                           {actionLoading === task.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <RotateCcw className="h-4 w-4" />
                           )}
                         </Button>
-                      </div>
-                    )}
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openCopyDialog(task)}
+                        disabled={actionLoading === task.id}
+                        title={t('delayedTasks.copyTask')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -401,6 +507,108 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               {t('delayedTasks.cancelTask')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={!!reschedulingTask} onOpenChange={(open) => {
+        if (!open) {
+          setReschedulingTask(null)
+          setRescheduleDateTime('')
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('delayedTasks.rescheduleTask')}</DialogTitle>
+            <DialogDescription>
+              {t('delayedTasks.rescheduleDescription')}
+              {reschedulingTask?.name && (
+                <span className="block mt-2 font-medium">
+                  "{reschedulingTask.name}"
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reschedule-datetime">{t('delayedTasks.newExecuteAt')}</Label>
+              <Input
+                id="reschedule-datetime"
+                type="datetime-local"
+                value={rescheduleDateTime}
+                onChange={(e) => setRescheduleDateTime(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setReschedulingTask(null)
+              setRescheduleDateTime('')
+            }}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleReschedule}
+              disabled={actionLoading === reschedulingTask?.id || !rescheduleDateTime}
+            >
+              {actionLoading === reschedulingTask?.id ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t('delayedTasks.reschedule')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Copy Dialog */}
+      <Dialog open={!!copyingTask} onOpenChange={(open) => {
+        if (!open) {
+          setCopyingTask(null)
+          setCopyDateTime('')
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('delayedTasks.copyTask')}</DialogTitle>
+            <DialogDescription>
+              {t('delayedTasks.copyDescription')}
+              {copyingTask?.name && (
+                <span className="block mt-2 font-medium">
+                  "{copyingTask.name}"
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="copy-datetime">{t('delayedTasks.newExecuteAt')}</Label>
+              <Input
+                id="copy-datetime"
+                type="datetime-local"
+                value={copyDateTime}
+                onChange={(e) => setCopyDateTime(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setCopyingTask(null)
+              setCopyDateTime('')
+            }}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleCopy}
+              disabled={actionLoading === copyingTask?.id || !copyDateTime}
+            >
+              {actionLoading === copyingTask?.id ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t('delayedTasks.copy')}
             </Button>
           </DialogFooter>
         </DialogContent>

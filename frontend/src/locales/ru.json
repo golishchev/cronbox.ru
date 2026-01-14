@@ -181,7 +181,11 @@
     "failedToRunTask": "Не удалось запустить задачу",
     "taskDeleted": "Задача удалена",
     "taskDeletedDescription": "\"{{name}}\" удалена",
-    "failedToDeleteTask": "Не удалось удалить задачу"
+    "failedToDeleteTask": "Не удалось удалить задачу",
+    "copyTask": "Копировать задачу",
+    "taskCopied": "Задача скопирована",
+    "taskCopiedDescription": "\"{{name}}\" скопирована",
+    "failedToCopyTask": "Не удалось скопировать задачу"
   },
   "delayedTasks": {
     "title": "Отложенные задачи",
@@ -209,7 +213,20 @@
     "editDelayedTask": "Редактировать отложенную задачу",
     "editDescription": "Обновление конфигурации задачи",
     "taskUpdated": "Задача обновлена",
-    "taskUpdatedDescription": "\"{{name}}\" обновлена"
+    "taskUpdatedDescription": "\"{{name}}\" обновлена",
+    "reschedule": "Повторить",
+    "rescheduleTask": "Повторить задачу",
+    "rescheduleDescription": "Создать новую задачу с такой же конфигурацией, но другим временем выполнения",
+    "newExecuteAt": "Новое время выполнения",
+    "taskRescheduled": "Задача запланирована",
+    "taskRescheduledDescription": "Создана новая задача на основе \"{{name}}\"",
+    "failedToRescheduleTask": "Не удалось повторить задачу",
+    "copyTask": "Копировать задачу",
+    "copy": "Копировать",
+    "copyDescription": "Создать копию задачи с новым временем выполнения",
+    "taskCopied": "Задача скопирована",
+    "taskCopiedDescription": "Создана копия \"{{name}}\"",
+    "failedToCopyTask": "Не удалось скопировать задачу"
   },
   "executions": {
     "title": "Выполнения",

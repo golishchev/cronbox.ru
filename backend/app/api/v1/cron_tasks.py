@@ -323,3 +323,75 @@ async def resume_cron_task(
     await db.commit()
 
     return CronTaskResponse.model_validate(task)
+
+
+@router.post("/{task_id}/copy", response_model=CronTaskResponse, status_code=status.HTTP_201_CREATED)
+async def copy_cron_task(
+    task_id: UUID,
+    workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
+    db: DB,
+):
+    """Create a copy of an existing cron task.
+
+    Creates a new task with the same configuration as the original,
+    with "(copy)" appended to the name.
+    """
+    cron_repo = CronTaskRepository(db)
+    workspace_repo = WorkspaceRepository(db)
+
+    # Get original task
+    original_task = await cron_repo.get_by_id(task_id)
+    if original_task is None or original_task.workspace_id != workspace.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cron task not found",
+        )
+
+    # Check plan limits
+    current_count = await cron_repo.count_by_workspace(workspace.id)
+    if current_count >= user_plan.max_cron_tasks:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cron task limit reached. Your plan allows {user_plan.max_cron_tasks} cron task(s)",
+        )
+
+    # Check minimum interval
+    interval_minutes = calculate_min_interval_minutes(original_task.schedule, original_task.timezone)
+    if interval_minutes < user_plan.min_cron_interval_minutes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+        )
+
+    # Calculate next run time
+    next_run_at = calculate_next_run(original_task.schedule, original_task.timezone)
+
+    # Create copy with new name
+    new_name = f"{original_task.name} (copy)"
+    new_task = await cron_repo.create(
+        workspace_id=workspace.id,
+        name=new_name,
+        description=original_task.description,
+        url=original_task.url,
+        method=original_task.method,
+        headers=original_task.headers,
+        body=original_task.body,
+        schedule=original_task.schedule,
+        timezone=original_task.timezone,
+        timeout_seconds=original_task.timeout_seconds,
+        retry_count=original_task.retry_count,
+        retry_delay_seconds=original_task.retry_delay_seconds,
+        notify_on_failure=original_task.notify_on_failure,
+        notify_on_recovery=original_task.notify_on_recovery,
+        is_active=True,
+        is_paused=False,
+        next_run_at=next_run_at,
+        worker_id=original_task.worker_id,
+    )
+
+    # Update workspace counter
+    await workspace_repo.update_cron_tasks_count(workspace, 1)
+    await db.commit()
+
+    return CronTaskResponse.model_validate(new_task)

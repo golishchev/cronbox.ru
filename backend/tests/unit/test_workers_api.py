@@ -13,7 +13,6 @@ def create_mock_worker(**kwargs):
     mock.workspace_id = kwargs.get("workspace_id", uuid4())
     mock.name = kwargs.get("name", "Test Worker")
     mock.description = kwargs.get("description", "Test description")
-    mock.region = kwargs.get("region", "us-east")
     mock.api_key_prefix = kwargs.get("api_key_prefix", "wk_abc12")
     mock.status = kwargs.get("status", "online")
     mock.last_heartbeat = kwargs.get("last_heartbeat", datetime.now(timezone.utc))

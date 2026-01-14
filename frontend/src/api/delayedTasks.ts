@@ -70,3 +70,35 @@ export async function cancelDelayedTask(
   )
   return response.data
 }
+
+export interface RescheduleDelayedTaskRequest {
+  execute_at: string
+}
+
+export async function rescheduleDelayedTask(
+  workspaceId: string,
+  taskId: string,
+  data: RescheduleDelayedTaskRequest
+): Promise<DelayedTask> {
+  const response = await apiClient.post<DelayedTask>(
+    `/workspaces/${workspaceId}/delayed/${taskId}/reschedule`,
+    data
+  )
+  return response.data
+}
+
+export interface CopyDelayedTaskRequest {
+  execute_at: string
+}
+
+export async function copyDelayedTask(
+  workspaceId: string,
+  taskId: string,
+  data: CopyDelayedTaskRequest
+): Promise<DelayedTask> {
+  const response = await apiClient.post<DelayedTask>(
+    `/workspaces/${workspaceId}/delayed/${taskId}/copy`,
+    data
+  )
+  return response.data
+}

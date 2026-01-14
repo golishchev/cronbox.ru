@@ -61,8 +61,6 @@ class CronBoxWorker:
         try:
             info = await self.get_worker_info()
             print(f"[Worker] Connected as: {info['name']} ({info['id']})")
-            if info.get("region"):
-                print(f"[Worker] Region: {info['region']}")
         except Exception as e:
             print(f"[Worker] Failed to connect: {e}")
             return

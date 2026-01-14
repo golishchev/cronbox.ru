@@ -87,3 +87,10 @@ export async function resumeCronTask(workspaceId: string, taskId: string): Promi
   )
   return response.data
 }
+
+export async function copyCronTask(workspaceId: string, taskId: string): Promise<CronTask> {
+  const response = await apiClient.post<CronTask>(
+    `/workspaces/${workspaceId}/cron/${taskId}/copy`
+  )
+  return response.data
+}
