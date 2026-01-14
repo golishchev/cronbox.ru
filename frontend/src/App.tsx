@@ -58,8 +58,13 @@ function App() {
           // Load workspaces after successful auth
           const workspaces = await getWorkspaces()
           setWorkspaces(workspaces)
-          if (workspaces.length > 0 && !currentWorkspace) {
+
+          // Validate that persisted currentWorkspace belongs to current user
+          const isValidWorkspace = currentWorkspace && workspaces.some(w => w.id === currentWorkspace.id)
+          if (workspaces.length > 0 && !isValidWorkspace) {
             setCurrentWorkspace(workspaces[0])
+          } else if (workspaces.length === 0) {
+            setCurrentWorkspace(null)
           }
 
           const hash = window.location.hash.slice(1) || 'dashboard'
