@@ -334,7 +334,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
 
       {/* Execution Details Dialog */}
       <Dialog open={!!selectedExecution} onOpenChange={() => setSelectedExecution(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('executions.executionDetails')}</DialogTitle>
           </DialogHeader>
