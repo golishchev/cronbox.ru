@@ -181,7 +181,11 @@
     "failedToRunTask": "Failed to run task",
     "taskDeleted": "Task deleted",
     "taskDeletedDescription": "\"{{name}}\" has been deleted",
-    "failedToDeleteTask": "Failed to delete task"
+    "failedToDeleteTask": "Failed to delete task",
+    "copyTask": "Copy task",
+    "taskCopied": "Task copied",
+    "taskCopiedDescription": "\"{{name}}\" has been copied",
+    "failedToCopyTask": "Failed to copy task"
   },
   "delayedTasks": {
     "title": "Delayed Tasks",
@@ -209,7 +213,20 @@
     "editDelayedTask": "Edit Delayed Task",
     "editDescription": "Update the task configuration",
     "taskUpdated": "Task updated",
-    "taskUpdatedDescription": "\"{{name}}\" has been updated"
+    "taskUpdatedDescription": "\"{{name}}\" has been updated",
+    "reschedule": "Reschedule",
+    "rescheduleTask": "Reschedule Task",
+    "rescheduleDescription": "Create a new task with the same configuration but a new execution time",
+    "newExecuteAt": "New execution time",
+    "taskRescheduled": "Task rescheduled",
+    "taskRescheduledDescription": "A new task based on \"{{name}}\" has been scheduled",
+    "failedToRescheduleTask": "Failed to reschedule task",
+    "copyTask": "Copy task",
+    "copy": "Copy",
+    "copyDescription": "Create a copy of this task with a new execution time",
+    "taskCopied": "Task copied",
+    "taskCopiedDescription": "A copy of \"{{name}}\" has been created",
+    "failedToCopyTask": "Failed to copy task"
   },
   "executions": {
     "title": "Executions",

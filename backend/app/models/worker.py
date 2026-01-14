@@ -56,9 +56,6 @@ class Worker(Base, UUIDMixin, TimestampMixin):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    # Location/region (optional, for geo-distributed workers)
-    region: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
     # Heartbeat tracking
     last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

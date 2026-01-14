@@ -13,6 +13,7 @@ from app.schemas.delayed_task import (
     DelayedTaskListResponse,
     DelayedTaskResponse,
     DelayedTaskUpdate,
+    RescheduleDelayedTaskRequest,
 )
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/delayed", tags=["Delayed Tasks"])
@@ -220,3 +221,145 @@ async def cancel_delayed_task(
 
     await delayed_repo.cancel(task)
     await db.commit()
+
+
+@router.post("/{task_id}/reschedule", response_model=DelayedTaskResponse, status_code=status.HTTP_201_CREATED)
+async def reschedule_delayed_task(
+    task_id: UUID,
+    data: RescheduleDelayedTaskRequest,
+    workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
+    db: DB,
+):
+    """Reschedule a completed delayed task.
+
+    Creates a new task with the same configuration as the original,
+    but with a new execution time. Only completed tasks (success, failed, cancelled)
+    can be rescheduled.
+    """
+    delayed_repo = DelayedTaskRepository(db)
+    workspace_repo = WorkspaceRepository(db)
+
+    # Get original task
+    original_task = await delayed_repo.get_by_id(task_id)
+    if original_task is None or original_task.workspace_id != workspace.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delayed task not found",
+        )
+
+    # Check task status - only completed tasks can be rescheduled
+    if original_task.status not in [TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot reschedule task with status '{original_task.status.value}'. Only completed tasks (success, failed, cancelled) can be rescheduled.",
+        )
+
+    # Check plan limits
+    if workspace.delayed_tasks_this_month >= user_plan.max_delayed_tasks_per_month:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Monthly delayed task limit reached. Your plan allows {user_plan.max_delayed_tasks_per_month} delayed task(s) per month",
+        )
+
+    # Validate execute_at is in the future
+    now = datetime.utcnow()
+    execute_at = data.execute_at.replace(tzinfo=None) if data.execute_at.tzinfo else data.execute_at
+    if execute_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="execute_at must be in the future",
+        )
+
+    # Create new task with same configuration
+    new_task = await delayed_repo.create(
+        workspace_id=workspace.id,
+        idempotency_key=None,  # New task, no idempotency key
+        name=original_task.name,
+        tags=original_task.tags,
+        url=original_task.url,
+        method=original_task.method,
+        headers=original_task.headers,
+        body=original_task.body,
+        execute_at=execute_at,
+        timeout_seconds=original_task.timeout_seconds,
+        retry_count=original_task.retry_count,
+        retry_delay_seconds=original_task.retry_delay_seconds,
+        callback_url=original_task.callback_url,
+        status=TaskStatus.PENDING,
+        worker_id=original_task.worker_id,
+    )
+
+    # Increment workspace counter
+    await workspace_repo.increment_delayed_tasks_count(workspace)
+    await db.commit()
+
+    return DelayedTaskResponse.model_validate(new_task)
+
+
+@router.post("/{task_id}/copy", response_model=DelayedTaskResponse, status_code=status.HTTP_201_CREATED)
+async def copy_delayed_task(
+    task_id: UUID,
+    data: RescheduleDelayedTaskRequest,
+    workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
+    db: DB,
+):
+    """Create a copy of an existing delayed task.
+
+    Creates a new task with the same configuration as the original,
+    but with a new execution time and "(copy)" appended to the name.
+    Any task can be copied regardless of its status.
+    """
+    delayed_repo = DelayedTaskRepository(db)
+    workspace_repo = WorkspaceRepository(db)
+
+    # Get original task
+    original_task = await delayed_repo.get_by_id(task_id)
+    if original_task is None or original_task.workspace_id != workspace.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delayed task not found",
+        )
+
+    # Check plan limits
+    if workspace.delayed_tasks_this_month >= user_plan.max_delayed_tasks_per_month:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Monthly delayed task limit reached. Your plan allows {user_plan.max_delayed_tasks_per_month} delayed task(s) per month",
+        )
+
+    # Validate execute_at is in the future
+    now = datetime.utcnow()
+    execute_at = data.execute_at.replace(tzinfo=None) if data.execute_at.tzinfo else data.execute_at
+    if execute_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="execute_at must be in the future",
+        )
+
+    # Create copy with new name
+    new_name = f"{original_task.name} (copy)" if original_task.name else None
+    new_task = await delayed_repo.create(
+        workspace_id=workspace.id,
+        idempotency_key=None,  # New task, no idempotency key
+        name=new_name,
+        tags=original_task.tags,
+        url=original_task.url,
+        method=original_task.method,
+        headers=original_task.headers,
+        body=original_task.body,
+        execute_at=execute_at,
+        timeout_seconds=original_task.timeout_seconds,
+        retry_count=original_task.retry_count,
+        retry_delay_seconds=original_task.retry_delay_seconds,
+        callback_url=original_task.callback_url,
+        status=TaskStatus.PENDING,
+        worker_id=original_task.worker_id,
+    )
+
+    # Increment workspace counter
+    await workspace_repo.increment_delayed_tasks_count(workspace)
+    await db.commit()
+
+    return DelayedTaskResponse.model_validate(new_task)

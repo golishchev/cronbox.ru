@@ -88,3 +88,9 @@ class DelayedTaskListResponse(BaseModel):
 
     tasks: list[DelayedTaskResponse]
     pagination: PaginationMeta
+
+
+class RescheduleDelayedTaskRequest(BaseModel):
+    """Schema for rescheduling a completed delayed task."""
+
+    execute_at: datetime = Field(..., description="New execution time (must be in the future)")

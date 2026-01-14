@@ -254,7 +254,6 @@ export interface Worker {
   workspace_id: string
   name: string
   description: string | null
-  region: string | null
   status: WorkerStatus
   is_active: boolean
   api_key_prefix: string
@@ -268,13 +267,11 @@ export interface Worker {
 export interface WorkerCreateRequest {
   name: string
   description?: string
-  region?: string
 }
 
 export interface WorkerUpdateRequest {
   name?: string
   description?: string
-  region?: string
   is_active?: boolean
 }
 
@@ -283,7 +280,6 @@ export interface WorkerCreateResponse {
   workspace_id: string
   name: string
   description: string | null
-  region: string | null
   api_key: string
   api_key_prefix: string
   created_at: string

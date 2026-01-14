@@ -23,7 +23,6 @@ class TestWorkerServiceCreateWorker:
         data = WorkerCreate(
             name="Test Worker",
             description="Test description",
-            region="eu-west",
         )
 
         with patch("app.services.worker.Worker") as mock_worker_class:

@@ -51,7 +51,6 @@ class WorkerService:
             workspace_id=workspace_id,
             name=data.name,
             description=data.description,
-            region=data.region,
             api_key_hash=api_key_hash,
             api_key_prefix=api_key_prefix,
             status=WorkerStatus.OFFLINE,

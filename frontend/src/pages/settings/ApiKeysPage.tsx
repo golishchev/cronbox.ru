@@ -58,7 +58,6 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
   // Create form state
   const [newWorkerName, setNewWorkerName] = useState('')
   const [newWorkerDescription, setNewWorkerDescription] = useState('')
-  const [newWorkerRegion, setNewWorkerRegion] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
 
   // Show key state
@@ -96,7 +95,6 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       const result = await createWorker(currentWorkspace.id, {
         name: newWorkerName.trim(),
         description: newWorkerDescription.trim() || undefined,
-        region: newWorkerRegion.trim() || undefined,
       })
 
       setNewApiKey(result)
@@ -104,7 +102,6 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
       setShowKeyDialog(true)
       setNewWorkerName('')
       setNewWorkerDescription('')
-      setNewWorkerRegion('')
 
       toast({
         title: t('apiKeys.created'),
@@ -304,11 +301,6 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                           {worker.description}
                         </p>
                       )}
-                      {worker.region && (
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          {worker.region}
-                        </Badge>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -385,15 +377,6 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
                 value={newWorkerDescription}
                 onChange={(e) => setNewWorkerDescription(e.target.value)}
                 placeholder={t('apiKeys.descriptionPlaceholder')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="region">Region</Label>
-              <Input
-                id="region"
-                value={newWorkerRegion}
-                onChange={(e) => setNewWorkerRegion(e.target.value)}
-                placeholder={t('apiKeys.regionPlaceholder')}
               />
             </div>
             <DialogFooter>
