@@ -5,6 +5,7 @@ import httpx
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings as app_settings
 from app.models.notification_settings import NotificationSettings
@@ -53,7 +54,9 @@ class NotificationService:
     ) -> tuple[str, str]:
         """Get workspace name and owner's preferred language."""
         result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
+            select(Workspace)
+            .options(selectinload(Workspace.owner))
+            .where(Workspace.id == workspace_id)
         )
         workspace = result.scalar_one_or_none()
 
