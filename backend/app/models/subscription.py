@@ -64,4 +64,4 @@ class Subscription(Base, UUIDMixin, TimestampMixin):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="subscription")
-    plan: Mapped["Plan"] = relationship()
+    plan: Mapped["Plan"] = relationship(foreign_keys=[plan_id])
