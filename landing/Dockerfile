@@ -49,8 +49,8 @@ USER node
 
 EXPOSE 3000
 
-# Health check
+# Health check using Node.js fetch (wget unreliable in alpine)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "server.js"]
