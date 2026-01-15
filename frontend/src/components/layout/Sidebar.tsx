@@ -81,13 +81,17 @@ export function Sidebar({ currentRoute, onNavigate }: SidebarProps) {
       <div className="flex items-center justify-between h-16 px-4 border-b">
         {!sidebarCollapsed && (
           <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-2">
-            <Clock className="h-8 w-8 text-primary" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
             <span className="font-bold text-xl">CronBox</span>
           </button>
         )}
         {sidebarCollapsed && (
           <button onClick={() => onNavigate('dashboard')} className="mx-auto">
-            <Clock className="h-8 w-8 text-primary" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
           </button>
         )}
         <Button
