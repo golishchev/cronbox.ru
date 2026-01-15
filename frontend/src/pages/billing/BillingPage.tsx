@@ -130,6 +130,16 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     })
   }
 
+  const formatDateTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString('ru-RU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -386,7 +396,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               <TableBody>
                 {payments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell>{formatDate(payment.created_at)}</TableCell>
+                    <TableCell>{formatDateTime(payment.created_at)}</TableCell>
                     <TableCell>{payment.description}</TableCell>
                     <TableCell>{formatPrice(payment.amount)}</TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
