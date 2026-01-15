@@ -642,9 +642,11 @@ class BillingService:
             )
             return None
 
-        # Set scheduled change
+        # Set scheduled change and clear any cancellation
         subscription.scheduled_plan_id = new_plan_id
         subscription.scheduled_billing_period = new_billing_period
+        subscription.cancel_at_period_end = False
+        subscription.cancelled_at = None
 
         await db.commit()
         logger.info(
