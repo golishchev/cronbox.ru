@@ -16,8 +16,28 @@ from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.models.workspace import Workspace
+from app.services.i18n import t
 
 logger = structlog.get_logger()
+
+
+def _get_billing_description(
+    plan_name: str, billing_period: str, lang: str, is_auto_renewal: bool = False
+) -> str:
+    """Get localized billing description."""
+    period_key = f"billing.period.{billing_period}"
+    period_localized = t(period_key, lang)
+
+    if is_auto_renewal:
+        return t("billing.auto_renewal", lang, plan_name=plan_name, period=period_localized)
+    return t("billing.subscription", lang, plan_name=plan_name, period=period_localized)
+
+
+def _get_receipt_description(plan_name: str, billing_period: str, lang: str) -> str:
+    """Get localized receipt item description."""
+    period_key = f"billing.period.{billing_period}"
+    period_localized = t(period_key, lang)
+    return t("billing.receipt_item", lang, plan_name=plan_name, period=period_localized)
 
 # Cache key for public plans
 PLANS_CACHE_KEY = "cache:plans:public"
@@ -174,6 +194,7 @@ class BillingService:
             logger.error("User not found", user_id=user_id)
             return None
         user_email = user.email
+        user_lang = user.preferred_language or "ru"
 
         # Get user's first workspace for payment association
         workspace_result = await db.execute(
@@ -197,7 +218,7 @@ class BillingService:
             amount=amount,
             currency="RUB",
             status=PaymentStatus.PENDING,
-            description=f"Subscription: {plan.display_name} ({billing_period})",
+            description=_get_billing_description(plan.display_name, billing_period, user_lang),
             extra_data={
                 "plan_id": str(plan_id),
                 "billing_period": billing_period,
@@ -242,13 +263,13 @@ class BillingService:
                             },
                             "items": [
                                 {
-                                    "description": f"Подписка {plan.display_name} ({billing_period})",
+                                    "description": _get_receipt_description(plan.display_name, billing_period, user_lang),
                                     "quantity": "1",
                                     "amount": {
                                         "value": amount_value,
                                         "currency": "RUB",
                                     },
-                                    "vat_code": 1,  # Без НДС
+                                    "vat_code": 1,
                                     "payment_mode": "full_payment",
                                     "payment_subject": "service",
                                 }
@@ -864,6 +885,7 @@ class BillingService:
         if not user:
             logger.error("User not found for renewal", user_id=subscription.user_id)
             return None
+        user_lang = user.preferred_language or "ru"
 
         # Get workspace for payment
         workspace = await self._get_oldest_workspace(db, subscription.user_id)
@@ -881,7 +903,7 @@ class BillingService:
             amount=amount,
             currency="RUB",
             status=PaymentStatus.PENDING,
-            description=f"Автопродление: {plan.display_name} ({billing_period})",
+            description=_get_billing_description(plan.display_name, billing_period, user_lang, is_auto_renewal=True),
             extra_data={
                 "plan_id": str(plan.id),
                 "billing_period": billing_period,
@@ -924,7 +946,7 @@ class BillingService:
                             },
                             "items": [
                                 {
-                                    "description": f"Подписка {plan.display_name} ({billing_period})",
+                                    "description": _get_receipt_description(plan.display_name, billing_period, user_lang),
                                     "quantity": "1",
                                     "amount": {
                                         "value": amount_value,
@@ -1016,6 +1038,103 @@ class BillingService:
             )
             await db.rollback()
             return None
+
+    async def check_pending_payments(
+        self,
+        db: AsyncSession,
+        timeout_minutes: int = 20,
+    ) -> int:
+        """
+        Check and update status of old pending payments via YooKassa API.
+
+        Returns count of payments that were updated.
+        """
+        if not self.is_configured:
+            return 0
+
+        now = datetime.now(timezone.utc)
+        cutoff_time = now - timedelta(minutes=timeout_minutes)
+
+        # Find old pending payments
+        result = await db.execute(
+            select(Payment).where(
+                Payment.status == PaymentStatus.PENDING,
+                Payment.created_at < cutoff_time,
+                Payment.yookassa_payment_id.isnot(None),
+            )
+        )
+        pending_payments = list(result.scalars().all())
+
+        if not pending_payments:
+            return 0
+
+        updated_count = 0
+
+        async with httpx.AsyncClient() as client:
+            for payment in pending_payments:
+                try:
+                    # Check payment status via YooKassa API
+                    response = await client.get(
+                        f"{self.base_url}/payments/{payment.yookassa_payment_id}",
+                        auth=self._get_auth(),
+                        timeout=10.0,
+                    )
+                    response.raise_for_status()
+                    yookassa_data = response.json()
+
+                    yookassa_status = yookassa_data.get("status")
+
+                    # Map YooKassa status to our status
+                    if yookassa_status == "succeeded":
+                        payment.status = PaymentStatus.SUCCEEDED
+                        payment.paid_at = datetime.now(timezone.utc)
+                        updated_count += 1
+                        logger.info(
+                            "Payment status updated to succeeded",
+                            payment_id=str(payment.id),
+                        )
+                    elif yookassa_status == "canceled":
+                        payment.status = PaymentStatus.CANCELLED
+                        updated_count += 1
+                        logger.info(
+                            "Payment status updated to cancelled",
+                            payment_id=str(payment.id),
+                        )
+                    elif yookassa_status == "waiting_for_capture":
+                        # Payment authorized but not captured - this shouldn't happen with capture=true
+                        logger.warning(
+                            "Payment waiting for capture",
+                            payment_id=str(payment.id),
+                        )
+                    # If still pending in YooKassa, leave as is
+
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 404:
+                        # Payment not found in YooKassa - mark as cancelled
+                        payment.status = PaymentStatus.CANCELLED
+                        updated_count += 1
+                        logger.warning(
+                            "Payment not found in YooKassa, marking as cancelled",
+                            payment_id=str(payment.id),
+                        )
+                    else:
+                        logger.error(
+                            "Error checking payment status",
+                            payment_id=str(payment.id),
+                            error=str(e),
+                        )
+                except Exception as e:
+                    logger.error(
+                        "Error checking payment status",
+                        payment_id=str(payment.id),
+                        error=str(e),
+                    )
+
+        if updated_count:
+            await db.commit()
+            logger.info("Updated pending payments", count=updated_count)
+
+        return updated_count
 
 
 # Global instance

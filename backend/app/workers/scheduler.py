@@ -47,6 +47,7 @@ class TaskScheduler:
             self._poll_delayed_tasks(),
             self._update_next_run_times(),
             self._check_subscriptions(),
+            self._check_pending_payments(),
         )
 
     async def stop(self):
@@ -96,6 +97,22 @@ class TaskScheduler:
 
             # Check every hour
             await asyncio.sleep(3600)
+
+    async def _check_pending_payments(self):
+        """Check and update old pending payments every 5 minutes."""
+        while self.running:
+            try:
+                from app.services.billing import billing_service
+
+                async with async_session_factory() as db:
+                    updated = await billing_service.check_pending_payments(db)
+                    if updated:
+                        logger.info("Checked pending payments", updated=updated)
+            except Exception as e:
+                logger.error("Error checking pending payments", error=str(e))
+
+            # Check every 5 minutes
+            await asyncio.sleep(300)
 
     async def _process_subscription_checks(self):
         """Process subscription expiration checks, auto-renewals, and notifications."""

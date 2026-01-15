@@ -9,5 +9,14 @@
       "email_success": "Если вы получили это письмо, ваши email-уведомления работают корректно.",
       "webhook_message": "Это тестовое уведомление от CronBox"
     }
+  },
+  "billing": {
+    "subscription": "Подписка: {plan_name} ({period})",
+    "auto_renewal": "Автопродление: {plan_name} ({period})",
+    "receipt_item": "Подписка {plan_name} ({period})",
+    "period": {
+      "monthly": "ежемесячно",
+      "yearly": "ежегодно"
+    }
   }
 }
