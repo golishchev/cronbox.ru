@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -11,10 +11,13 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
     """Workspace model - container for tasks."""
 
     __tablename__ = "workspaces"
+    __table_args__ = (
+        UniqueConstraint("slug", "owner_id", name="uq_workspaces_slug_owner"),
+    )
 
     # Identification
     name: Mapped[str] = mapped_column(String(255))
-    slug: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    slug: Mapped[str] = mapped_column(String(100), index=True)
 
     # Owner
     owner_id: Mapped[UUID] = mapped_column(
