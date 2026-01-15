@@ -98,18 +98,39 @@ class TaskScheduler:
             await asyncio.sleep(3600)
 
     async def _process_subscription_checks(self):
-        """Process subscription expiration checks and send notifications."""
+        """Process subscription expiration checks, auto-renewals, and notifications."""
         from app.services.billing import billing_service
         from app.services.notifications import notification_service
 
         async with async_session_factory() as db:
-            # 1. Check and process expired subscriptions
+            # 0. Try to auto-renew expiring subscriptions (due today or already expired)
+            renewed_count = 0
+            failed_renewals = []
+            expiring_subscriptions = await billing_service.get_subscriptions_for_renewal(db)
+            for subscription in expiring_subscriptions:
+                payment = await billing_service.auto_renew_subscription(db, subscription)
+                if payment:
+                    renewed_count += 1
+                    # Send success notification
+                    await notification_service.send_subscription_renewed(
+                        db=db,
+                        user_id=subscription.user_id,
+                        payment=payment,
+                    )
+                else:
+                    failed_renewals.append(subscription.user_id)
+
+            if renewed_count:
+                logger.info("Auto-renewed subscriptions", count=renewed_count)
+
+            # 1. Check and process expired subscriptions (those that couldn't be auto-renewed)
             expired_workspaces = await billing_service.check_expired_subscriptions(db)
-            for workspace_id, tasks_paused in expired_workspaces:
+            for user_id, tasks_paused, workspaces_blocked in expired_workspaces:
                 await notification_service.send_subscription_expired(
                     db=db,
-                    workspace_id=workspace_id,
+                    user_id=user_id,
                     tasks_paused=tasks_paused,
+                    workspaces_blocked=workspaces_blocked,
                 )
             if expired_workspaces:
                 logger.info(

@@ -706,6 +706,30 @@ class BillingService:
         )
         return list(result.scalars().all())
 
+    async def get_subscriptions_for_renewal(
+        self, db: AsyncSession
+    ) -> list[Subscription]:
+        """
+        Get subscriptions that need auto-renewal.
+
+        Returns active subscriptions that:
+        - Have expired or expire within the next hour
+        - Have a saved payment method
+        - Are not marked for cancellation
+        """
+        now = datetime.now(timezone.utc)
+        renewal_window = now + timedelta(hours=1)
+
+        result = await db.execute(
+            select(Subscription).where(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.current_period_end <= renewal_window,
+                Subscription.yookassa_payment_method_id.isnot(None),
+                Subscription.cancel_at_period_end.is_(False),
+            )
+        )
+        return list(result.scalars().all())
+
     async def auto_pause_excess_tasks(
         self, db: AsyncSession, workspace_id: uuid_module.UUID, max_tasks: int
     ) -> int:
@@ -795,6 +819,203 @@ class BillingService:
             )
 
         return affected_users
+
+    async def auto_renew_subscription(
+        self,
+        db: AsyncSession,
+        subscription: Subscription,
+    ) -> Payment | None:
+        """
+        Автоматическое продление подписки с использованием сохранённого метода оплаты.
+
+        Returns:
+            Payment если успешно, None если не удалось
+        """
+        if not self.is_configured:
+            logger.warning("YooKassa not configured for auto-renewal")
+            return None
+
+        if not subscription.yookassa_payment_method_id:
+            logger.info(
+                "No saved payment method for subscription",
+                subscription_id=str(subscription.id),
+                user_id=str(subscription.user_id),
+            )
+            return None
+
+        # Get plan
+        plan = await self.get_plan_by_id(db, subscription.plan_id)
+        if not plan:
+            logger.error("Plan not found for renewal", plan_id=subscription.plan_id)
+            return None
+
+        # Determine billing period based on previous subscription duration
+        period_days = (subscription.current_period_end - subscription.current_period_start).days
+        billing_period = "yearly" if period_days > 60 else "monthly"
+        amount = plan.price_yearly if billing_period == "yearly" else plan.price_monthly
+
+        if amount == 0:
+            logger.error("Cannot auto-renew free plan")
+            return None
+
+        # Get user for email (required for receipt)
+        user_result = await db.execute(select(User).where(User.id == subscription.user_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            logger.error("User not found for renewal", user_id=subscription.user_id)
+            return None
+
+        # Get workspace for payment
+        workspace = await self._get_oldest_workspace(db, subscription.user_id)
+        if not workspace:
+            logger.error("No workspace for renewal", user_id=subscription.user_id)
+            return None
+
+        # Convert kopeks to rubles
+        amount_value = f"{amount / 100:.2f}"
+
+        # Create payment record
+        payment = Payment(
+            workspace_id=workspace.id,
+            user_id=subscription.user_id,
+            amount=amount,
+            currency="RUB",
+            status=PaymentStatus.PENDING,
+            description=f"Автопродление: {plan.display_name} ({billing_period})",
+            extra_data={
+                "plan_id": str(plan.id),
+                "billing_period": billing_period,
+                "user_id": str(subscription.user_id),
+                "auto_renewal": True,
+            },
+        )
+        db.add(payment)
+        await db.flush()
+
+        # Create YooKassa payment with saved payment method (no confirmation needed)
+        idempotence_key = str(uuid_module.uuid4())
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/payments",
+                    auth=self._get_auth(),
+                    headers={
+                        "Idempotence-Key": idempotence_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "amount": {
+                            "value": amount_value,
+                            "currency": "RUB",
+                        },
+                        "capture": True,
+                        "payment_method_id": subscription.yookassa_payment_method_id,
+                        "description": payment.description,
+                        "metadata": {
+                            "payment_id": str(payment.id),
+                            "user_id": str(subscription.user_id),
+                            "plan_id": str(plan.id),
+                            "billing_period": billing_period,
+                            "auto_renewal": "true",
+                        },
+                        "receipt": {
+                            "customer": {
+                                "email": user.email,
+                            },
+                            "items": [
+                                {
+                                    "description": f"Подписка {plan.display_name} ({billing_period})",
+                                    "quantity": "1",
+                                    "amount": {
+                                        "value": amount_value,
+                                        "currency": "RUB",
+                                    },
+                                    "vat_code": 1,
+                                    "payment_mode": "full_payment",
+                                    "payment_subject": "service",
+                                }
+                            ],
+                        },
+                    },
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+                yookassa_data = response.json()
+
+                payment.yookassa_payment_id = yookassa_data["id"]
+                payment_status = yookassa_data.get("status")
+
+                if payment_status == "succeeded":
+                    # Payment succeeded immediately
+                    payment.status = PaymentStatus.SUCCEEDED
+                    payment.paid_at = datetime.now(timezone.utc)
+
+                    # Extend subscription
+                    now = datetime.now(timezone.utc)
+                    if billing_period == "yearly":
+                        new_period_end = now + timedelta(days=365)
+                    else:
+                        new_period_end = now + timedelta(days=30)
+
+                    subscription.current_period_start = now
+                    subscription.current_period_end = new_period_end
+                    subscription.status = SubscriptionStatus.ACTIVE
+
+                    # Save new payment method if returned
+                    payment_method = yookassa_data.get("payment_method")
+                    if payment_method and payment_method.get("id"):
+                        subscription.yookassa_payment_method_id = payment_method["id"]
+
+                    await db.commit()
+                    logger.info(
+                        "Subscription auto-renewed successfully",
+                        subscription_id=str(subscription.id),
+                        user_id=str(subscription.user_id),
+                        payment_id=str(payment.id),
+                    )
+                    return payment
+
+                elif payment_status == "pending":
+                    # Payment is pending (waiting for confirmation)
+                    await db.commit()
+                    logger.info(
+                        "Auto-renewal payment pending",
+                        subscription_id=str(subscription.id),
+                        payment_id=str(payment.id),
+                    )
+                    return payment
+
+                else:
+                    # Payment failed or cancelled
+                    payment.status = PaymentStatus.FAILED
+                    await db.commit()
+                    logger.warning(
+                        "Auto-renewal payment failed",
+                        subscription_id=str(subscription.id),
+                        payment_status=payment_status,
+                    )
+                    return None
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "YooKassa API error during auto-renewal",
+                error=str(e),
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+                subscription_id=str(subscription.id),
+            )
+            payment.status = PaymentStatus.FAILED
+            await db.commit()
+            return None
+        except Exception as e:
+            logger.error(
+                "Failed to auto-renew subscription",
+                error=str(e),
+                error_type=type(e).__name__,
+                subscription_id=str(subscription.id),
+            )
+            await db.rollback()
+            return None
 
 
 # Global instance

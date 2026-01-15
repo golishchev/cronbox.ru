@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings as app_settings
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationChannel
+from app.models.payment import Payment
 from app.models.workspace import Workspace
 from app.services.email import email_service  # SMTP fallback
 from app.services.postal import postal_service
@@ -351,10 +352,23 @@ class NotificationService:
     async def send_subscription_expired(
         self,
         db: AsyncSession,
-        workspace_id: UUID,
+        user_id: UUID,
         tasks_paused: int,
+        workspaces_blocked: int = 0,
     ) -> None:
         """Send subscription expired notifications through all enabled channels."""
+        # Get user's first workspace for notification settings
+        workspace_result = await db.execute(
+            select(Workspace)
+            .where(Workspace.owner_id == user_id)
+            .order_by(Workspace.created_at.asc())
+            .limit(1)
+        )
+        workspace = workspace_result.scalar_one_or_none()
+        if not workspace:
+            return
+
+        workspace_id = workspace.id
         settings = await self.get_settings(db, workspace_id)
         if not settings:
             return
@@ -364,6 +378,7 @@ class NotificationService:
         variables = {
             "workspace_name": workspace_name,
             "tasks_paused": str(tasks_paused),
+            "workspaces_blocked": str(workspaces_blocked),
         }
 
         # Send Telegram notifications
@@ -398,13 +413,93 @@ class NotificationService:
                     "workspace_id": str(workspace_id),
                     "workspace_name": workspace_name,
                     "tasks_paused": tasks_paused,
+                    "workspaces_blocked": workspaces_blocked,
                 },
             )
 
         logger.info(
             "Subscription expired notification sent",
-            workspace_id=str(workspace_id),
+            user_id=str(user_id),
             tasks_paused=tasks_paused,
+            workspaces_blocked=workspaces_blocked,
+        )
+
+    async def send_subscription_renewed(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        payment: Payment,
+    ) -> None:
+        """Send subscription auto-renewed notification."""
+        # Get user's first workspace for notification settings
+        workspace_result = await db.execute(
+            select(Workspace)
+            .where(Workspace.owner_id == user_id)
+            .order_by(Workspace.created_at.asc())
+            .limit(1)
+        )
+        workspace = workspace_result.scalar_one_or_none()
+        if not workspace:
+            return
+
+        workspace_id = workspace.id
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        # Format amount (from kopeks to rubles)
+        amount_rub = f"{payment.amount / 100:.2f}"
+
+        variables = {
+            "workspace_name": workspace_name,
+            "amount": amount_rub,
+            "currency": payment.currency,
+            "description": payment.description or "Подписка",
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            await self._send_templated_telegram(
+                db,
+                settings.telegram_chat_ids,
+                "subscription_renewed",
+                language,
+                variables,
+            )
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            await self._send_templated_email(
+                db,
+                settings.email_addresses,
+                "subscription_renewed",
+                language,
+                variables,
+                workspace_id,
+                tag="subscription-renewed",
+            )
+
+        # Send Webhook notification
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="subscription.renewed",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "amount": payment.amount,
+                    "currency": payment.currency,
+                    "payment_id": str(payment.id),
+                },
+            )
+
+        logger.info(
+            "Subscription renewed notification sent",
+            user_id=str(user_id),
+            payment_id=str(payment.id),
         )
 
     async def _send_webhook(
