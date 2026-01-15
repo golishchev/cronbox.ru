@@ -40,7 +40,7 @@ const features = [
   },
   {
     name: 'Надежность',
-    description: 'Распределенная архитектура с автоматическими повторными попытками. SLA 99.9% uptime.',
+    description: 'Архитектура с автоматическими повторными попытками. SLA 99% uptime.',
     icon: Shield,
   },
 ]
@@ -126,6 +126,9 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
               </pre>
             </div>
           </div>
+          <h2 className="mx-auto mt-16 max-w-4xl text-lg leading-8 text-gray-600 text-center">
+            Облачное решение, которое работает 24/7 без вашего участия
+          </h2>
         </div>
       </section>
 
@@ -187,63 +190,6 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                 <p className="mt-2 text-gray-600">{useCase.description}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-20 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                Почему выбирают CronBox?
-              </h2>
-              <p className="mt-4 text-lg text-gray-600">
-                Облачное решение, которое работает 24/7 без вашего участия
-              </p>
-
-              <ul className="mt-8 space-y-4">
-                {benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-10">
-                <Link
-                  to="/pricing"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
-                >
-                  Посмотреть тарифы <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 p-8 text-white">
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <div className="text-4xl font-bold">99.9%</div>
-                    <div className="mt-1 text-primary-100">Uptime</div>
-                  </div>
-                  <div>
-                    <div className="text-4xl font-bold">&lt;100ms</div>
-                    <div className="mt-1 text-primary-100">Задержка</div>
-                  </div>
-                  <div>
-                    <div className="text-4xl font-bold">24/7</div>
-                    <div className="mt-1 text-primary-100">Мониторинг</div>
-                  </div>
-                  <div>
-                    <div className="text-4xl font-bold">3</div>
-                    <div className="mt-1 text-primary-100">Повторные попытки</div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
