@@ -373,7 +373,11 @@
     "cancelled": "Отменена",
     "expired": "Истекла",
     "paid": "Оплачено",
-    "refunded": "Возвращено"
+    "refunded": "Возвращено",
+    "planPrice": "Стоимость тарифа",
+    "prorationCredit": "Зачет за неиспользованные дни",
+    "daysRemaining": "Осталось дней",
+    "totalAmount": "Итого к оплате"
   },
   "taskForm": {
     "name": "Название",

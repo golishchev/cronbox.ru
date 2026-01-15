@@ -27,9 +27,11 @@ import {
   createPayment,
   cancelSubscription,
   getPaymentHistory,
+  previewPrice,
   Plan,
   Subscription,
   Payment,
+  PricePreview,
 } from '@/api/billing'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +51,8 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pricePreview, setPricePreview] = useState<PricePreview | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
 
   useEffect(() => {
     loadBillingData()
@@ -362,9 +366,19 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 ) : (
                   <Button
                     className="w-full"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedPlan(plan)
+                      setPricePreview(null)
                       setShowUpgradeDialog(true)
+                      setLoadingPreview(true)
+                      try {
+                        const preview = await previewPrice(plan.id, billingPeriod)
+                        setPricePreview(preview)
+                      } catch (err) {
+                        console.error('Failed to load price preview:', err)
+                      } finally {
+                        setLoadingPreview(false)
+                      }
                     }}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
@@ -421,27 +435,54 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               {t('billing.upgradeDescription')}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-3">
             <div className="flex justify-between items-center">
               <span>{t('billing.plan')}:</span>
               <span className="font-semibold">{selectedPlan?.display_name}</span>
             </div>
-            <div className="flex justify-between items-center mt-2">
+            <div className="flex justify-between items-center">
               <span>{t('billing.billingPeriod')}:</span>
               <span className="font-semibold">
                 {billingPeriod === 'yearly' ? t('billing.yearly') : t('billing.monthly')}
               </span>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span>{t('billing.amount')}:</span>
-              <span className="font-semibold text-lg">
-                {selectedPlan && formatPrice(
-                  billingPeriod === 'yearly'
-                    ? selectedPlan.price_yearly
-                    : selectedPlan.price_monthly
+
+            {loadingPreview ? (
+              <div className="flex items-center justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : pricePreview ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span>{t('billing.planPrice')}:</span>
+                  <span>{formatPrice(pricePreview.plan_price)}</span>
+                </div>
+                {pricePreview.proration_credit > 0 && (
+                  <>
+                    <div className="flex justify-between items-center text-green-600">
+                      <span>{t('billing.prorationCredit')} ({pricePreview.remaining_days} {t('billing.daysRemaining')}):</span>
+                      <span>-{formatPrice(pricePreview.proration_credit)}</span>
+                    </div>
+                    <hr className="border-border" />
+                  </>
                 )}
-              </span>
-            </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">{t('billing.totalAmount')}:</span>
+                  <span className="font-bold text-lg">{formatPrice(pricePreview.final_amount)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between items-center">
+                <span>{t('billing.amount')}:</span>
+                <span className="font-semibold text-lg">
+                  {selectedPlan && formatPrice(
+                    billingPeriod === 'yearly'
+                      ? selectedPlan.price_yearly
+                      : selectedPlan.price_monthly
+                  )}
+                </span>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>

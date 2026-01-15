@@ -43,6 +43,14 @@ export interface Payment {
   created_at: string
 }
 
+export interface PricePreview {
+  plan_price: number
+  proration_credit: number
+  final_amount: number
+  remaining_days: number
+  currency: string
+}
+
 export async function getPlans(): Promise<Plan[]> {
   const response = await apiClient.get('/billing/plans')
   return response.data
@@ -80,6 +88,17 @@ export async function getPaymentHistory(
 ): Promise<Payment[]> {
   const response = await apiClient.get('/billing/payments', {
     params: { limit, offset },
+  })
+  return response.data
+}
+
+export async function previewPrice(
+  planId: string,
+  billingPeriod: 'monthly' | 'yearly' = 'monthly'
+): Promise<PricePreview> {
+  const response = await apiClient.post('/billing/preview-price', {
+    plan_id: planId,
+    billing_period: billingPeriod,
   })
   return response.data
 }

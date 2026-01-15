@@ -367,7 +367,11 @@
     "cancelled": "Cancelled",
     "expired": "Expired",
     "paid": "Paid",
-    "refunded": "Refunded"
+    "refunded": "Refunded",
+    "planPrice": "Plan price",
+    "prorationCredit": "Credit for unused days",
+    "daysRemaining": "Days remaining",
+    "totalAmount": "Total to pay"
   },
   "taskForm": {
     "name": "Name",

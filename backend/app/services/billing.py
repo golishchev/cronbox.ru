@@ -181,11 +181,27 @@ class BillingService:
             logger.error("Plan not found", plan_id=plan_id)
             return None
 
-        # Calculate amount
-        amount = plan.price_yearly if billing_period == "yearly" else plan.price_monthly
-        if amount == 0:
+        # Calculate base amount for new plan
+        new_plan_amount = plan.price_yearly if billing_period == "yearly" else plan.price_monthly
+        if new_plan_amount == 0:
             logger.error("Cannot create payment for free plan")
             return None
+
+        # Calculate proration credit from current subscription
+        proration_credit = 0
+        current_subscription = await self.get_user_subscription(db, user_id)
+        if current_subscription and current_subscription.status == SubscriptionStatus.ACTIVE:
+            proration_credit = await self._calculate_proration_credit(
+                db, current_subscription
+            )
+            logger.info(
+                "Proration credit calculated",
+                user_id=str(user_id),
+                credit=proration_credit,
+            )
+
+        # Final amount after proration
+        amount = max(new_plan_amount - proration_credit, 100)  # Minimum 1 RUB (100 kopeks)
 
         # Get user for email (required for receipt)
         user_result = await db.execute(select(User).where(User.id == user_id))
@@ -223,6 +239,8 @@ class BillingService:
                 "plan_id": str(plan_id),
                 "billing_period": billing_period,
                 "user_id": str(user_id),
+                "new_plan_amount": new_plan_amount,
+                "proration_credit": proration_credit,
             },
         )
         db.add(payment)
@@ -542,6 +560,56 @@ class BillingService:
             immediately=immediately,
         )
         return True
+
+    async def _calculate_proration_credit(
+        self, db: AsyncSession, subscription: Subscription
+    ) -> int:
+        """
+        Calculate proration credit for unused days of current subscription.
+
+        Returns credit amount in kopeks.
+        """
+        now = datetime.now(timezone.utc)
+
+        # If subscription already expired, no credit
+        if subscription.current_period_end <= now:
+            return 0
+
+        # Get current plan price
+        current_plan = await self.get_plan_by_id(db, subscription.plan_id)
+        if not current_plan:
+            return 0
+
+        # Determine billing period based on subscription duration
+        period_days = (subscription.current_period_end - subscription.current_period_start).days
+        if period_days <= 0:
+            return 0
+
+        is_yearly = period_days > 60
+        current_plan_price = current_plan.price_yearly if is_yearly else current_plan.price_monthly
+
+        if current_plan_price == 0:
+            return 0
+
+        # Calculate remaining days
+        remaining_days = (subscription.current_period_end - now).days
+        if remaining_days <= 0:
+            return 0
+
+        # Calculate daily rate and credit
+        daily_rate = current_plan_price / period_days
+        credit = int(daily_rate * remaining_days)
+
+        logger.info(
+            "Proration calculated",
+            subscription_id=str(subscription.id),
+            period_days=period_days,
+            remaining_days=remaining_days,
+            daily_rate=daily_rate,
+            credit=credit,
+        )
+
+        return credit
 
     async def _get_oldest_workspace(
         self, db: AsyncSession, user_id: uuid_module.UUID

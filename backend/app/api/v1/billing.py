@@ -1,15 +1,19 @@
 """Billing API endpoints."""
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, UserPlan, get_db
+from app.models.subscription import SubscriptionStatus
 from app.schemas.billing import (
     CancelSubscriptionRequest,
     CreatePaymentRequest,
     PaymentResponse,
     PlanResponse,
+    PricePreviewRequest,
+    PricePreviewResponse,
     SubscriptionResponse,
 )
 from app.services.billing import billing_service
@@ -58,6 +62,45 @@ async def get_subscription(
     response.plan = PlanResponse.model_validate(user_plan)
 
     return response
+
+
+@router.post("/preview-price", response_model=PricePreviewResponse)
+async def preview_price(
+    request: PricePreviewRequest,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview price with proration for plan upgrade/change."""
+    # Get plan
+    plan = await billing_service.get_plan_by_id(db, request.plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found",
+        )
+
+    # Calculate base price
+    plan_price = plan.price_yearly if request.billing_period == "yearly" else plan.price_monthly
+
+    # Calculate proration
+    proration_credit = 0
+    remaining_days = 0
+    subscription = await billing_service.get_user_subscription(db, current_user.id)
+
+    if subscription and subscription.status == SubscriptionStatus.ACTIVE:
+        proration_credit = await billing_service._calculate_proration_credit(db, subscription)
+        now = datetime.now(timezone.utc)
+        if subscription.current_period_end > now:
+            remaining_days = (subscription.current_period_end - now).days
+
+    final_amount = max(plan_price - proration_credit, 100)  # Minimum 1 RUB
+
+    return PricePreviewResponse(
+        plan_price=plan_price,
+        proration_credit=proration_credit,
+        final_amount=final_amount,
+        remaining_days=remaining_days,
+    )
 
 
 @router.post("/subscribe", response_model=PaymentResponse)

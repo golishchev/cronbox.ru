@@ -90,6 +90,23 @@ class CancelSubscriptionRequest(BaseModel):
     immediately: bool = False
 
 
+class PricePreviewRequest(BaseModel):
+    """Request to preview price with proration."""
+
+    plan_id: UUID
+    billing_period: str = Field(default="monthly", pattern="^(monthly|yearly)$")
+
+
+class PricePreviewResponse(BaseModel):
+    """Price preview with proration details."""
+
+    plan_price: int  # Full price of new plan (kopeks)
+    proration_credit: int  # Credit for unused days (kopeks)
+    final_amount: int  # Amount to pay after proration (kopeks)
+    remaining_days: int  # Days remaining in current subscription
+    currency: str = "RUB"
+
+
 class WebhookPayload(BaseModel):
     """YooKassa webhook payload."""
 
