@@ -57,14 +57,14 @@ export default function PricingPage() {
     <>
       <JsonLd data={faqJsonLd} />
 
-      <div className="bg-white">
+      <div className="bg-white dark:bg-gray-900">
         {/* Header */}
-        <section className="bg-gradient-to-b from-primary-50 to-white py-16 sm:py-24">
+        <section className="bg-gradient-to-b from-primary-50 to-white dark:from-gray-800 dark:to-gray-900 py-16 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
               Простые и прозрачные тарифы
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
               Выберите подходящий тариф для ваших задач. Начните бесплатно и
               масштабируйтесь по мере роста.
             </p>
@@ -79,19 +79,19 @@ export default function PricingPage() {
         </section>
 
         {/* FAQ */}
-        <section className="bg-gray-50 py-16 sm:py-24">
+        <section className="bg-gray-50 dark:bg-gray-800 py-16 sm:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+            <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
               Часто задаваемые вопросы
             </h2>
 
             <dl className="mt-12 space-y-8">
               {faqs.map((faq) => (
                 <div key={faq.question}>
-                  <dt className="text-lg font-semibold text-gray-900">
+                  <dt className="text-lg font-semibold text-gray-900 dark:text-white">
                     {faq.question}
                   </dt>
-                  <dd className="mt-2 text-gray-600">{faq.answer}</dd>
+                  <dd className="mt-2 text-gray-600 dark:text-gray-300">{faq.answer}</dd>
                 </div>
               ))}
             </dl>
@@ -101,10 +101,10 @@ export default function PricingPage() {
         {/* CTA */}
         <section className="py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Остались вопросы по тарифам?
             </h2>
-            <p className="mt-4 text-gray-600">
+            <p className="mt-4 text-gray-600 dark:text-gray-300">
               Свяжитесь с нами, и мы поможем выбрать подходящий тариф
             </p>
             <a

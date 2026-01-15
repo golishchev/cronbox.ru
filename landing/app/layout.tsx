@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { JsonLd } from '@/components/JsonLd'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import './globals.css'
 
 const YANDEX_METRIKA_ID = 106267474
@@ -136,14 +137,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ru" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <head>
         <JsonLd data={organizationJsonLd} />
       </head>
       <body className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ThemeProvider>
 
         {/* Yandex.Metrika counter */}
         <Script id="yandex-metrika" strategy="afterInteractive">

@@ -116,7 +116,11 @@
     "profile": "Profile",
     "logout": "Log out",
     "language": "Language",
-    "documentation": "Docs"
+    "documentation": "Docs",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   },
   "dashboard": {
     "title": "Dashboard",

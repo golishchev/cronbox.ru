@@ -126,13 +126,13 @@ export function PricingPlans() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-500" />
       </div>
     )
   }
 
   if (error) {
-    return <div className="text-center py-20 text-red-600">{error}</div>
+    return <div className="text-center py-20 text-red-600 dark:text-red-400">{error}</div>
   }
 
   return (
@@ -148,8 +148,8 @@ export function PricingPlans() {
             className={clsx(
               'relative rounded-2xl border p-8 flex flex-col',
               isFeatured
-                ? 'border-primary-600 bg-primary-50 shadow-lg ring-2 ring-primary-600'
-                : 'border-gray-200 bg-white shadow-sm'
+                ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/30 shadow-lg ring-2 ring-primary-600'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm'
             )}
           >
             {isFeatured && (
@@ -161,29 +161,29 @@ export function PricingPlans() {
             )}
 
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {plan.display_name}
               </h3>
               <div className="mt-4 flex items-baseline justify-center gap-x-1">
                 {isFree ? (
-                  <span className="text-4xl font-bold text-gray-900">0</span>
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">0</span>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold text-gray-900">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
                       {formatPrice(plan.price_monthly)}
                     </span>
-                    <span className="text-gray-600">/мес</span>
+                    <span className="text-gray-600 dark:text-gray-400">/мес</span>
                   </>
                 )}
               </div>
-              <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{plan.description}</p>
             </div>
 
             <ul className="mt-8 space-y-3 flex-1">
               {features.map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">{feature}</span>
+                  <CheckCircle2 className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
                 </li>
               ))}
             </ul>
@@ -194,7 +194,7 @@ export function PricingPlans() {
                 'mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors',
                 isFeatured
                   ? 'bg-primary-600 text-white hover:bg-primary-700'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
               )}
             >
               {getPlanCta(plan)}
@@ -204,31 +204,31 @@ export function PricingPlans() {
       })}
 
       {/* Enterprise plan */}
-      <div className="relative rounded-2xl border p-8 border-gray-200 bg-white shadow-sm flex flex-col">
+      <div className="relative rounded-2xl border p-8 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {enterprisePlan.display_name}
           </h3>
           <div className="mt-4 flex items-baseline justify-center gap-x-1">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
               {enterprisePlan.price}
             </span>
           </div>
-          <p className="mt-2 text-sm text-gray-600">{enterprisePlan.description}</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{enterprisePlan.description}</p>
         </div>
 
         <ul className="mt-8 space-y-3 flex-1">
           {enterprisePlan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
-              <span className="text-sm text-gray-700">{feature}</span>
+              <CheckCircle2 className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
             </li>
           ))}
         </ul>
 
         <a
           href={enterprisePlan.href}
-          className="mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200"
+          className="mt-8 block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
         >
           {enterprisePlan.cta}
         </a>

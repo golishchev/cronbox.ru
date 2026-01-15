@@ -16,11 +16,11 @@ export function DocsSidebar({ activeSection }: DocsSidebarProps) {
     <>
       {/* Mobile section selector */}
       <div className="lg:hidden mb-6">
-        <label className="text-sm font-medium text-gray-700">Раздел</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Раздел</label>
         <select
           value={activeSection}
           onChange={(e) => router.push(`/docs/${e.target.value}`)}
-          className="mt-1 block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-white py-2.5 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         >
           {sections.map((item) => (
             <option key={item.id} value={item.id}>
@@ -33,7 +33,7 @@ export function DocsSidebar({ activeSection }: DocsSidebarProps) {
       {/* Desktop sidebar */}
       <aside className="hidden lg:block w-64 flex-shrink-0">
         <div className="sticky top-24">
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
             Документация API
           </h2>
           <nav className="mt-4 space-y-1">
@@ -44,8 +44,8 @@ export function DocsSidebar({ activeSection }: DocsSidebarProps) {
                 className={clsx(
                   'flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors',
                   activeSection === item.id
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                 )}
               >
                 <item.icon className="h-4 w-4" />

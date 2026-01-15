@@ -48,30 +48,30 @@ export default async function DocsPage({ params }: Props) {
   const nextSection = currentIndex < sections.length - 1 ? sections[currentIndex + 1] : null
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-900">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <div className="lg:flex lg:gap-12">
           <DocsSidebar activeSection={section} />
 
           <main className="flex-1 min-w-0">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-              <Link href="/docs" className="hover:text-primary-600">
+            <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-8">
+              <Link href="/docs" className="hover:text-primary-600 dark:hover:text-primary-400">
                 Документация
               </Link>
               <ChevronRight className="h-4 w-4" />
-              <span className="text-gray-900">{sectionData.name}</span>
+              <span className="text-gray-900 dark:text-white">{sectionData.name}</span>
             </nav>
 
             <SectionComponent />
 
             {/* Next/Prev navigation */}
-            <div className="mt-16 pt-8 border-t border-gray-200">
+            <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between">
                 {prevSection && (
                   <Link
                     href={`/docs/${prevSection.id}`}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                   >
                     &larr; {prevSection.name}
                   </Link>
@@ -80,7 +80,7 @@ export default async function DocsPage({ params }: Props) {
                 {nextSection && (
                   <Link
                     href={`/docs/${nextSection.id}`}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                   >
                     {nextSection.name} &rarr;
                   </Link>

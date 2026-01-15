@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LogOut, User, Menu, Settings, Globe, ChevronDown, Plus, Check, Trash2, BookOpen } from 'lucide-react'
+import { LogOut, User, Menu, Settings, Globe, ChevronDown, Plus, Check, Trash2, BookOpen, Sun, Moon, Monitor } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -47,7 +47,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const { user, updateUser } = useAuthStore()
   const { workspaces, currentWorkspace, setCurrentWorkspace, addWorkspace, removeWorkspace } = useWorkspaceStore()
-  const { toggleSidebar } = useUIStore()
+  const { toggleSidebar, theme, setTheme } = useUIStore()
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -248,6 +248,40 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
           <BookOpen className="h-5 w-5" />
         </Button>
 
+        {/* Theme switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" title={t('header.theme')}>
+              {theme === 'light' && <Sun className="h-5 w-5" />}
+              {theme === 'dark' && <Moon className="h-5 w-5" />}
+              {theme === 'system' && <Monitor className="h-5 w-5" />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => setTheme('light')}
+              className="cursor-pointer"
+            >
+              <Sun className="mr-2 h-4 w-4" />
+              {t('header.themeLight')} {theme === 'light' && <Check className="ml-auto h-4 w-4" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setTheme('dark')}
+              className="cursor-pointer"
+            >
+              <Moon className="mr-2 h-4 w-4" />
+              {t('header.themeDark')} {theme === 'dark' && <Check className="ml-auto h-4 w-4" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setTheme('system')}
+              className="cursor-pointer"
+            >
+              <Monitor className="mr-2 h-4 w-4" />
+              {t('header.themeSystem')} {theme === 'system' && <Check className="ml-auto h-4 w-4" />}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -260,13 +294,13 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
               onClick={() => handleLanguageChange('ru')}
               className="cursor-pointer"
             >
-              Русский {currentLanguage === 'ru' && '✓'}
+              Русский {currentLanguage === 'ru' && <Check className="ml-auto h-4 w-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleLanguageChange('en')}
               className="cursor-pointer"
             >
-              English {currentLanguage === 'en' && '✓'}
+              English {currentLanguage === 'en' && <Check className="ml-auto h-4 w-4" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

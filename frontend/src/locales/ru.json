@@ -116,7 +116,11 @@
     "profile": "Профиль",
     "logout": "Выйти",
     "language": "Язык",
-    "documentation": "Документация"
+    "documentation": "Документация",
+    "theme": "Тема",
+    "themeLight": "Светлая",
+    "themeDark": "Тёмная",
+    "themeSystem": "Системная"
   },
   "dashboard": {
     "title": "Панель управления",

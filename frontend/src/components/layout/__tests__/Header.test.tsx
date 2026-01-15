@@ -74,6 +74,8 @@ describe('Header', () => {
       sidebarCollapsed: false,
       setSidebarCollapsed: vi.fn(),
       toggleSidebar: mockToggleSidebar,
+      theme: 'system',
+      setTheme: vi.fn(),
     })
   })
 
@@ -147,7 +149,7 @@ describe('Header', () => {
     const globeButton = screen.getByTitle('Language')
     await user.click(globeButton)
 
-    expect(screen.getByText('English ✓')).toBeInTheDocument()
+    expect(screen.getByText('English')).toBeInTheDocument()
     expect(screen.getByText('Русский')).toBeInTheDocument()
   })
 

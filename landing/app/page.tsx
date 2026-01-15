@@ -107,14 +107,14 @@ export default function HomePage() {
       <JsonLd data={softwareJsonLd} />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary-50 to-white py-20 sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary-50 to-white dark:from-gray-800 dark:to-gray-900 py-20 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
               Планирование HTTP-запросов{' '}
-              <span className="text-primary-600">по расписанию</span>
+              <span className="text-primary-600 dark:text-primary-400">по расписанию</span>
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
               CronBox - облачный сервис для планирования и автоматического выполнения
               HTTP-запросов. Создавайте cron-задачи, отложенные запросы, отслеживайте
               результаты и получайте уведомления.
@@ -128,7 +128,7 @@ export default function HomePage() {
               </a>
               <Link
                 href="/docs"
-                className="flex items-center gap-2 text-base font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+                className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
               >
                 Документация <ArrowRight className="h-4 w-4" />
               </Link>
@@ -158,7 +158,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
               </pre>
             </div>
           </div>
-          <h2 className="mx-auto mt-16 max-w-4xl text-lg leading-8 text-gray-600 text-center">
+          <h2 className="mx-auto mt-16 max-w-4xl text-lg leading-8 text-gray-600 dark:text-gray-400 text-center">
             Облачное решение, которое работает 24/7 без вашего участия
           </h2>
         </div>
@@ -168,10 +168,10 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
       <section id="features" className="py-20 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
               Все необходимое для автоматизации
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
               Мощные инструменты для планирования и мониторинга HTTP-запросов
             </p>
           </div>
@@ -180,15 +180,15 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
             {features.map((feature) => (
               <div
                 key={feature.name}
-                className="relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow"
+                className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-100">
-                  <feature.icon className="h-6 w-6 text-primary-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/50">
+                  <feature.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
                 </div>
-                <h3 className="mt-6 text-lg font-semibold text-gray-900">
+                <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-white">
                   {feature.name}
                 </h3>
-                <p className="mt-2 text-gray-600">{feature.description}</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -196,13 +196,13 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
       </section>
 
       {/* Use Cases Section */}
-      <section className="bg-gray-50 py-20 sm:py-32">
+      <section className="bg-gray-50 dark:bg-gray-800 py-20 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
               Сценарии использования
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
               CronBox подходит для любых задач автоматизации
             </p>
           </div>
@@ -213,10 +213,10 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-600">
                   <useCase.icon className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="mt-6 text-lg font-semibold text-gray-900">
+                <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-white">
                   {useCase.title}
                 </h3>
-                <p className="mt-2 text-gray-600">{useCase.description}</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">{useCase.description}</p>
               </div>
             ))}
           </div>

@@ -7,6 +7,7 @@ describe('uiStore', () => {
     // Reset store state before each test
     useUIStore.setState({
       sidebarCollapsed: false,
+      theme: 'system',
     })
   })
 
@@ -15,6 +16,12 @@ describe('uiStore', () => {
       const state = useUIStore.getState()
 
       expect(state.sidebarCollapsed).toBe(false)
+    })
+
+    it('should have system theme by default', () => {
+      const state = useUIStore.getState()
+
+      expect(state.theme).toBe('system')
     })
   })
 
@@ -76,6 +83,34 @@ describe('uiStore', () => {
         useUIStore.getState().toggleSidebar()
       })
       expect(useUIStore.getState().sidebarCollapsed).toBe(true)
+    })
+  })
+
+  describe('setTheme', () => {
+    it('should set theme to light', () => {
+      act(() => {
+        useUIStore.getState().setTheme('light')
+      })
+
+      expect(useUIStore.getState().theme).toBe('light')
+    })
+
+    it('should set theme to dark', () => {
+      act(() => {
+        useUIStore.getState().setTheme('dark')
+      })
+
+      expect(useUIStore.getState().theme).toBe('dark')
+    })
+
+    it('should set theme to system', () => {
+      useUIStore.setState({ theme: 'dark' })
+
+      act(() => {
+        useUIStore.getState().setTheme('system')
+      })
+
+      expect(useUIStore.getState().theme).toBe('system')
     })
   })
 })

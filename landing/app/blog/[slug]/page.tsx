@@ -54,7 +54,7 @@ function renderInline(text: string): React.ReactNode {
       return (
         <code
           key={i}
-          className="px-1.5 py-0.5 bg-gray-100 rounded text-sm font-mono text-gray-800"
+          className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-gray-800 dark:text-gray-200"
         >
           {part.slice(1, -1)}
         </code>
@@ -77,7 +77,7 @@ function renderInline(text: string): React.ReactNode {
           <a
             key={`link-${match.index}`}
             href={match[2]}
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
             target={match[2].startsWith('http') ? '_blank' : undefined}
             rel={match[2].startsWith('http') ? 'noopener noreferrer' : undefined}
           >
@@ -107,7 +107,7 @@ function renderContent(content: string) {
       elements.push(
         <ul key={elements.length} className="list-disc pl-6 my-4 space-y-2">
           {currentList.map((item, i) => (
-            <li key={i} className="text-gray-700">
+            <li key={i} className="text-gray-700 dark:text-gray-300">
               {renderInline(item)}
             </li>
           ))}
@@ -123,24 +123,24 @@ function renderContent(content: string) {
       const rows = currentTable.slice(2)
       elements.push(
         <div key={elements.length} className="my-6 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 {headers.map((header, i) => (
                   <th
                     key={i}
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
                   >
                     {header.trim()}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {rows.map((row, i) => (
-                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
                   {row.map((cell, j) => (
-                    <td key={j} className="px-4 py-3 text-sm text-gray-700">
+                    <td key={j} className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                       {renderInline(cell.trim())}
                     </td>
                   ))}
@@ -196,7 +196,7 @@ function renderContent(content: string) {
       elements.push(
         <h2
           key={elements.length}
-          className="text-2xl font-bold text-gray-900 mt-10 mb-4"
+          className="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4"
         >
           {line.slice(3)}
         </h2>
@@ -209,7 +209,7 @@ function renderContent(content: string) {
       elements.push(
         <h3
           key={elements.length}
-          className="text-xl font-semibold text-gray-900 mt-8 mb-3"
+          className="text-xl font-semibold text-gray-900 dark:text-white mt-8 mb-3"
         >
           {line.slice(4)}
         </h3>
@@ -234,7 +234,7 @@ function renderContent(content: string) {
     }
 
     elements.push(
-      <p key={elements.length} className="text-gray-700 my-4 leading-relaxed">
+      <p key={elements.length} className="text-gray-700 dark:text-gray-300 my-4 leading-relaxed">
         {renderInline(line)}
       </p>
     )
@@ -285,18 +285,18 @@ export default async function BlogPostPage({ params }: Props) {
     <>
       <JsonLd data={articleJsonLd} />
 
-      <article className="py-12 sm:py-16">
+      <article className="py-12 sm:py-16 bg-white dark:bg-gray-900">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 mb-8"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
             Все статьи
           </Link>
 
           <header className="mb-10">
-            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 {new Date(post.date).toLocaleDateString('ru-RU', {
@@ -311,17 +311,17 @@ export default async function BlogPostPage({ params }: Props) {
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
               {post.title}
             </h1>
 
-            <p className="mt-4 text-lg text-gray-600">{post.description}</p>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">{post.description}</p>
 
             <div className="mt-6 flex flex-wrap gap-2">
               {post.keywords.map((keyword) => (
                 <span
                   key={keyword}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
                 >
                   {keyword}
                 </span>

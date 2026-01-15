@@ -7,7 +7,7 @@ html {
 }
 
 body {
-  @apply antialiased text-gray-900 bg-white;
+  @apply antialiased text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-900;
 }
 
 /* Code blocks */
@@ -26,15 +26,15 @@ code[class*="language-"] {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-gray-100 dark:bg-gray-800;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  @apply bg-gray-300 rounded-full dark:bg-gray-600;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-gray-400 dark:bg-gray-500;
 }
 
 /* Prism.js theme overrides */
