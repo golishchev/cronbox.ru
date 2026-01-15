@@ -323,6 +323,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
         {plans.map((plan) => {
           const price = billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly
           const isCurrentPlan = plan.id === currentPlanId
+          const isScheduledPlan = subscription?.scheduled_plan_id === plan.id
           const isFree = plan.price_monthly === 0
 
           return (
@@ -405,6 +406,10 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 {isCurrentPlan ? (
                   <Button className="w-full" disabled>
                     {t('billing.currentPlan')}
+                  </Button>
+                ) : isScheduledPlan ? (
+                  <Button className="w-full" variant="secondary" disabled>
+                    {t('billing.scheduled')}
                   </Button>
                 ) : isFree ? (
                   <Button className="w-full" variant="outline" disabled>

@@ -382,7 +382,8 @@
     "scheduledChangeNotice": "Запланирован переход на тариф {{plan}} с {{date}}",
     "scheduleChange": "Запланировать изменение",
     "cancelScheduledChange": "Отменить",
-    "alreadyOnPlan": "Вы уже на этом тарифе"
+    "alreadyOnPlan": "Вы уже на этом тарифе",
+    "scheduled": "Запланировано"
   },
   "taskForm": {
     "name": "Название",

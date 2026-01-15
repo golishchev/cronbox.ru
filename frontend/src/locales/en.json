@@ -376,7 +376,8 @@
     "scheduledChangeNotice": "Scheduled switch to {{plan}} on {{date}}",
     "scheduleChange": "Schedule Change",
     "cancelScheduledChange": "Cancel",
-    "alreadyOnPlan": "You are already on this plan"
+    "alreadyOnPlan": "You are already on this plan",
+    "scheduled": "Scheduled"
   },
   "taskForm": {
     "name": "Name",
