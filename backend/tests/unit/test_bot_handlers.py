@@ -156,27 +156,29 @@ class TestProcessLinkCode:
         mock_user.email = "test@example.com"
         mock_user.name = "Test User"
         mock_user.id = "test-uuid"
+        mock_user.language = "ru"
 
-        with patch("app.bot.handlers.AsyncSessionLocal") as mock_session_class:
-            mock_db = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_db
-            mock_session_class.return_value.__aexit__.return_value = None
+        with patch("app.bot.handlers.get_user_language", new_callable=AsyncMock, return_value="ru"):
+            with patch("app.bot.handlers.AsyncSessionLocal") as mock_session_class:
+                mock_db = AsyncMock()
+                mock_session_class.return_value.__aenter__.return_value = mock_db
+                mock_session_class.return_value.__aexit__.return_value = None
 
-            with patch("app.bot.handlers.AuthService") as mock_auth_class:
-                mock_auth = MagicMock()
-                mock_auth.link_telegram_by_code = AsyncMock(return_value=mock_user)
-                mock_auth_class.return_value = mock_auth
+                with patch("app.bot.handlers.AuthService") as mock_auth_class:
+                    mock_auth = MagicMock()
+                    mock_auth.link_telegram_by_code = AsyncMock(return_value=mock_user)
+                    mock_auth_class.return_value = mock_auth
 
-                await process_link_code(mock_message, "123456")
+                    await process_link_code(mock_message, "123456")
 
-                mock_auth.link_telegram_by_code.assert_called_once_with(
-                    code="123456",
-                    telegram_id=12345,
-                    telegram_username="testuser",
-                )
-                mock_message.answer.assert_called_once()
-                call_args = mock_message.answer.call_args
-                assert "успешно привязан" in call_args[0][0]
+                    mock_auth.link_telegram_by_code.assert_called_once_with(
+                        code="123456",
+                        telegram_id=12345,
+                        telegram_username="testuser",
+                    )
+                    mock_message.answer.assert_called_once()
+                    call_args = mock_message.answer.call_args
+                    assert "успешно привязан" in call_args[0][0]
 
     @pytest.mark.asyncio
     async def test_process_link_code_failure(self):
@@ -224,6 +226,7 @@ class TestCmdStatus:
         mock_user.name = "Test User"
         mock_user.is_active = True
         mock_user.email_verified = True
+        mock_user.language = "ru"
 
         with patch("app.bot.handlers.AsyncSessionLocal") as mock_session_class:
             mock_db = AsyncMock()
@@ -310,6 +313,7 @@ class TestCmdUnlink:
 
         mock_user = MagicMock()
         mock_user.id = "test-uuid"
+        mock_user.language = "ru"
 
         with patch("app.bot.handlers.AsyncSessionLocal") as mock_session_class:
             mock_db = AsyncMock()

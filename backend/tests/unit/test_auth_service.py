@@ -450,9 +450,12 @@ class TestAuthServicePasswordReset:
             with patch("app.services.auth.redis_client") as mock_redis:
                 mock_redis.set = AsyncMock()
 
-                token = await service.request_password_reset("test@example.com")
+                result = await service.request_password_reset("test@example.com")
 
+                assert result is not None
+                token, user = result
                 assert token is not None
+                assert user == mock_user
                 mock_redis.set.assert_called_once()
 
     @pytest.mark.asyncio
