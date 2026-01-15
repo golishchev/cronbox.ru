@@ -14,6 +14,7 @@ from app.core.redis import redis_client
 from app.models.payment import Payment, PaymentStatus
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
+from app.models.user import User
 from app.models.workspace import Workspace
 
 logger = structlog.get_logger()
@@ -166,6 +167,14 @@ class BillingService:
             logger.error("Cannot create payment for free plan")
             return None
 
+        # Get user for email (required for receipt)
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            logger.error("User not found", user_id=user_id)
+            return None
+        user_email = user.email
+
         # Get user's first workspace for payment association
         workspace_result = await db.execute(
             select(Workspace)
@@ -227,6 +236,24 @@ class BillingService:
                             "billing_period": billing_period,
                         },
                         "save_payment_method": True,
+                        "receipt": {
+                            "customer": {
+                                "email": user_email,
+                            },
+                            "items": [
+                                {
+                                    "description": f"Подписка {plan.display_name} ({billing_period})",
+                                    "quantity": "1",
+                                    "amount": {
+                                        "value": amount_value,
+                                        "currency": "RUB",
+                                    },
+                                    "vat_code": 1,  # Без НДС
+                                    "payment_mode": "full_payment",
+                                    "payment_subject": "service",
+                                }
+                            ],
+                        },
                     },
                     timeout=30.0,
                 )
@@ -247,8 +274,17 @@ class BillingService:
                 )
                 return payment
 
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "YooKassa API error",
+                error=str(e),
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+            )
+            await db.rollback()
+            return None
         except Exception as e:
-            logger.error("Failed to create YooKassa payment", error=str(e))
+            logger.error("Failed to create YooKassa payment", error=str(e), error_type=type(e).__name__)
             await db.rollback()
             return None
 
