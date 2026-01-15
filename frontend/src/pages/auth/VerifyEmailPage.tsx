@@ -45,7 +45,9 @@ export function VerifyEmailPage({ token, onNavigate }: VerifyEmailPageProps) {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 text-2xl font-bold">
-              <Clock className="h-8 w-8" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
               <span>CronBox</span>
             </div>
           </div>

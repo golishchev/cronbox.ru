@@ -1,55 +1,56 @@
-# Landing Dockerfile - Multi-stage build
-# Security-hardened for production use
+# Landing Dockerfile - Next.js Multi-stage build
+# Optimized for production with standalone output
 
-# Build stage
-FROM node:20-alpine AS builder
-
+# Dependencies stage
+FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with cache mount (survives image prune)
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+# Install dependencies
+RUN npm ci
 
-# Copy source code
-COPY . .
-
-# Build arguments for environment variables (baked into the build)
-ARG VITE_API_URL=https://api.cronbox.ru/v1
-
-# Build the application with environment variable
-RUN VITE_API_URL=${VITE_API_URL} npm run build
-
-# Production stage - using serve instead of nginx
-FROM node:20-alpine
-
-# Security: Add labels
-LABEL maintainer="CronBox Team"
-LABEL version="1.0"
-LABEL description="CronBox Landing"
-
-# Install serve globally
-RUN npm install -g serve@14
-
+# Builder stage
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy built files (node user already exists with uid 1000)
-COPY --from=builder --chown=node:node /app/dist /app
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# Create health endpoint file
-RUN echo "OK" > /app/health && chown node:node /app/health
+# Environment variables for build
+ARG NEXT_PUBLIC_API_URL=https://api.cronbox.ru/v1
 
-# Security: Switch to non-root user
+# Build Next.js app with standalone output
+RUN NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} npm run build
+
+# Production stage
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+# Security labels
+LABEL maintainer="CronBox Team"
+LABEL version="2.0"
+LABEL description="CronBox Landing (Next.js)"
+
+# Environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Copy built files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Security: Non-root user (node user already exists in alpine with uid 1000)
 USER node
 
-# Expose port
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Run serve with SPA mode (-s) on port 3000
-CMD ["serve", "-s", "-l", "3000"]
+CMD ["node", "server.js"]

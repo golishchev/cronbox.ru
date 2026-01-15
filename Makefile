@@ -62,6 +62,7 @@ stop:
 	-pkill -f "app.cli bot" 2>/dev/null || true
 	-pkill -f "uvicorn" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
+	-pkill -f "next dev" 2>/dev/null || true
 	@sleep 1
 	@echo "Stopping Docker containers..."
 	-docker-compose down
