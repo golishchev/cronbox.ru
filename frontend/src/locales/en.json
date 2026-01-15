@@ -72,6 +72,13 @@
     "goToDashboard": "Go to Dashboard",
     "loginSuccess": "You have successfully signed in",
     "loginFailed": "Sign in failed",
+    "emailVerificationBanner": {
+      "title": "Verify your email",
+      "message": "To create workspaces and subscribe to plans, please verify your email. Check your inbox or resend the verification email.",
+      "resend": "Resend",
+      "sending": "Sending...",
+      "sent": "Email sent"
+    },
     "otp": {
       "title": "Sign in with Email",
       "enterEmail": "Enter your email to receive a login code",

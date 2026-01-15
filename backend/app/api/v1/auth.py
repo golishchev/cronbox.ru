@@ -40,14 +40,43 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def register(data: RegisterRequest, db: DB):
-    """Register a new user account."""
+async def register(data: RegisterRequest, db: DB, background_tasks: BackgroundTasks):
+    """Register a new user account and send verification email."""
     auth_service = AuthService(db)
     user, tokens = await auth_service.register(
         email=data.email,
         password=data.password,
         name=data.name,
     )
+
+    # Auto-send verification email
+    token = await auth_service.send_email_verification(user)
+    verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+
+    async def send_verification_email():
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Добро пожаловать в CronBox!</h2>
+            <p>Здравствуйте, {user.name}!</p>
+            <p>Спасибо за регистрацию. Для подтверждения вашего email перейдите по ссылке:</p>
+            <a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
+                Подтвердить email
+            </a>
+            <p style="margin-top: 16px; color: #666;">
+                Или скопируйте ссылку: {verification_url}
+            </p>
+            <p style="margin-top: 24px; color: #666; font-size: 12px;">
+                Ссылка действительна 24 часа.
+            </p>
+        </div>
+        """
+        await email_service.send_email(
+            to=user.email,
+            subject="[CronBox] Подтверждение email",
+            html=html,
+        )
+
+    background_tasks.add_task(send_verification_email)
 
     return RegisterResponse(
         user=UserResponse.model_validate(user),

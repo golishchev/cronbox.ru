@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { createWorkspace } from '@/api/workspaces'
+import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
 
 export function NoWorkspaceState() {
@@ -45,8 +46,8 @@ export function NoWorkspaceState() {
         description: t('workspace.createdDescription', { name: workspace.name }),
         variant: 'success',
       })
-    } catch (err: any) {
-      setCreateError(err.response?.data?.detail || 'Failed to create workspace')
+    } catch (err) {
+      setCreateError(getErrorMessage(err))
     } finally {
       setCreating(false)
     }

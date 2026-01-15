@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, UserPlan, get_db
+from app.api.deps import CurrentUser, UserPlan, VerifiedUser, get_db
 from app.schemas.billing import (
     CancelSubscriptionRequest,
     CreatePaymentRequest,
@@ -111,10 +111,10 @@ async def preview_price(
 @router.post("/subscribe", response_model=PaymentResponse)
 async def create_subscription_payment(
     request: CreatePaymentRequest,
-    current_user: CurrentUser,
+    current_user: VerifiedUser,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a payment to subscribe to a plan."""
+    """Create a payment to subscribe to a plan. Requires verified email."""
     # Check if YooKassa is configured
     if not billing_service.is_configured:
         raise HTTPException(
@@ -162,12 +162,13 @@ async def create_subscription_payment(
 @router.post("/schedule-plan-change", response_model=SubscriptionResponse)
 async def schedule_plan_change(
     request: CreatePaymentRequest,
-    current_user: CurrentUser,
+    current_user: VerifiedUser,
     db: AsyncSession = Depends(get_db),
 ):
     """Schedule a plan change for the end of current billing period.
 
     Used for downgrades and yearly→monthly transitions.
+    Requires verified email.
     """
     # Verify plan exists
     plan = await billing_service.get_plan_by_id(db, request.plan_id)

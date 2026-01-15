@@ -2,7 +2,7 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import DB, CurrentUser, CurrentWorkspace, UserPlan
+from app.api.deps import DB, CurrentUser, CurrentWorkspace, UserPlan, VerifiedUser
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.schemas.workspace import (
     WorkspaceCreate,
@@ -35,11 +35,11 @@ async def list_workspaces(
 @router.post("", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     data: WorkspaceCreate,
-    current_user: CurrentUser,
+    current_user: VerifiedUser,
     user_plan: UserPlan,
     db: DB,
 ):
-    """Create a new workspace."""
+    """Create a new workspace. Requires verified email."""
     workspace_repo = WorkspaceRepository(db)
 
     # Check if slug is unique

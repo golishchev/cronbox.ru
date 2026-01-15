@@ -62,10 +62,25 @@ apiClient.interceptors.response.use(
 
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    return error.response?.data?.detail || error.message || 'An error occurred'
+    const detail = error.response?.data?.detail
+    // Handle structured error objects like {error: "code", message: "text"}
+    if (detail && typeof detail === 'object' && 'message' in detail) {
+      return detail.message
+    }
+    return detail || error.message || 'An error occurred'
   }
   if (error instanceof Error) {
     return error.message
   }
   return 'An unexpected error occurred'
+}
+
+export function getErrorCode(error: unknown): string | null {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail
+    if (detail && typeof detail === 'object' && 'error' in detail) {
+      return detail.error
+    }
+  }
+  return null
 }

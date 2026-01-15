@@ -61,6 +61,21 @@ async def get_current_active_superuser(
     return current_user
 
 
+async def get_verified_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Get current user and verify their email is verified."""
+    if not current_user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "email_not_verified",
+                "message": "Please verify your email address to continue",
+            },
+        )
+    return current_user
+
+
 async def get_workspace(
     workspace_id: Annotated[UUID, Path(description="Workspace ID")],
     current_user: Annotated[User, Depends(get_current_user)],
@@ -177,6 +192,7 @@ async def require_active_subscription(
 
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_user)]
+VerifiedUser = Annotated[User, Depends(get_verified_user)]
 CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentWorkspace = Annotated[Workspace, Depends(get_workspace)]
 ActiveSubscriptionWorkspace = Annotated[Workspace, Depends(require_active_subscription)]
