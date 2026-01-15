@@ -16,10 +16,16 @@ export function VerifyEmailPage({ token, onNavigate }: VerifyEmailPageProps) {
   const { t } = useTranslation()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState('')
-  const { updateUser } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
 
   useEffect(() => {
     const verify = async () => {
+      // If user is already logged in and email is verified, show success immediately
+      if (user?.email_verified) {
+        setStatus('success')
+        return
+      }
+
       if (!token) {
         setStatus('error')
         setError(t('auth.verifyEmailNoToken'))
@@ -27,8 +33,8 @@ export function VerifyEmailPage({ token, onNavigate }: VerifyEmailPageProps) {
       }
 
       try {
-        const user = await verifyEmail(token)
-        updateUser(user)
+        const verifiedUser = await verifyEmail(token)
+        updateUser(verifiedUser)
         setStatus('success')
       } catch (err) {
         setStatus('error')
@@ -37,7 +43,7 @@ export function VerifyEmailPage({ token, onNavigate }: VerifyEmailPageProps) {
     }
 
     verify()
-  }, [token, updateUser, t])
+  }, [token, user?.email_verified, updateUser, t])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-4">
