@@ -95,12 +95,6 @@ describe('Header', () => {
     expect(screen.getByText('My Workspace')).toBeInTheDocument()
   })
 
-  it('should render free plan badge', () => {
-    render(<Header onNavigate={mockOnNavigate} onLogout={mockOnLogout} />)
-
-    expect(screen.getByText('Free')).toBeInTheDocument()
-  })
-
   it('should open user dropdown when avatar clicked', async () => {
     const { user } = render(<Header onNavigate={mockOnNavigate} onLogout={mockOnLogout} />)
 

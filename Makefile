@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db
 
 # Start all dev services (backend + frontend + landing in background)
 dev: infra
@@ -68,13 +68,18 @@ stop:
 	-docker-compose down
 	@echo "All services stopped"
 
+# Create test database if not exists
+test-db: infra
+	@docker exec cronbox-postgres psql -U cronbox -tc "SELECT 1 FROM pg_database WHERE datname = 'cronbox_test'" | grep -q 1 || \
+		docker exec cronbox-postgres psql -U cronbox -c "CREATE DATABASE cronbox_test;"
+
 # Run all tests
-test:
+test: test-db
 	cd backend && uv run pytest tests -v
 	cd frontend && npm run test
 
 # Run tests with coverage
-test-cov:
+test-cov: test-db
 	cd backend && uv run pytest tests -v --cov=app --cov-report=term-missing
 	cd frontend && npm run test:coverage
 

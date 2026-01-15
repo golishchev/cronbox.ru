@@ -180,6 +180,8 @@ testI18n.use(initReactI18next).init({
         'profile.emailVerified': 'Verified',
         'profile.emailNotVerified': 'Not verified',
         'profile.telegramNotConnected': 'Not connected',
+        'profile.telegramNotConnectedDesc': 'Connect your Telegram account to receive notifications about task executions, failures, and recoveries.',
+        'profile.connectTelegram': 'Connect Telegram',
         'profile.russian': 'Russian',
         'profile.english': 'English',
         'profile.saveChanges': 'Save Changes',

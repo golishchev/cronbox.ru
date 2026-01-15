@@ -18,8 +18,6 @@ vi.mock('../client', () => ({
 }))
 
 describe('billing API', () => {
-  const workspaceId = 'workspace-1'
-
   const mockPlan = {
     id: 'pro',
     name: 'pro',
@@ -41,13 +39,15 @@ describe('billing API', () => {
 
   const mockSubscription = {
     id: 'sub-1',
-    workspace_id: workspaceId,
+    user_id: 'user-1',
     plan_id: 'pro',
     status: 'active',
     current_period_start: '2024-01-01T00:00:00Z',
     current_period_end: '2024-02-01T00:00:00Z',
     cancel_at_period_end: false,
     cancelled_at: null,
+    scheduled_plan_id: null,
+    scheduled_billing_period: null,
   }
 
   beforeEach(() => {
@@ -65,7 +65,7 @@ describe('billing API', () => {
 
       const result = await getPlans()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/plans')
+      expect(apiClient.get).toHaveBeenCalledWith('/billing/plans')
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBe(3)
       expect(result[0].id).toBeDefined()
@@ -74,12 +74,12 @@ describe('billing API', () => {
   })
 
   describe('getSubscription', () => {
-    it('should return subscription for workspace', async () => {
+    it('should return subscription for user', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: mockSubscription })
 
-      const result = await getSubscription(workspaceId)
+      const result = await getSubscription()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/workspaces/workspace-1/subscription')
+      expect(apiClient.get).toHaveBeenCalledWith('/billing/subscription')
       expect(result).not.toBeNull()
       expect(result?.id).toBeDefined()
       expect(result?.status).toBeDefined()
@@ -89,7 +89,7 @@ describe('billing API', () => {
     it('should return null when no subscription', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: null })
 
-      const result = await getSubscription(workspaceId)
+      const result = await getSubscription()
 
       expect(result).toBeNull()
     })
@@ -100,7 +100,7 @@ describe('billing API', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: {
           id: 'payment-123',
-          workspace_id: workspaceId,
+          workspace_id: 'workspace-1',
           amount: 990,
           currency: 'RUB',
           status: 'pending',
@@ -111,9 +111,9 @@ describe('billing API', () => {
         },
       })
 
-      const result = await createPayment(workspaceId, 'pro', 'monthly')
+      const result = await createPayment('pro', 'monthly')
 
-      expect(apiClient.post).toHaveBeenCalledWith('/workspaces/workspace-1/subscribe', {
+      expect(apiClient.post).toHaveBeenCalledWith('/billing/subscribe', {
         plan_id: 'pro',
         billing_period: 'monthly',
         return_url: undefined,
@@ -127,7 +127,7 @@ describe('billing API', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: {
           id: 'payment-124',
-          workspace_id: workspaceId,
+          workspace_id: 'workspace-1',
           amount: 9900,
           currency: 'RUB',
           status: 'pending',
@@ -138,9 +138,9 @@ describe('billing API', () => {
         },
       })
 
-      const result = await createPayment(workspaceId, 'pro', 'yearly')
+      const result = await createPayment('pro', 'yearly')
 
-      expect(apiClient.post).toHaveBeenCalledWith('/workspaces/workspace-1/subscribe', {
+      expect(apiClient.post).toHaveBeenCalledWith('/billing/subscribe', {
         plan_id: 'pro',
         billing_period: 'yearly',
         return_url: undefined,
@@ -152,7 +152,7 @@ describe('billing API', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: {
           id: 'payment-125',
-          workspace_id: workspaceId,
+          workspace_id: 'workspace-1',
           amount: 990,
           currency: 'RUB',
           status: 'pending',
@@ -163,9 +163,9 @@ describe('billing API', () => {
         },
       })
 
-      await createPayment(workspaceId, 'pro', 'monthly', 'https://cronbox.ru/billing')
+      await createPayment('pro', 'monthly', 'https://cronbox.ru/billing')
 
-      expect(apiClient.post).toHaveBeenCalledWith('/workspaces/workspace-1/subscribe', {
+      expect(apiClient.post).toHaveBeenCalledWith('/billing/subscribe', {
         plan_id: 'pro',
         billing_period: 'monthly',
         return_url: 'https://cronbox.ru/billing',
@@ -177,9 +177,9 @@ describe('billing API', () => {
     it('should cancel subscription at period end', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
 
-      await expect(cancelSubscription(workspaceId, false)).resolves.not.toThrow()
+      await expect(cancelSubscription(false)).resolves.not.toThrow()
 
-      expect(apiClient.post).toHaveBeenCalledWith('/workspaces/workspace-1/subscription/cancel', {
+      expect(apiClient.post).toHaveBeenCalledWith('/billing/subscription/cancel', {
         immediately: false,
       })
     })
@@ -187,9 +187,9 @@ describe('billing API', () => {
     it('should cancel subscription immediately', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
 
-      await expect(cancelSubscription(workspaceId, true)).resolves.not.toThrow()
+      await expect(cancelSubscription(true)).resolves.not.toThrow()
 
-      expect(apiClient.post).toHaveBeenCalledWith('/workspaces/workspace-1/subscription/cancel', {
+      expect(apiClient.post).toHaveBeenCalledWith('/billing/subscription/cancel', {
         immediately: true,
       })
     })
@@ -201,7 +201,7 @@ describe('billing API', () => {
         data: [
           {
             id: 'payment-1',
-            workspace_id: workspaceId,
+            workspace_id: 'workspace-1',
             amount: 990,
             currency: 'RUB',
             status: 'succeeded',
@@ -212,9 +212,9 @@ describe('billing API', () => {
         ],
       })
 
-      const result = await getPaymentHistory(workspaceId)
+      const result = await getPaymentHistory()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/workspaces/workspace-1/payments', {
+      expect(apiClient.get).toHaveBeenCalledWith('/billing/payments', {
         params: { limit: 20, offset: 0 },
       })
       expect(Array.isArray(result)).toBe(true)
@@ -225,9 +225,9 @@ describe('billing API', () => {
     it('should support pagination', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
 
-      await getPaymentHistory(workspaceId, 50, 100)
+      await getPaymentHistory(50, 100)
 
-      expect(apiClient.get).toHaveBeenCalledWith('/workspaces/workspace-1/payments', {
+      expect(apiClient.get).toHaveBeenCalledWith('/billing/payments', {
         params: { limit: 50, offset: 100 },
       })
     })

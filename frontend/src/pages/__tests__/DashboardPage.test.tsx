@@ -14,6 +14,7 @@ vi.mock('@/api/workspaces', () => ({
 
 vi.mock('@/api/executions', () => ({
   getExecutions: vi.fn(),
+  getDailyExecutionStats: vi.fn(),
 }))
 
 // Mock workspaceStore
@@ -101,6 +102,11 @@ describe('DashboardPage', () => {
       per_page: 10,
       total_pages: 1,
     })
+    vi.mocked(executionsApi.getDailyExecutionStats).mockResolvedValue([
+      { date: '2024-01-01', success: 10, failed: 2 },
+      { date: '2024-01-02', success: 15, failed: 1 },
+      { date: '2024-01-03', success: 12, failed: 3 },
+    ])
   })
 
   it('should render loading skeleton when loading', () => {

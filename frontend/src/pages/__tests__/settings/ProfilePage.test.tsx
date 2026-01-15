@@ -93,7 +93,7 @@ describe('ProfilePage', () => {
   it('should show telegram not connected when no telegram_id', () => {
     render(<ProfilePage onNavigate={mockOnNavigate} />)
 
-    expect(screen.getByText('Not connected')).toBeInTheDocument()
+    expect(screen.getByText('Connect Telegram')).toBeInTheDocument()
   })
 
   it('should disable save button when no changes', () => {

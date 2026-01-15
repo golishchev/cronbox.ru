@@ -146,22 +146,4 @@ describe('BillingPage', () => {
       expect(billingApi.getPaymentHistory).toHaveBeenCalled()
     })
   })
-
-  it('should handle no workspace', async () => {
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      currentWorkspace: null,
-      workspaces: [],
-      setWorkspaces: vi.fn(),
-      setCurrentWorkspace: vi.fn(),
-      addWorkspace: vi.fn(),
-      updateWorkspace: vi.fn(),
-      removeWorkspace: vi.fn(),
-      clearWorkspaces: vi.fn(),
-    })
-
-    render(<BillingPage onNavigate={mockOnNavigate} />)
-
-    // Should not call APIs without workspace
-    expect(billingApi.getPlans).not.toHaveBeenCalled()
-  })
 })

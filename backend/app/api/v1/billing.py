@@ -115,14 +115,7 @@ async def create_subscription_payment(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a payment to subscribe to a plan. Requires verified email."""
-    # Check if YooKassa is configured
-    if not billing_service.is_configured:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Payment system is not configured",
-        )
-
-    # Analyze the plan change
+    # Analyze the plan change first (validation before payment system check)
     subscription = await billing_service.get_user_subscription(db, current_user.id)
     analysis = await billing_service._analyze_plan_change(
         db, subscription, request.plan_id, request.billing_period
@@ -140,6 +133,13 @@ async def create_subscription_payment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This plan change requires scheduling. Use /schedule-plan-change endpoint.",
+        )
+
+    # Check if YooKassa is configured (only after validation passes)
+    if not billing_service.is_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Payment system is not configured",
         )
 
     payment = await billing_service.create_payment(
