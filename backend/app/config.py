@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # Frontend URL (for email links)
     frontend_url: str = "http://localhost:3000"
 
+    # API URL (for email links that need backend redirects)
+    api_url: str = "http://localhost:8000"
+
     # API
     api_prefix: str = "/v1"
 

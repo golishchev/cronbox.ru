@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, status
+from fastapi.responses import RedirectResponse
 
 from app.api.deps import DB, CurrentUser
 from app.config import settings
@@ -52,7 +53,8 @@ async def register(data: RegisterRequest, db: DB, background_tasks: BackgroundTa
 
     # Auto-send verification email
     token = await auth_service.send_email_verification(user)
-    verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+    # Use API redirect URL to avoid hash fragment being stripped by email clients
+    verification_url = f"{settings.api_url}/v1/auth/verify-email?token={token}"
     lang = user.language or "ru"
 
     async def send_verification_email():
@@ -224,7 +226,8 @@ async def send_verification_email(
     token = await auth_service.send_email_verification(current_user)
 
     # Send email in background
-    verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+    # Use API redirect URL to avoid hash fragment being stripped by email clients
+    verification_url = f"{settings.api_url}/v1/auth/verify-email?token={token}"
     lang = current_user.language or "ru"
 
     async def send_email():
@@ -251,6 +254,18 @@ async def send_verification_email(
         )
 
     background_tasks.add_task(send_email)
+
+
+@router.get("/verify-email")
+async def verify_email_redirect(token: str):
+    """Redirect from email link to frontend verification page.
+
+    This endpoint exists because hash-based URLs (with #) in emails
+    often get truncated by email clients. This provides a clean URL
+    that redirects to the frontend with the proper hash fragment.
+    """
+    frontend_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+    return RedirectResponse(url=frontend_url, status_code=302)
 
 
 @router.post("/verify-email", response_model=UserResponse)
