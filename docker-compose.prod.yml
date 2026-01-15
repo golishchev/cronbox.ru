@@ -130,6 +130,7 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
       CORS_ORIGINS: ${CORS_ORIGINS:-["https://cronbox.ru","https://cp.cronbox.ru","https://api.cronbox.ru"]}
+      FRONTEND_URL: ${FRONTEND_URL:-https://cp.cronbox.ru}
     command: >
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
