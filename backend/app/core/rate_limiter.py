@@ -125,6 +125,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/v1/auth/register": settings.auth_rate_limit_register,
             "/v1/auth/forgot-password": settings.auth_rate_limit_password_reset,
             "/v1/auth/reset-password": settings.auth_rate_limit_password_reset,
+            "/v1/auth/send-verification": settings.auth_rate_limit_send_verification,
         }
 
         # Create rate limiters for auth endpoints

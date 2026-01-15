@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ defau
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
 const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })))
 const OTPLoginPage = lazy(() => import('@/pages/auth/OTPLoginPage').then(m => ({ default: m.OTPLoginPage })))
+const EmailVerificationRequired = lazy(() => import('@/pages/auth/EmailVerificationRequired').then(m => ({ default: m.EmailVerificationRequired })))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const CronTasksPage = lazy(() => import('@/pages/cron/CronTasksPage').then(m => ({ default: m.CronTasksPage })))
 const DelayedTasksPage = lazy(() => import('@/pages/delayed/DelayedTasksPage').then(m => ({ default: m.DelayedTasksPage })))
@@ -42,7 +43,7 @@ function PageLoader() {
 }
 
 function App() {
-  const { isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore()
+  const { user, isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore()
   const { setWorkspaces, setCurrentWorkspace, currentWorkspace } = useWorkspaceStore()
   const [route, setRoute] = useState<Route>('login')
   const [verifyEmailToken, setVerifyEmailToken] = useState<string>('')
@@ -187,6 +188,23 @@ function App() {
       <>
         <Suspense fallback={<PageLoader />}>
           {renderAuthPage()}
+        </Suspense>
+        <Toaster />
+      </>
+    )
+  }
+
+  // Block access if email is not verified
+  if (user && !user.email_verified) {
+    const handleLogout = () => {
+      logout()
+      navigate('login')
+    }
+
+    return (
+      <>
+        <Suspense fallback={<PageLoader />}>
+          <EmailVerificationRequired onLogout={handleLogout} />
         </Suspense>
         <Toaster />
       </>

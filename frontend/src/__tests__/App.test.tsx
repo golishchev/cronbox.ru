@@ -148,4 +148,38 @@ describe('App', () => {
       expect(mockLogout).toHaveBeenCalled()
     })
   })
+
+  it('should show email verification required screen for unverified users', async () => {
+    vi.mocked(useAuthStore).mockReturnValue({
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        name: 'Test User',
+        is_superuser: false,
+        is_active: true,
+        email_verified: false,
+        telegram_username: null,
+        preferred_language: 'en',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: mockLogout,
+      setTokens: vi.fn(),
+      updateUser: vi.fn(),
+      clearAuth: vi.fn(),
+      setUser: mockSetUser,
+      setLoading: mockSetLoading,
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      // i18n keys are shown in tests
+      expect(screen.getByText('auth.emailVerificationRequired.title')).toBeInTheDocument()
+      expect(screen.getByText('test@example.com')).toBeInTheDocument()
+    })
+  })
 })

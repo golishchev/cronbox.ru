@@ -79,6 +79,16 @@
       "sending": "Sending...",
       "sent": "Email sent"
     },
+    "emailVerificationRequired": {
+      "title": "Verify your email",
+      "description": "To continue, please verify your email address. We've sent a verification link to your email.",
+      "sentTo": "Email sent to",
+      "resend": "Resend verification email",
+      "sending": "Sending...",
+      "resendIn": "Resend in {{seconds}}s",
+      "logout": "Sign out",
+      "checkSpam": "If you don't see the email, check your spam folder"
+    },
     "otp": {
       "title": "Sign in with Email",
       "enterEmail": "Enter your email to receive a login code",

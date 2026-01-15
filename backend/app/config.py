@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     auth_rate_limit_login: int = 5
     auth_rate_limit_register: int = 3
     auth_rate_limit_password_reset: int = 3
+    auth_rate_limit_send_verification: int = 2
     # Rate limiting for public endpoints (requests per minute per IP)
     public_rate_limit: int = 30
     # Account lockout
