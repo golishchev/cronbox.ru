@@ -120,7 +120,17 @@ class TaskScheduler:
         from app.services.notifications import notification_service
 
         async with async_session_factory() as db:
-            # 0. Try to auto-renew expiring subscriptions (due today or already expired)
+            # 0. Apply scheduled plan changes (downgrades, yearly→monthly)
+            scheduled_changes = await billing_service.get_subscriptions_with_scheduled_changes(db)
+            applied_count = 0
+            for subscription in scheduled_changes:
+                success = await billing_service.apply_scheduled_plan_change(db, subscription)
+                if success:
+                    applied_count += 1
+            if applied_count:
+                logger.info("Applied scheduled plan changes", count=applied_count)
+
+            # 1. Try to auto-renew expiring subscriptions (due today or already expired)
             renewed_count = 0
             failed_renewals = []
             expiring_subscriptions = await billing_service.get_subscriptions_for_renewal(db)
@@ -140,7 +150,7 @@ class TaskScheduler:
             if renewed_count:
                 logger.info("Auto-renewed subscriptions", count=renewed_count)
 
-            # 1. Check and process expired subscriptions (those that couldn't be auto-renewed)
+            # 2. Check and process expired subscriptions (those that couldn't be auto-renewed)
             expired_workspaces = await billing_service.check_expired_subscriptions(db)
             for user_id, tasks_paused, workspaces_blocked in expired_workspaces:
                 await notification_service.send_subscription_expired(
@@ -155,13 +165,13 @@ class TaskScheduler:
                     count=len(expired_workspaces),
                 )
 
-            # 2. Send notifications for subscriptions expiring in 7 days
+            # 3. Send notifications for subscriptions expiring in 7 days
             expiring_7d = await billing_service.get_expiring_subscriptions(db, days_before=7)
             for subscription in expiring_7d:
                 expiration_date = subscription.current_period_end.strftime("%d.%m.%Y")
                 await notification_service.send_subscription_expiring(
                     db=db,
-                    workspace_id=subscription.workspace_id,
+                    user_id=subscription.user_id,
                     days_remaining=7,
                     expiration_date=expiration_date,
                 )
@@ -171,13 +181,13 @@ class TaskScheduler:
                     count=len(expiring_7d),
                 )
 
-            # 3. Send notifications for subscriptions expiring in 1 day
+            # 4. Send notifications for subscriptions expiring in 1 day
             expiring_1d = await billing_service.get_expiring_subscriptions(db, days_before=1)
             for subscription in expiring_1d:
                 expiration_date = subscription.current_period_end.strftime("%d.%m.%Y")
                 await notification_service.send_subscription_expiring(
                     db=db,
-                    workspace_id=subscription.workspace_id,
+                    user_id=subscription.user_id,
                     days_remaining=1,
                     expiration_date=expiration_date,
                 )

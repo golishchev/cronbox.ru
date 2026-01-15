@@ -146,6 +146,21 @@ class BillingService:
         )
         return result.scalar_one_or_none()
 
+    async def get_user_subscription_for_update(
+        self, db: AsyncSession, user_id: uuid_module.UUID
+    ) -> Subscription | None:
+        """Get user's subscription with row-level lock (FOR UPDATE).
+
+        Use this method when modifying subscription to prevent race conditions.
+        The lock is held until the transaction commits or rolls back.
+        """
+        result = await db.execute(
+            select(Subscription)
+            .where(Subscription.user_id == user_id)
+            .with_for_update()
+        )
+        return result.scalar_one_or_none()
+
     async def get_user_plan(self, db: AsyncSession, user_id: uuid_module.UUID) -> Plan:
         """Get user's current plan (from subscription or free)."""
         subscription = await self.get_user_subscription(db, user_id)
@@ -188,12 +203,31 @@ class BillingService:
             return None
 
         # Calculate proration credit from current subscription
+        # Use FOR UPDATE lock to prevent race conditions with parallel upgrade requests
         proration_credit = 0
-        current_subscription = await self.get_user_subscription(db, user_id)
+        current_subscription = await self.get_user_subscription_for_update(db, user_id)
         if current_subscription and current_subscription.status == SubscriptionStatus.ACTIVE:
-            proration_credit = await self._calculate_proration_credit(
-                db, current_subscription
+            # Re-validate plan change inside lock to prevent TOCTOU race condition
+            # (subscription could have changed between API validation and this point)
+            analysis = await self._analyze_plan_change(
+                db, current_subscription, plan_id, billing_period
             )
+            if analysis["is_same_plan"]:
+                logger.warning(
+                    "Plan change rejected: already on this plan",
+                    user_id=str(user_id),
+                    plan_id=str(plan_id),
+                )
+                return None
+            if analysis["requires_deferred"]:
+                logger.warning(
+                    "Plan change rejected: requires deferred change",
+                    user_id=str(user_id),
+                    plan_id=str(plan_id),
+                )
+                return None
+
+            proration_credit = analysis.get("proration_credit", 0)
             logger.info(
                 "Proration credit calculated",
                 user_id=str(user_id),
@@ -486,8 +520,8 @@ class BillingService:
         else:
             period_end = now + timedelta(days=30)
 
-        # Get existing subscription
-        subscription = await self.get_user_subscription(db, user_id)
+        # Get existing subscription with lock to prevent race conditions
+        subscription = await self.get_user_subscription_for_update(db, user_id)
 
         if subscription:
             # Update existing subscription
@@ -531,9 +565,13 @@ class BillingService:
         immediately: bool = False,
     ) -> bool:
         """Cancel a user's subscription."""
-        subscription = await self.get_user_subscription(db, user_id)
+        subscription = await self.get_user_subscription_for_update(db, user_id)
         if not subscription:
             return False
+
+        # Clear any scheduled plan change when cancelling
+        subscription.scheduled_plan_id = None
+        subscription.scheduled_billing_period = None
 
         if immediately:
             subscription.status = SubscriptionStatus.CANCELLED
@@ -559,6 +597,85 @@ class BillingService:
             user_id=str(user_id),
             immediately=immediately,
         )
+        return True
+
+    async def schedule_plan_change(
+        self,
+        db: AsyncSession,
+        user_id: uuid_module.UUID,
+        new_plan_id: uuid_module.UUID,
+        new_billing_period: str,
+    ) -> Subscription | None:
+        """
+        Schedule a plan change for the end of current billing period.
+
+        Used for downgrades and yearly→monthly transitions.
+        """
+        subscription = await self.get_user_subscription_for_update(db, user_id)
+        if not subscription:
+            logger.warning("No subscription to schedule change", user_id=str(user_id))
+            return None
+
+        if subscription.status != SubscriptionStatus.ACTIVE:
+            logger.warning(
+                "Cannot schedule change for non-active subscription",
+                user_id=str(user_id),
+                status=subscription.status,
+            )
+            return None
+
+        # Verify plan exists
+        new_plan = await self.get_plan_by_id(db, new_plan_id)
+        if not new_plan:
+            logger.error("Plan not found for scheduled change", plan_id=str(new_plan_id))
+            return None
+
+        # Re-validate plan change inside lock to prevent TOCTOU race condition
+        analysis = await self._analyze_plan_change(
+            db, subscription, new_plan_id, new_billing_period
+        )
+        if analysis["is_same_plan"]:
+            logger.warning(
+                "Schedule rejected: already on this plan",
+                user_id=str(user_id),
+                plan_id=str(new_plan_id),
+            )
+            return None
+
+        # Set scheduled change
+        subscription.scheduled_plan_id = new_plan_id
+        subscription.scheduled_billing_period = new_billing_period
+
+        await db.commit()
+        logger.info(
+            "Plan change scheduled",
+            user_id=str(user_id),
+            new_plan_id=str(new_plan_id),
+            new_billing_period=new_billing_period,
+            effective_date=subscription.current_period_end.isoformat(),
+        )
+
+        return subscription
+
+    async def cancel_scheduled_plan_change(
+        self,
+        db: AsyncSession,
+        user_id: uuid_module.UUID,
+    ) -> bool:
+        """Cancel a scheduled plan change."""
+        subscription = await self.get_user_subscription_for_update(db, user_id)
+        if not subscription:
+            return False
+
+        if not subscription.scheduled_plan_id:
+            return False
+
+        subscription.scheduled_plan_id = None
+        subscription.scheduled_billing_period = None
+
+        await db.commit()
+        logger.info("Scheduled plan change cancelled", user_id=str(user_id))
+
         return True
 
     async def _calculate_proration_credit(
@@ -610,6 +727,94 @@ class BillingService:
         )
 
         return credit
+
+    async def _analyze_plan_change(
+        self,
+        db: AsyncSession,
+        current_subscription: Subscription | None,
+        new_plan_id: uuid_module.UUID,
+        new_billing_period: str,
+    ) -> dict:
+        """
+        Analyze the type of plan change and determine if it requires deferral.
+
+        Returns:
+            {
+                "is_same_plan": bool,
+                "is_downgrade": bool,
+                "is_period_downgrade": bool,  # yearly → monthly
+                "requires_deferred": bool,
+                "proration_credit": int,
+                "remaining_days": int,
+                "effective_date": datetime | None,
+                "current_is_yearly": bool,
+            }
+        """
+        result = {
+            "is_same_plan": False,
+            "is_downgrade": False,
+            "is_period_downgrade": False,
+            "requires_deferred": False,
+            "proration_credit": 0,
+            "remaining_days": 0,
+            "effective_date": None,
+            "current_is_yearly": False,
+        }
+
+        # No current subscription - simple new subscription
+        if not current_subscription or current_subscription.status != SubscriptionStatus.ACTIVE:
+            return result
+
+        now = datetime.now(timezone.utc)
+
+        # Calculate remaining days
+        if current_subscription.current_period_end > now:
+            result["remaining_days"] = (current_subscription.current_period_end - now).days
+            result["effective_date"] = current_subscription.current_period_end
+
+        # Determine current billing period
+        period_days = (
+            current_subscription.current_period_end - current_subscription.current_period_start
+        ).days
+        current_is_yearly = period_days > 60
+        result["current_is_yearly"] = current_is_yearly
+
+        # Check if same plan and same period
+        if current_subscription.plan_id == new_plan_id:
+            current_period = "yearly" if current_is_yearly else "monthly"
+            if current_period == new_billing_period:
+                result["is_same_plan"] = True
+                return result
+
+        # Get current and new plan prices
+        current_plan = await self.get_plan_by_id(db, current_subscription.plan_id)
+        new_plan = await self.get_plan_by_id(db, new_plan_id)
+
+        if not current_plan or not new_plan:
+            return result
+
+        # Check for period downgrade (yearly → monthly)
+        if current_is_yearly and new_billing_period == "monthly":
+            result["is_period_downgrade"] = True
+            result["requires_deferred"] = True
+            return result
+
+        # Check for plan downgrade (new plan is cheaper)
+        # Compare normalized prices (per month)
+        current_monthly = current_plan.price_monthly
+        new_monthly = new_plan.price_monthly
+
+        if new_monthly < current_monthly:
+            result["is_downgrade"] = True
+            result["requires_deferred"] = True
+            return result
+
+        # Upgrade or same price - calculate proration credit
+        result["proration_credit"] = await self._calculate_proration_credit(
+            db, current_subscription
+        )
+
+        return result
 
     async def _get_oldest_workspace(
         self, db: AsyncSession, user_id: uuid_module.UUID
@@ -908,6 +1113,93 @@ class BillingService:
             )
 
         return affected_users
+
+    async def get_subscriptions_with_scheduled_changes(
+        self, db: AsyncSession
+    ) -> list[Subscription]:
+        """
+        Get subscriptions with scheduled plan changes that should be applied.
+
+        Returns subscriptions that:
+        - Have a scheduled_plan_id
+        - Current period has ended
+        - Status is ACTIVE (don't apply to cancelled/expired subscriptions)
+        """
+        now = datetime.now(timezone.utc)
+
+        result = await db.execute(
+            select(Subscription).where(
+                Subscription.scheduled_plan_id.isnot(None),
+                Subscription.current_period_end <= now,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def apply_scheduled_plan_change(
+        self,
+        db: AsyncSession,
+        subscription: Subscription,
+    ) -> bool:
+        """
+        Apply a scheduled plan change.
+
+        This switches the subscription to the new plan without payment
+        (for downgrades the user already paid for the current period).
+        """
+        if not subscription.scheduled_plan_id:
+            return False
+
+        new_plan = await self.get_plan_by_id(db, subscription.scheduled_plan_id)
+        if not new_plan:
+            logger.error(
+                "Scheduled plan not found",
+                subscription_id=str(subscription.id),
+                plan_id=str(subscription.scheduled_plan_id),
+            )
+            return False
+
+        old_plan_id = subscription.plan_id
+        new_billing_period = subscription.scheduled_billing_period or "monthly"
+
+        # Update subscription to new plan
+        now = datetime.now(timezone.utc)
+        subscription.plan_id = subscription.scheduled_plan_id
+
+        # Calculate new period based on billing period
+        if new_billing_period == "yearly":
+            period_end = now + timedelta(days=365)
+        else:
+            period_end = now + timedelta(days=30)
+
+        subscription.current_period_start = now
+        subscription.current_period_end = period_end
+        subscription.status = SubscriptionStatus.ACTIVE
+
+        # Clear scheduled change
+        subscription.scheduled_plan_id = None
+        subscription.scheduled_billing_period = None
+
+        # Handle workspace/task limits for downgrade
+        await self._block_excess_workspaces(db, subscription.user_id, new_plan.max_workspaces)
+        first_workspace = await self._get_oldest_workspace(db, subscription.user_id)
+        if first_workspace:
+            await self.auto_pause_excess_tasks(
+                db, first_workspace.id, new_plan.max_cron_tasks
+            )
+
+        await db.commit()
+
+        logger.info(
+            "Scheduled plan change applied",
+            subscription_id=str(subscription.id),
+            user_id=str(subscription.user_id),
+            old_plan_id=str(old_plan_id),
+            new_plan_id=str(new_plan.id),
+            new_billing_period=new_billing_period,
+        )
+
+        return True
 
     async def auto_renew_subscription(
         self,

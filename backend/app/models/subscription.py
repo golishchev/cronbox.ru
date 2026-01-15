@@ -54,6 +54,14 @@ class Subscription(Base, UUIDMixin, TimestampMixin):
         String(255), nullable=True
     )
 
+    # Scheduled plan change (for downgrade or yearly→monthly)
+    scheduled_plan_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("plans.id"), nullable=True
+    )
+    scheduled_billing_period: Mapped[str | None] = mapped_column(
+        String(10), nullable=True
+    )
+
     # Relationships
     user: Mapped["User"] = relationship(back_populates="subscription")
     plan: Mapped["Plan"] = relationship()

@@ -1,12 +1,10 @@
 """Billing API endpoints."""
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, UserPlan, get_db
-from app.models.subscription import SubscriptionStatus
 from app.schemas.billing import (
     CancelSubscriptionRequest,
     CreatePaymentRequest,
@@ -82,24 +80,31 @@ async def preview_price(
     # Calculate base price
     plan_price = plan.price_yearly if request.billing_period == "yearly" else plan.price_monthly
 
-    # Calculate proration
-    proration_credit = 0
-    remaining_days = 0
+    # Get current subscription and analyze change
     subscription = await billing_service.get_user_subscription(db, current_user.id)
+    analysis = await billing_service._analyze_plan_change(
+        db, subscription, request.plan_id, request.billing_period
+    )
 
-    if subscription and subscription.status == SubscriptionStatus.ACTIVE:
-        proration_credit = await billing_service._calculate_proration_credit(db, subscription)
-        now = datetime.now(timezone.utc)
-        if subscription.current_period_end > now:
-            remaining_days = (subscription.current_period_end - now).days
-
-    final_amount = max(plan_price - proration_credit, 100)  # Minimum 1 RUB
+    # Determine final amount based on analysis
+    if analysis["requires_deferred"]:
+        # Deferred changes don't have proration - user pays full price at period end
+        final_amount = plan_price
+        proration_credit = 0
+    else:
+        proration_credit = analysis["proration_credit"]
+        final_amount = max(plan_price - proration_credit, 100)  # Minimum 1 RUB
 
     return PricePreviewResponse(
         plan_price=plan_price,
         proration_credit=proration_credit,
         final_amount=final_amount,
-        remaining_days=remaining_days,
+        remaining_days=analysis["remaining_days"],
+        is_same_plan=analysis["is_same_plan"],
+        is_downgrade=analysis["is_downgrade"],
+        is_period_downgrade=analysis["is_period_downgrade"],
+        requires_deferred=analysis["requires_deferred"],
+        effective_date=analysis["effective_date"],
     )
 
 
@@ -117,6 +122,26 @@ async def create_subscription_payment(
             detail="Payment system is not configured",
         )
 
+    # Analyze the plan change
+    subscription = await billing_service.get_user_subscription(db, current_user.id)
+    analysis = await billing_service._analyze_plan_change(
+        db, subscription, request.plan_id, request.billing_period
+    )
+
+    # Reject same plan
+    if analysis["is_same_plan"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already subscribed to this plan",
+        )
+
+    # Reject deferred changes via this endpoint
+    if analysis["requires_deferred"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This plan change requires scheduling. Use /schedule-plan-change endpoint.",
+        )
+
     payment = await billing_service.create_payment(
         db,
         user_id=current_user.id,
@@ -132,6 +157,82 @@ async def create_subscription_payment(
         )
 
     return payment
+
+
+@router.post("/schedule-plan-change", response_model=SubscriptionResponse)
+async def schedule_plan_change(
+    request: CreatePaymentRequest,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Schedule a plan change for the end of current billing period.
+
+    Used for downgrades and yearly→monthly transitions.
+    """
+    # Verify plan exists
+    plan = await billing_service.get_plan_by_id(db, request.plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found",
+        )
+
+    # Analyze the plan change
+    subscription = await billing_service.get_user_subscription(db, current_user.id)
+    analysis = await billing_service._analyze_plan_change(
+        db, subscription, request.plan_id, request.billing_period
+    )
+
+    # Reject same plan
+    if analysis["is_same_plan"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already subscribed to this plan",
+        )
+
+    # Only allow deferred changes via this endpoint
+    if not analysis["requires_deferred"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This plan change does not require scheduling. Use /subscribe endpoint.",
+        )
+
+    updated_subscription = await billing_service.schedule_plan_change(
+        db,
+        user_id=current_user.id,
+        new_plan_id=request.plan_id,
+        new_billing_period=request.billing_period,
+    )
+
+    if not updated_subscription:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to schedule plan change",
+        )
+
+    # Include plan in response
+    user_plan = await billing_service.get_user_plan(db, current_user.id)
+    response = SubscriptionResponse.model_validate(updated_subscription)
+    response.plan = PlanResponse.model_validate(user_plan)
+
+    return response
+
+
+@router.post("/cancel-scheduled-change")
+async def cancel_scheduled_change(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel a scheduled plan change."""
+    success = await billing_service.cancel_scheduled_plan_change(db, current_user.id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No scheduled plan change to cancel",
+        )
+
+    return {"message": "Scheduled plan change cancelled"}
 
 
 @router.post("/subscription/cancel")

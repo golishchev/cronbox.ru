@@ -52,6 +52,10 @@ class SubscriptionResponse(BaseModel):
     cancel_at_period_end: bool
     cancelled_at: datetime | None
 
+    # Scheduled plan change (for downgrade or yearly→monthly)
+    scheduled_plan_id: UUID | None = None
+    scheduled_billing_period: str | None = None
+
     # Include plan details
     plan: PlanResponse | None = None
 
@@ -105,6 +109,13 @@ class PricePreviewResponse(BaseModel):
     final_amount: int  # Amount to pay after proration (kopeks)
     remaining_days: int  # Days remaining in current subscription
     currency: str = "RUB"
+
+    # Plan change analysis
+    is_same_plan: bool = False  # Trying to select current plan
+    is_downgrade: bool = False  # New plan is cheaper
+    is_period_downgrade: bool = False  # yearly → monthly
+    requires_deferred: bool = False  # Change will be applied at period end
+    effective_date: datetime | None = None  # When change takes effect
 
 
 class WebhookPayload(BaseModel):

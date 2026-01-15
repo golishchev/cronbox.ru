@@ -371,7 +371,12 @@
     "planPrice": "Plan price",
     "prorationCredit": "Credit for unused days",
     "daysRemaining": "Days remaining",
-    "totalAmount": "Total to pay"
+    "totalAmount": "Total to pay",
+    "deferredChangeNotice": "Plan change will take effect on {{date}} at the end of current period",
+    "scheduledChangeNotice": "Scheduled switch to {{plan}} on {{date}}",
+    "scheduleChange": "Schedule Change",
+    "cancelScheduledChange": "Cancel",
+    "alreadyOnPlan": "You are already on this plan"
   },
   "taskForm": {
     "name": "Name",

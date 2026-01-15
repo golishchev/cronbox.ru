@@ -21,13 +21,15 @@ export interface Plan {
 
 export interface Subscription {
   id: string
-  workspace_id: string
+  user_id: string
   plan_id: string
   status: 'active' | 'past_due' | 'cancelled' | 'expired'
   current_period_start: string
   current_period_end: string
   cancel_at_period_end: boolean
   cancelled_at: string | null
+  scheduled_plan_id: string | null
+  scheduled_billing_period: string | null
   plan?: Plan
 }
 
@@ -49,6 +51,11 @@ export interface PricePreview {
   final_amount: number
   remaining_days: number
   currency: string
+  is_same_plan: boolean
+  is_downgrade: boolean
+  is_period_downgrade: boolean
+  requires_deferred: boolean
+  effective_date: string | null
 }
 
 export async function getPlans(): Promise<Plan[]> {
@@ -101,4 +108,19 @@ export async function previewPrice(
     billing_period: billingPeriod,
   })
   return response.data
+}
+
+export async function schedulePlanChange(
+  planId: string,
+  billingPeriod: 'monthly' | 'yearly' = 'monthly'
+): Promise<Subscription> {
+  const response = await apiClient.post('/billing/schedule-plan-change', {
+    plan_id: planId,
+    billing_period: billingPeriod,
+  })
+  return response.data
+}
+
+export async function cancelScheduledChange(): Promise<void> {
+  await apiClient.post('/billing/cancel-scheduled-change')
 }

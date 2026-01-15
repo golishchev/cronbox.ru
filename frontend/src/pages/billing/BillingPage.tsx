@@ -28,6 +28,8 @@ import {
   cancelSubscription,
   getPaymentHistory,
   previewPrice,
+  schedulePlanChange,
+  cancelScheduledChange,
   Plan,
   Subscription,
   Payment,
@@ -83,6 +85,14 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     setError(null)
 
     try {
+      // Check if this is a deferred change (downgrade or yearly→monthly)
+      if (pricePreview?.requires_deferred) {
+        await schedulePlanChange(selectedPlan.id, billingPeriod)
+        await loadBillingData()
+        setShowUpgradeDialog(false)
+        return
+      }
+
       const payment = await createPayment(
         selectedPlan.id,
         billingPeriod,
@@ -100,6 +110,20 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     } finally {
       setProcessing(false)
       setShowUpgradeDialog(false)
+    }
+  }
+
+  const handleCancelScheduledChange = async () => {
+    setProcessing(true)
+    setError(null)
+
+    try {
+      await cancelScheduledChange()
+      await loadBillingData()
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to cancel scheduled change')
+    } finally {
+      setProcessing(false)
     }
   }
 
@@ -239,6 +263,29 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 )}
               </div>
             </div>
+
+            {/* Scheduled Plan Change */}
+            {subscription.scheduled_plan_id && (
+              <Alert className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>
+                    {t('billing.scheduledChangeNotice', {
+                      plan: plans.find(p => p.id === subscription.scheduled_plan_id)?.display_name || 'Unknown',
+                      date: formatDate(subscription.current_period_end),
+                    })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelScheduledChange}
+                    disabled={processing}
+                  >
+                    {t('billing.cancelScheduledChange')}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       )}
@@ -453,23 +500,49 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
               </div>
             ) : pricePreview ? (
               <>
-                <div className="flex justify-between items-center">
-                  <span>{t('billing.planPrice')}:</span>
-                  <span>{formatPrice(pricePreview.plan_price)}</span>
-                </div>
-                {pricePreview.proration_credit > 0 && (
+                {/* Deferred change notice */}
+                {pricePreview.requires_deferred && pricePreview.effective_date && (
+                  <Alert className="mb-3">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {t('billing.deferredChangeNotice', {
+                        date: formatDate(pricePreview.effective_date),
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Same plan error */}
+                {pricePreview.is_same_plan && (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {t('billing.alreadyOnPlan')}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {!pricePreview.requires_deferred && (
                   <>
-                    <div className="flex justify-between items-center text-green-600">
-                      <span>{t('billing.prorationCredit')} ({pricePreview.remaining_days} {t('billing.daysRemaining')}):</span>
-                      <span>-{formatPrice(pricePreview.proration_credit)}</span>
+                    <div className="flex justify-between items-center">
+                      <span>{t('billing.planPrice')}:</span>
+                      <span>{formatPrice(pricePreview.plan_price)}</span>
                     </div>
-                    <hr className="border-border" />
+                    {pricePreview.proration_credit > 0 && (
+                      <>
+                        <div className="flex justify-between items-center text-green-600">
+                          <span>{t('billing.prorationCredit')} ({pricePreview.remaining_days} {t('billing.daysRemaining')}):</span>
+                          <span>-{formatPrice(pricePreview.proration_credit)}</span>
+                        </div>
+                        <hr className="border-border" />
+                      </>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">{t('billing.totalAmount')}:</span>
+                      <span className="font-bold text-lg">{formatPrice(pricePreview.final_amount)}</span>
+                    </div>
                   </>
                 )}
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">{t('billing.totalAmount')}:</span>
-                  <span className="font-bold text-lg">{formatPrice(pricePreview.final_amount)}</span>
-                </div>
               </>
             ) : (
               <div className="flex justify-between items-center">
@@ -488,9 +561,14 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
             <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleUpgrade} disabled={processing}>
+            <Button
+              onClick={handleUpgrade}
+              disabled={processing || pricePreview?.is_same_plan}
+            >
               {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('billing.proceedToPayment')}
+              {pricePreview?.requires_deferred
+                ? t('billing.scheduleChange')
+                : t('billing.proceedToPayment')}
             </Button>
           </DialogFooter>
         </DialogContent>

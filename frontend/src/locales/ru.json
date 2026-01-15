@@ -377,7 +377,12 @@
     "planPrice": "Стоимость тарифа",
     "prorationCredit": "Зачет за неиспользованные дни",
     "daysRemaining": "Осталось дней",
-    "totalAmount": "Итого к оплате"
+    "totalAmount": "Итого к оплате",
+    "deferredChangeNotice": "Изменение тарифа вступит в силу {{date}} после окончания текущего периода",
+    "scheduledChangeNotice": "Запланирован переход на тариф {{plan}} с {{date}}",
+    "scheduleChange": "Запланировать изменение",
+    "cancelScheduledChange": "Отменить",
+    "alreadyOnPlan": "Вы уже на этом тарифе"
   },
   "taskForm": {
     "name": "Название",
