@@ -329,7 +329,7 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
           </header>
 
-          <div className="prose prose-lg max-w-none">
+          <div className="prose prose-lg dark:prose-invert max-w-none">
             {renderContent(post.content)}
           </div>
 
