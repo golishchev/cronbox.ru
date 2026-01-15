@@ -162,7 +162,7 @@ function renderContent(content: string) {
         elements.push(
           <pre
             key={elements.length}
-            className="my-4 p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-sm"
+            className="my-4 p-4 bg-gray-900 dark:bg-gray-800 dark:border dark:border-gray-600 text-gray-100 rounded-lg overflow-x-auto text-sm"
           >
             <code>{codeBlockContent.join('\n')}</code>
           </pre>
