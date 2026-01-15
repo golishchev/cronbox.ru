@@ -4,103 +4,155 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CronBox.ru is an HTTP request scheduling SaaS platform. Users can schedule recurring cron tasks or one-time delayed tasks, monitor execution history, and receive notifications via email, Telegram, or webhooks.
+CronBox is an HTTP request scheduling service with cron and delayed task capabilities. The project consists of three main parts:
+- **Backend** (`/backend`): Python FastAPI application with SQLAlchemy, Redis, and APScheduler
+- **Frontend** (`/frontend`): React 19 control panel with Vite, TailwindCSS, and Zustand
+- **Landing** (`/landing`): Next.js marketing site
 
-## Common Commands
+## Development Commands
 
-### Backend (Python/FastAPI)
+### Start all services (recommended)
 ```bash
-# Dependencies (uses uv package manager)
-uv sync --frozen
-
-# Linting and type checking
-uv run ruff check .
-uv run mypy app --ignore-missing-imports
-
-# Testing
-uv run pytest tests -v --cov=app --cov-report=xml
-
-# Database migrations
-uv run alembic upgrade head
-uv run alembic downgrade -1
-
-# Run services (via CLI entry points defined in pyproject.toml)
-cronbox-server       # Start FastAPI API server
-cronbox-worker       # Start arq task worker
-cronbox-scheduler    # Start task scheduler
+make dev          # Starts API, scheduler, worker, bot, frontend, and landing
+make stop         # Stop all services
 ```
 
-### Frontend (React/TypeScript/Vite)
+### Individual services
 ```bash
-cd frontend
-npm install
-npm run dev          # Dev server on port 3000
-npm run build        # Production build
-npm run lint         # ESLint check
+make dev-backend    # API server (port 8000)
+make dev-frontend   # Control panel (port 3000)
+make dev-landing    # Landing page (port 3001)
+make dev-scheduler  # Task scheduler
+make dev-worker     # Task executor
+make dev-bot        # Telegram bot
 ```
 
-### Development with Make
+### Infrastructure
 ```bash
-make dev             # Start full stack (backend + frontend + infrastructure)
-make dev-backend     # Backend only
-make dev-frontend    # Frontend only
-make infra           # Start PostgreSQL + Redis containers
-make stop            # Stop all services
+make infra        # Start PostgreSQL + Redis via Docker
+```
+
+### Testing
+```bash
+# Backend tests (requires test DB)
+make test-db                              # Create test database
+cd backend && uv run pytest tests -v      # Run all tests
+cd backend && uv run pytest tests/test_auth.py -v  # Single test file
+cd backend && uv run pytest tests -v -k "test_name"  # Single test
+
+# Frontend tests
+cd frontend && npm run test               # Run all tests
+cd frontend && npm run test:watch         # Watch mode
+cd frontend && npm run test:coverage      # With coverage
+```
+
+### Linting & Type Checking
+```bash
+# Backend
+cd backend && uv run ruff check .         # Linting
+cd backend && uv run ruff format .        # Formatting
+cd backend && uv run mypy app --ignore-missing-imports
+
+# Frontend
+cd frontend && npm run lint               # ESLint
+cd frontend && npm run build              # Includes TypeScript check
+```
+
+### Database Migrations
+```bash
+cd backend
+uv run alembic upgrade head                               # Apply migrations
+uv run alembic revision --autogenerate -m "description"   # Create migration
+uv run alembic downgrade -1                               # Rollback last
 ```
 
 ## Architecture
 
-### Multi-Process Backend
-The backend runs as three separate processes:
-1. **API Server** (Uvicorn/FastAPI) - REST API on port 8000
-2. **Scheduler** - Polls database every 5-10 seconds for due tasks, enqueues them to Redis
-3. **Worker Pool** (arq) - Consumes from Redis queue, executes HTTP requests, stores results
+### Backend Structure (`/backend/app`)
 
-### Key Backend Directories
-- `backend/app/api/v1/` - API endpoints organized by resource
-- `backend/app/models/` - SQLAlchemy ORM models (all inherit from `Base` with UUID pk + timestamps)
-- `backend/app/schemas/` - Pydantic request/response schemas
-- `backend/app/services/` - Business logic (auth, billing, email, notifications)
-- `backend/app/workers/` - Task scheduler and arq worker functions
-- `backend/app/db/repositories/` - Data access layer
+**Layered Architecture:**
+- `api/v1/` - FastAPI route handlers (thin layer, delegates to services)
+- `services/` - Business logic (auth, billing, notifications, worker)
+- `db/repositories/` - Data access layer (SQLAlchemy queries)
+- `models/` - SQLAlchemy ORM models
+- `schemas/` - Pydantic request/response models
+- `core/` - Cross-cutting concerns (security, redis, rate limiter)
 
-### Key Frontend Directories
-- `frontend/src/api/` - Axios API client modules
-- `frontend/src/pages/` - Route page components
-- `frontend/src/components/ui/` - Radix UI wrapped components
-- `frontend/src/stores/` - Zustand state stores (auth, workspace, ui)
+**Dependency Injection Pattern** (see `api/deps.py`):
+```python
+from app.api.deps import CurrentUser, DB, CurrentWorkspace
 
-### Data Flow for Task Execution
-1. User creates cron/delayed task via API
-2. Scheduler polls PostgreSQL for tasks where `next_run_at <= now`
-3. Scheduler enqueues task to Redis via arq
-4. Worker executes HTTP request, stores execution record
-5. Worker sends notifications based on user settings
+@router.get("/items")
+async def list_items(user: CurrentUser, db: DB):
+    ...
+```
 
-### Tech Stack
-- **Backend**: FastAPI, SQLAlchemy 2.0 (async), PostgreSQL, Redis, arq
-- **Frontend**: React 19, TypeScript, Vite, TanStack Router/Query, Zustand, Radix UI, Tailwind CSS
-- **Auth**: JWT with 15-min access tokens, 30-day refresh tokens
-- **Payments**: YooKassa (Russian payment processor)
-- **Email**: Postal API (primary) with SMTP fallback
-- **Notifications**: Telegram (aiogram), webhooks
+Key type aliases: `CurrentUser`, `VerifiedUser`, `CurrentWorkspace`, `ActiveSubscriptionWorkspace`, `DB`, `UserPlan`
 
-## Environment Variables
+**Key Services:**
+- `auth.py` - JWT auth, OAuth (Yandex, GitHub), email verification
+- `billing.py` - YooKassa payments, subscriptions, plan limits
+- `notifications.py` - Email, Telegram, Slack, webhook notifications
+- `worker.py` - HTTP task execution logic
 
-Key variables needed (see `.env.example` for full list):
-- `DATABASE_URL` - PostgreSQL connection string (asyncpg)
-- `REDIS_URL` - Redis connection string
-- `JWT_SECRET` - Secret for JWT signing
-- `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` - Payment processing
-- `TELEGRAM_BOT_TOKEN` - Telegram notifications
-- `POSTAL_API_URL`, `POSTAL_API_KEY` - Email service
+### Frontend Structure (`/frontend/src`)
 
-## Database
+**State Management:** Zustand stores in `/stores`
+- `authStore.ts` - User authentication state
+- `workspaceStore.ts` - Current workspace selection
+- `uiStore.ts` - UI preferences (sidebar, theme)
 
-PostgreSQL with async SQLAlchemy. Migrations in `backend/alembic/versions/`. Apply with `uv run alembic upgrade head`.
+**API Layer:** `/api` directory with typed API clients
+- Uses axios with interceptors for auth tokens
+- Consistent error handling pattern
 
-Core models: User, Workspace, CronTask, DelayedTask, Execution, NotificationSettings, Plan, Subscription, Payment, Worker
+**Routing:** Hash-based routing in `App.tsx` (not React Router)
+- Auth routes: login, register, verify-email, otp-login
+- Protected routes: dashboard, cron, delayed, executions, etc.
 
-## API Documentation
+**UI Components:** Radix UI primitives with TailwindCSS
+- Components in `/components/ui` follow shadcn/ui patterns
 
-Swagger UI available at `http://localhost:8000/v1/docs` when running locally.
+### Landing (`/landing`)
+
+Next.js 14+ with App Router, MDX for blog content.
+
+## Key Patterns
+
+### Adding a New API Endpoint
+1. Create Pydantic schemas in `schemas/`
+2. Add repository methods in `db/repositories/`
+3. Implement business logic in `services/`
+4. Create route handler in `api/v1/`
+5. Include router in `api/router.py`
+
+### Adding a New Frontend Page
+1. Create page component in `pages/`
+2. Add lazy import in `App.tsx`
+3. Add route type and handler in `App.tsx`
+4. Update navigation in `components/layout/`
+
+### Environment Variables
+Backend: `/backend/.env` (see `.env.example`)
+Frontend: Uses Vite env vars (VITE_* prefix)
+Landing: `/landing/.env.example`
+
+## Testing Patterns
+
+**Backend:** pytest-asyncio with fixtures in `conftest.py`
+- Use `async_client` fixture for API tests
+- Use `test_db` for database tests
+- Tests are in `tests/` (integration) and `tests/unit/`
+
+**Frontend:** Vitest with React Testing Library
+- Tests colocated in `__tests__/` directories
+- MSW for API mocking in `src/test/`
+
+## Porduction
+
+  - CI автоматически деплоит при push в main в github
+  - SSH доступ: ssh cronbox
+  - Авторизуешшься под su - cronbox
+  - Путь на сервере: /opt/cronbox
+  - Контейнеры называются cronbox-*
+  - Можешь подключаться и проверять работу и логи после успешного деплоя
