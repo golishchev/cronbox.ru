@@ -6,6 +6,7 @@ import aiosmtplib
 import structlog
 
 from app.config import settings
+from app.services.i18n import t
 
 logger = structlog.get_logger()
 
@@ -225,36 +226,37 @@ This is an automated notification from CronBox.
         to: str,
         code: str,
         expire_minutes: int | None = None,
+        lang: str = "ru",
     ) -> bool:
         """Send OTP code email for passwordless login."""
         if expire_minutes is None:
             expire_minutes = OTP_EXPIRE_MINUTES
 
-        subject = f"[CronBox] Ваш код входа: {code}"
+        subject = t("email.otp.subject", lang) + f": {code}"
 
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Код для входа в CronBox</h2>
-            <p>Ваш код для входа:</p>
+            <h2>{t("email.otp.title", lang)}</h2>
+            <p>{t("email.otp.code_label", lang)}</p>
             <div style="margin: 24px 0; padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;">{code}</span>
             </div>
             <p style="color: #666;">
-                Код действителен {expire_minutes} минут.
+                {t("email.otp.validity", lang, minutes=expire_minutes)}
             </p>
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
-                Если вы не запрашивали вход в CronBox, просто проигнорируйте это письмо.
+                {t("email.otp.ignore_notice", lang)}
             </p>
         </div>
         """
 
-        text = f"""Код для входа в CronBox
+        text = f"""{t("email.otp.title", lang)}
 
-Ваш код для входа: {code}
+{t("email.otp.code_label", lang)} {code}
 
-Код действителен {expire_minutes} минут.
+{t("email.otp.validity", lang, minutes=expire_minutes)}
 
-Если вы не запрашивали вход в CronBox, просто проигнорируйте это письмо.
+{t("email.otp.ignore_notice", lang)}
 """
 
         return await self.send_email(to, subject, html, text)

@@ -9,12 +9,31 @@ from aiogram.types import Message
 from app.config import settings
 from app.db.database import AsyncSessionLocal
 from app.services.auth import AuthService
+from app.services.i18n import t
 
 logger = structlog.get_logger()
+
+# Default language for bot (can be extended to support per-user language)
+DEFAULT_BOT_LANG = "ru"
 
 # Initialize bot and dispatcher
 bot = Bot(token=settings.telegram_bot_token) if settings.telegram_bot_token else None
 dp = Dispatcher()
+
+
+async def get_user_language(telegram_id: int) -> str:
+    """Get user language from database or return default."""
+    from app.db.repositories.users import UserRepository
+
+    try:
+        async with AsyncSessionLocal() as db:
+            user_repo = UserRepository(db)
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user and user.language:
+                return user.language
+    except Exception:
+        pass
+    return DEFAULT_BOT_LANG
 
 
 @dp.message(CommandStart())
@@ -32,18 +51,9 @@ async def cmd_start(message: Message):
         return
 
     chat_id = message.from_user.id
+    lang = await get_user_language(message.from_user.id)
     await message.answer(
-        "👋 <b>Привет!</b> Я бот CronBox.\n\n"
-        f"🆔 <b>Ваш Chat ID:</b> <code>{chat_id}</code>\n\n"
-        "Я буду отправлять вам уведомления о выполнении задач.\n\n"
-        "<b>Доступные команды:</b>\n"
-        "/link <code>код</code> - привязать аккаунт CronBox\n"
-        "/status - проверить статус привязки\n"
-        "/help - показать справку\n\n"
-        "💡 <b>Чтобы привязать аккаунт:</b>\n"
-        "1. Зайдите в настройки CronBox\n"
-        "2. Нажмите «Привязать Telegram»\n"
-        "3. Скопируйте код и отправьте мне командой /link",
+        t("bot.start.greeting", lang, chat_id=chat_id),
         parse_mode="HTML",
     )
 
@@ -51,20 +61,12 @@ async def cmd_start(message: Message):
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     """Handle /help command."""
+    if not message.from_user:
+        return
+
+    lang = await get_user_language(message.from_user.id)
     await message.answer(
-        "📖 <b>Справка по CronBox Bot</b>\n\n"
-        "<b>Команды:</b>\n"
-        "/start - начать работу с ботом\n"
-        "/link <code>код</code> - привязать аккаунт CronBox\n"
-        "/status - проверить статус привязки\n"
-        "/unlink - отвязать аккаунт\n"
-        "/help - показать эту справку\n\n"
-        "<b>Уведомления:</b>\n"
-        "После привязки аккаунта вы будете получать уведомления о:\n"
-        "• Неудачных выполнениях задач\n"
-        "• Восстановлении задач после ошибок\n"
-        "• Успешных выполнениях (если включено)\n\n"
-        "🌐 <a href=\"https://cronbox.ru\">cronbox.ru</a>",
+        t("bot.help.title", lang),
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
@@ -76,12 +78,11 @@ async def cmd_link(message: Message):
     if not message.text or not message.from_user:
         return
 
+    lang = await get_user_language(message.from_user.id)
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
         await message.answer(
-            "❌ Укажите код привязки.\n\n"
-            "<b>Пример:</b> /link 123456\n\n"
-            "Код можно получить в настройках CronBox → Telegram.",
+            t("bot.link.missing_code", lang),
             parse_mode="HTML",
         )
         return
@@ -95,11 +96,12 @@ async def process_link_code(message: Message, code: str):
     if not message.from_user:
         return
 
+    lang = await get_user_language(message.from_user.id)
+
     # Validate code format (6 digits)
     if not re.match(r"^\d{6}$", code):
         await message.answer(
-            "❌ Неверный формат кода.\n"
-            "Код должен состоять из 6 цифр.",
+            t("bot.link.invalid_format", lang),
             parse_mode="HTML",
         )
         return
@@ -115,11 +117,10 @@ async def process_link_code(message: Message, code: str):
 
             if user:
                 await db.commit()
+                # Use user's language after linking
+                user_lang = user.language or lang
                 await message.answer(
-                    f"✅ <b>Аккаунт успешно привязан!</b>\n\n"
-                    f"Email: {user.email}\n"
-                    f"Имя: {user.name}\n\n"
-                    "Теперь вы будете получать уведомления о задачах в этот чат.",
+                    t("bot.link.success", user_lang, email=user.email, name=user.name),
                     parse_mode="HTML",
                 )
                 logger.info(
@@ -129,18 +130,13 @@ async def process_link_code(message: Message, code: str):
                 )
             else:
                 await message.answer(
-                    "❌ <b>Не удалось привязать аккаунт.</b>\n\n"
-                    "Возможные причины:\n"
-                    "• Код неверный или истёк\n"
-                    "• Этот Telegram уже привязан к другому аккаунту\n\n"
-                    "Получите новый код в настройках CronBox.",
+                    t("bot.link.failed", lang),
                     parse_mode="HTML",
                 )
     except Exception as e:
         logger.error("Error linking Telegram account", error=str(e), code=code)
         await message.answer(
-            "❌ <b>Произошла ошибка.</b>\n\n"
-            "Попробуйте позже или обратитесь в поддержку.",
+            t("bot.link.error", lang),
             parse_mode="HTML",
         )
 
@@ -158,18 +154,17 @@ async def cmd_status(message: Message):
         user = await user_repo.get_by_telegram_id(message.from_user.id)
 
         if user:
+            lang = user.language or DEFAULT_BOT_LANG
+            status_text = t("bot.status.active", lang) if user.is_active else t("bot.status.inactive", lang)
+            verified_text = t("bot.status.yes", lang) if user.email_verified else t("bot.status.no", lang)
             await message.answer(
-                f"✅ <b>Аккаунт привязан</b>\n\n"
-                f"Email: {user.email}\n"
-                f"Имя: {user.name}\n"
-                f"Статус: {'Активен' if user.is_active else 'Неактивен'}\n"
-                f"Email подтверждён: {'Да' if user.email_verified else 'Нет'}",
+                t("bot.status.linked", lang, email=user.email, name=user.name, status=status_text, email_verified=verified_text),
                 parse_mode="HTML",
             )
         else:
+            lang = DEFAULT_BOT_LANG
             await message.answer(
-                "❌ <b>Аккаунт не привязан</b>\n\n"
-                "Используйте команду /link для привязки аккаунта CronBox.",
+                t("bot.status.not_linked", lang),
                 parse_mode="HTML",
             )
 
@@ -188,19 +183,19 @@ async def cmd_unlink(message: Message):
 
         if not user:
             await message.answer(
-                "❌ Ваш Telegram не привязан к аккаунту CronBox.",
+                t("bot.unlink.not_linked", DEFAULT_BOT_LANG),
                 parse_mode="HTML",
             )
             return
+
+        lang = user.language or DEFAULT_BOT_LANG
 
         # Unlink account
         await user_repo.update(user, telegram_id=None, telegram_username=None)
         await db.commit()
 
         await message.answer(
-            "✅ <b>Аккаунт отвязан</b>\n\n"
-            "Вы больше не будете получать уведомления в Telegram.\n"
-            "Для повторной привязки используйте /link.",
+            t("bot.unlink.success", lang),
             parse_mode="HTML",
         )
         logger.info(

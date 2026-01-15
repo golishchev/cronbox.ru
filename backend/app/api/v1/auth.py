@@ -26,6 +26,7 @@ from app.schemas.auth import (
 from app.schemas.user import UserLogin, UserResponse, UserUpdate
 from app.services.auth import TELEGRAM_LINK_EXPIRE, AuthService
 from app.services.email import email_service
+from app.services.i18n import t
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -52,27 +53,28 @@ async def register(data: RegisterRequest, db: DB, background_tasks: BackgroundTa
     # Auto-send verification email
     token = await auth_service.send_email_verification(user)
     verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+    lang = user.language or "ru"
 
     async def send_verification_email():
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Добро пожаловать в CronBox!</h2>
-            <p>Здравствуйте, {user.name}!</p>
-            <p>Спасибо за регистрацию. Для подтверждения вашего email перейдите по ссылке:</p>
+            <h2>{t("email.verification.welcome_title", lang)}</h2>
+            <p>{t("email.verification.greeting", lang, name=user.name)}</p>
+            <p>{t("email.verification.body", lang)}</p>
             <a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
-                Подтвердить email
+                {t("email.verification.button", lang)}
             </a>
             <p style="margin-top: 16px; color: #666;">
-                Или скопируйте ссылку: {verification_url}
+                {t("email.verification.copy_link", lang)} {verification_url}
             </p>
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
-                Ссылка действительна 24 часа.
+                {t("email.verification.validity", lang)}
             </p>
         </div>
         """
         await email_service.send_email(
             to=user.email,
-            subject="[CronBox] Подтверждение email",
+            subject=t("email.verification.subject", lang),
             html=html,
         )
 
@@ -111,7 +113,10 @@ async def request_otp(
     The code is valid for 5 minutes.
     """
     auth_service = AuthService(db)
-    code, expires_in = await auth_service.request_otp(data.email)
+    code, expires_in, user = await auth_service.request_otp(data.email)
+
+    # Get user language if user exists
+    lang = user.language if user and user.language else "ru"
 
     # Send OTP email in background
     async def send_email():
@@ -119,6 +124,7 @@ async def request_otp(
             to=data.email,
             code=code,
             expire_minutes=settings.otp_expire_minutes,
+            lang=lang,
         )
 
     background_tasks.add_task(send_email)
@@ -219,27 +225,28 @@ async def send_verification_email(
 
     # Send email in background
     verification_url = f"{settings.frontend_url}/#/verify-email?token={token}"
+    lang = current_user.language or "ru"
 
     async def send_email():
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Подтверждение email</h2>
-            <p>Здравствуйте, {current_user.name}!</p>
-            <p>Для подтверждения вашего email перейдите по ссылке:</p>
+            <h2>{t("email.verification_resend.title", lang)}</h2>
+            <p>{t("email.verification_resend.greeting", lang, name=current_user.name)}</p>
+            <p>{t("email.verification_resend.body", lang)}</p>
             <a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
-                Подтвердить email
+                {t("email.verification_resend.button", lang)}
             </a>
             <p style="margin-top: 16px; color: #666;">
-                Или скопируйте ссылку: {verification_url}
+                {t("email.verification_resend.copy_link", lang)} {verification_url}
             </p>
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
-                Ссылка действительна 24 часа. Если вы не запрашивали это письмо, просто проигнорируйте его.
+                {t("email.verification_resend.validity", lang)}
             </p>
         </div>
         """
         await email_service.send_email(
             to=current_user.email,
-            subject="[CronBox] Подтверждение email",
+            subject=t("email.verification_resend.subject", lang),
             html=html,
         )
 
@@ -262,32 +269,34 @@ async def forgot_password(
 ):
     """Request password reset. Sends email if user exists."""
     auth_service = AuthService(db)
-    token = await auth_service.request_password_reset(data.email)
+    result = await auth_service.request_password_reset(data.email)
 
-    if token:
+    if result:
+        token, user = result
         # Send email in background (only if user exists)
         reset_url = f"{settings.cors_origins[0]}/#/reset-password?token={token}"
+        lang = user.language if user else "ru"
 
         async def send_email():
             html = f"""
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Сброс пароля</h2>
-                <p>Вы запросили сброс пароля для вашего аккаунта CronBox.</p>
-                <p>Для установки нового пароля перейдите по ссылке:</p>
+                <h2>{t("email.password_reset.title", lang)}</h2>
+                <p>{t("email.password_reset.body", lang)}</p>
+                <p>{t("email.password_reset.instruction", lang)}</p>
                 <a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
-                    Сбросить пароль
+                    {t("email.password_reset.button", lang)}
                 </a>
                 <p style="margin-top: 16px; color: #666;">
-                    Или скопируйте ссылку: {reset_url}
+                    {t("email.password_reset.copy_link", lang)} {reset_url}
                 </p>
                 <p style="margin-top: 24px; color: #666; font-size: 12px;">
-                    Ссылка действительна 1 час. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
+                    {t("email.password_reset.validity", lang)}
                 </p>
             </div>
             """
             await email_service.send_email(
                 to=data.email,
-                subject="[CronBox] Сброс пароля",
+                subject=t("email.password_reset.subject", lang),
                 html=html,
             )
 

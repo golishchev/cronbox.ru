@@ -18,5 +18,100 @@
       "monthly": "monthly",
       "yearly": "yearly"
     }
+  },
+  "email": {
+    "verification": {
+      "subject": "[CronBox] Email Verification",
+      "welcome_title": "Welcome to CronBox!",
+      "greeting": "Hello, {name}!",
+      "body": "Thank you for registering. To verify your email, please click the link below:",
+      "button": "Verify Email",
+      "copy_link": "Or copy the link:",
+      "validity": "The link is valid for 24 hours.",
+      "ignore_notice": "If you did not request this email, please ignore it."
+    },
+    "verification_resend": {
+      "subject": "[CronBox] Email Verification",
+      "title": "Email Verification",
+      "greeting": "Hello, {name}!",
+      "body": "To verify your email, please click the link below:",
+      "button": "Verify Email",
+      "copy_link": "Or copy the link:",
+      "validity": "The link is valid for 24 hours. If you did not request this email, please ignore it."
+    },
+    "password_reset": {
+      "subject": "[CronBox] Password Reset",
+      "title": "Password Reset",
+      "body": "You requested a password reset for your CronBox account.",
+      "instruction": "To set a new password, please click the link below:",
+      "button": "Reset Password",
+      "copy_link": "Or copy the link:",
+      "validity": "The link is valid for 1 hour. If you did not request a password reset, please ignore this email."
+    },
+    "otp": {
+      "subject": "[CronBox] Login Code",
+      "title": "Login Code",
+      "code_label": "Your login code:",
+      "validity": "The code is valid for {minutes} minutes.",
+      "ignore_notice": "If you did not request this code, please ignore this email."
+    }
+  },
+  "bot": {
+    "start": {
+      "greeting": "👋 <b>Hello!</b> I'm the CronBox bot.\n\n🆔 <b>Your Chat ID:</b> <code>{chat_id}</code>\n\nI will send you notifications about task executions.\n\n<b>Available commands:</b>\n/link <code>code</code> - link your CronBox account\n/status - check link status\n/help - show help\n\n💡 <b>To link your account:</b>\n1. Go to CronBox settings\n2. Click \"Link Telegram\"\n3. Copy the code and send it to me with /link"
+    },
+    "help": {
+      "title": "📖 <b>CronBox Bot Help</b>\n\n<b>Commands:</b>\n/start - start using the bot\n/link <code>code</code> - link your CronBox account\n/status - check link status\n/unlink - unlink your account\n/help - show this help\n\n<b>Notifications:</b>\nAfter linking your account, you will receive notifications about:\n• Failed task executions\n• Task recovery after errors\n• Successful executions (if enabled)\n\n🌐 <a href=\"https://cronbox.ru\">cronbox.ru</a>"
+    },
+    "link": {
+      "missing_code": "❌ Please provide a link code.\n\n<b>Example:</b> /link 123456\n\nYou can get the code in CronBox settings → Telegram.",
+      "invalid_format": "❌ Invalid code format.\nThe code must consist of 6 digits.",
+      "success": "✅ <b>Account successfully linked!</b>\n\nEmail: {email}\nName: {name}\n\nYou will now receive task notifications in this chat.",
+      "failed": "❌ <b>Failed to link account.</b>\n\nPossible reasons:\n• The code is incorrect or expired\n• This Telegram is already linked to another account\n\nGet a new code in CronBox settings.",
+      "error": "❌ <b>An error occurred.</b>\n\nPlease try again later or contact support."
+    },
+    "status": {
+      "linked": "✅ <b>Account linked</b>\n\nEmail: {email}\nName: {name}\nStatus: {status}\nEmail verified: {email_verified}",
+      "not_linked": "❌ <b>Account not linked</b>\n\nUse the /link command to link your CronBox account.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "unlink": {
+      "not_linked": "❌ Your Telegram is not linked to a CronBox account.",
+      "success": "✅ <b>Account unlinked</b>\n\nYou will no longer receive Telegram notifications.\nTo link again, use /link."
+    }
+  },
+  "errors": {
+    "cron_task_limit": "Cron task limit reached. Your plan allows {max_tasks} cron task(s)",
+    "cron_interval_too_frequent": "Cron interval too frequent. Your plan requires minimum {min_interval} minute(s) between runs",
+    "delayed_task_limit": "Delayed task limit reached. Your plan allows {max_tasks} delayed task(s)",
+    "cron_task_not_found": "Cron task not found",
+    "delayed_task_not_found": "Delayed task not found",
+    "cannot_run_inactive_task": "Cannot run inactive task",
+    "task_already_paused": "Task is already paused",
+    "task_not_paused": "Task is not paused",
+    "failed_to_enqueue_task": "Failed to enqueue task: {error}",
+    "plan_not_found": "Plan not found",
+    "no_active_subscription": "No active subscription",
+    "already_subscribed": "Already subscribed to this plan",
+    "requires_scheduling": "This plan change requires scheduling. Use /schedule-plan-change endpoint.",
+    "no_scheduling_required": "This plan change does not require scheduling. Use /subscribe endpoint.",
+    "failed_to_create_payment": "Failed to create payment",
+    "failed_to_cancel_subscription": "Failed to cancel subscription",
+    "failed_to_schedule_change": "Failed to schedule plan change",
+    "no_scheduled_change": "No scheduled plan change to cancel",
+    "payment_not_configured": "Payment system is not configured",
+    "invalid_file_type": "Invalid file type. Allowed: JPEG, PNG, GIF, WebP",
+    "file_too_large": "File too large. Maximum size is 2 MB",
+    "delete_confirmation": "Type 'delete' to confirm account deletion",
+    "workspace_not_found": "Workspace not found",
+    "workspace_limit_reached": "Workspace limit reached. Your plan allows {max_workspaces} workspace(s)",
+    "cannot_delete_default_workspace": "Cannot delete default workspace",
+    "worker_not_found": "Worker not found",
+    "worker_limit_reached": "Worker limit reached. Your plan allows {max_workers} worker(s)",
+    "execution_not_found": "Execution not found",
+    "account_disabled": "Account is disabled"
   }
 }

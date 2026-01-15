@@ -258,8 +258,8 @@ class AuthService:
         logger.info("Email verified successfully", user_id=str(user.id))
         return user
 
-    async def request_password_reset(self, email: str) -> str | None:
-        """Request password reset and return token (or None if user not found)."""
+    async def request_password_reset(self, email: str) -> tuple[str, User] | None:
+        """Request password reset and return (token, user) tuple (or None if user not found)."""
         user = await self.user_repo.get_by_email(email)
 
         if not user:
@@ -279,7 +279,7 @@ class AuthService:
         await redis_client.set(redis_key, str(user.id), expire=PASSWORD_RESET_EXPIRE)
 
         logger.info("Generated password reset token", user_id=str(user.id))
-        return token
+        return token, user
 
     async def reset_password(self, token: str, new_password: str) -> User:
         """Reset password using token."""
@@ -316,11 +316,12 @@ class AuthService:
         logger.info("Telegram account unlinked", user_id=str(user.id))
         return user
 
-    async def request_otp(self, email: str) -> tuple[str, int]:
+    async def request_otp(self, email: str) -> tuple[str, int, User | None]:
         """
         Request OTP code for passwordless login.
 
-        Returns (code, expires_in) tuple.
+        Returns (code, expires_in, user) tuple.
+        User is returned if exists (for language preference), None otherwise.
         Code should be sent via email to the user.
         Raises BadRequestError if rate limited.
         """
@@ -331,6 +332,9 @@ class AuthService:
         if await redis_client.exists(cooldown_key):
             ttl = await redis_client.ttl(cooldown_key)
             raise BadRequestError(f"Please wait {ttl} seconds before requesting a new code")
+
+        # Try to get existing user for language preference
+        user = await self.user_repo.get_by_email(email_lower)
 
         # Generate OTP code
         code = "".join([str(secrets.randbelow(10)) for _ in range(settings.otp_code_length)])
@@ -350,7 +354,7 @@ class AuthService:
         )
 
         logger.info("OTP code generated", email=email_lower)
-        return code, expire_seconds
+        return code, expire_seconds, user
 
     async def verify_otp(self, email: str, code: str) -> tuple[User, TokenResponse]:
         """
