@@ -52,6 +52,11 @@ class User(Base, UUIDMixin, TimestampMixin):
         uselist=False,
     )
 
+    @property
+    def language(self) -> str:
+        """Alias for preferred_language for backward compatibility."""
+        return self.preferred_language
+
     def is_locked(self) -> bool:
         """Check if account is currently locked."""
         if self.locked_until is None:

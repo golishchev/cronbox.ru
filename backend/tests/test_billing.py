@@ -1,5 +1,5 @@
 """Tests for billing API."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -80,7 +80,7 @@ async def user_with_basic_subscription(
 ) -> tuple[User, Subscription]:
     """Create a test user with active basic subscription (monthly, 15 days remaining)."""
     # Create subscription that started 15 days ago
-    start_date = datetime.utcnow() - timedelta(days=15)
+    start_date = datetime.now(timezone.utc) - timedelta(days=15)
     end_date = start_date + timedelta(days=30)
 
     subscription = Subscription(
@@ -103,7 +103,7 @@ async def user_with_max_yearly_subscription(
 ) -> tuple[User, Subscription]:
     """Create a test user with active max yearly subscription."""
     # Create yearly subscription that started 6 months ago
-    start_date = datetime.utcnow() - timedelta(days=180)
+    start_date = datetime.now(timezone.utc) - timedelta(days=180)
     end_date = start_date + timedelta(days=365)
 
     subscription = Subscription(
@@ -297,7 +297,7 @@ class TestPreviewPriceProration:
         from app.core.security import create_access_token
 
         # Create subscription on max plan
-        start_date = datetime.utcnow() - timedelta(days=15)
+        start_date = datetime.now(timezone.utc) - timedelta(days=15)
         end_date = start_date + timedelta(days=30)
 
         subscription = Subscription(
@@ -438,7 +438,7 @@ class TestSchedulePlanChange:
         from app.core.security import create_access_token
 
         # Create subscription on max plan
-        start_date = datetime.utcnow() - timedelta(days=15)
+        start_date = datetime.now(timezone.utc) - timedelta(days=15)
         end_date = start_date + timedelta(days=30)
 
         subscription = Subscription(
@@ -482,7 +482,7 @@ class TestSchedulePlanChange:
         from app.core.security import create_access_token
 
         # Create subscription with scheduled change
-        start_date = datetime.utcnow() - timedelta(days=15)
+        start_date = datetime.now(timezone.utc) - timedelta(days=15)
         end_date = start_date + timedelta(days=30)
 
         subscription = Subscription(
@@ -553,7 +553,7 @@ class TestSubscribeValidation:
         from app.core.security import create_access_token
 
         # Create subscription on max plan
-        start_date = datetime.utcnow() - timedelta(days=15)
+        start_date = datetime.now(timezone.utc) - timedelta(days=15)
         end_date = start_date + timedelta(days=30)
 
         subscription = Subscription(

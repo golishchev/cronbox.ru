@@ -143,12 +143,13 @@ async def pro_plan(db_session: AsyncSession) -> Plan:
 
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession, free_plan: Plan) -> User:
-    """Create a test user."""
+    """Create a test user with verified email."""
     user = User(
         email="test@example.com",
         password_hash=get_password_hash("testpassword123"),
         name="Test User",
         is_active=True,
+        email_verified=True,
     )
     db_session.add(user)
     await db_session.commit()
