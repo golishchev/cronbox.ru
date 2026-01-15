@@ -532,7 +532,9 @@ class TestWorkspaceRepository:
 
     @pytest.mark.asyncio
     async def test_slug_exists(self):
-        """Test checking if slug exists."""
+        """Test checking if slug exists for owner."""
+        from uuid import uuid4
+
         from app.db.repositories.workspaces import WorkspaceRepository
 
         mock_db = AsyncMock()
@@ -542,13 +544,16 @@ class TestWorkspaceRepository:
         mock_result.scalar_one_or_none.return_value = MagicMock()
         mock_db.execute.return_value = mock_result
 
-        exists = await repo.slug_exists("test-slug")
+        owner_id = uuid4()
+        exists = await repo.slug_exists("test-slug", owner_id=owner_id)
 
         assert exists is True
 
     @pytest.mark.asyncio
     async def test_slug_not_exists(self):
-        """Test slug doesn't exist."""
+        """Test slug doesn't exist for owner."""
+        from uuid import uuid4
+
         from app.db.repositories.workspaces import WorkspaceRepository
 
         mock_db = AsyncMock()
@@ -558,7 +563,8 @@ class TestWorkspaceRepository:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        exists = await repo.slug_exists("non-existent")
+        owner_id = uuid4()
+        exists = await repo.slug_exists("non-existent", owner_id=owner_id)
 
         assert exists is False
 

@@ -42,8 +42,8 @@ async def create_workspace(
     """Create a new workspace. Requires verified email."""
     workspace_repo = WorkspaceRepository(db)
 
-    # Check if slug is unique
-    if await workspace_repo.slug_exists(data.slug):
+    # Check if slug is unique for this user
+    if await workspace_repo.slug_exists(data.slug, owner_id=current_user.id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Workspace with this slug already exists",

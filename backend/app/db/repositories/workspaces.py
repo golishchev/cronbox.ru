@@ -54,9 +54,14 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def slug_exists(self, slug: str, exclude_id: UUID | None = None) -> bool:
-        """Check if slug already exists."""
-        stmt = select(Workspace.id).where(Workspace.slug == slug)
+    async def slug_exists(
+        self, slug: str, owner_id: UUID, exclude_id: UUID | None = None
+    ) -> bool:
+        """Check if slug already exists for the given owner."""
+        stmt = select(Workspace.id).where(
+            Workspace.slug == slug,
+            Workspace.owner_id == owner_id,
+        )
         if exclude_id:
             stmt = stmt.where(Workspace.id != exclude_id)
         result = await self.db.execute(stmt)
