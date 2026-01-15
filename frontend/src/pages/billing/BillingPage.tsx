@@ -103,10 +103,10 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
         // Redirect to YooKassa payment page
         window.location.href = payment.yookassa_confirmation_url
       } else {
-        setError('Failed to get payment URL')
+        setError(t('apiErrors.failedToGetPaymentUrl'))
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create payment')
+      setError(err.response?.data?.detail || t('apiErrors.failedToCreatePayment'))
     } finally {
       setProcessing(false)
       setShowUpgradeDialog(false)
