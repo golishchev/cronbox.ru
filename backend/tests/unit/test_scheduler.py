@@ -375,15 +375,22 @@ class TestSubscriptionChecks:
 
             # billing_service and notification_service are imported inside the method
             with patch("app.services.billing.billing_service") as mock_billing:
+                mock_billing.get_subscriptions_with_scheduled_changes = AsyncMock(return_value=[])
+                mock_billing.apply_scheduled_plan_change = AsyncMock(return_value=True)
+                mock_billing.get_subscriptions_for_renewal = AsyncMock(return_value=[])
+                mock_billing.auto_renew_subscription = AsyncMock(return_value=None)
                 mock_billing.check_expired_subscriptions = AsyncMock(return_value=[])
                 mock_billing.get_expiring_subscriptions = AsyncMock(return_value=[])
 
                 with patch("app.services.notifications.notification_service") as mock_notif:
                     mock_notif.send_subscription_expired = AsyncMock()
                     mock_notif.send_subscription_expiring = AsyncMock()
+                    mock_notif.send_subscription_renewed = AsyncMock()
 
                     await scheduler._process_subscription_checks()
 
-                    # Should have checked for expired and expiring subscriptions
+                    # Should have checked for scheduled changes, renewals, and expirations
+                    mock_billing.get_subscriptions_with_scheduled_changes.assert_called_once()
+                    mock_billing.get_subscriptions_for_renewal.assert_called_once()
                     mock_billing.check_expired_subscriptions.assert_called_once()
                     assert mock_billing.get_expiring_subscriptions.call_count == 2  # 7 days and 1 day

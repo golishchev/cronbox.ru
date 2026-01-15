@@ -286,7 +286,16 @@ class TestNotificationService:
         service = NotificationService()
         mock_db = AsyncMock()
 
+        user_id = uuid4()
         workspace_id = uuid4()
+
+        # Mock workspace query result
+        mock_workspace = MagicMock()
+        mock_workspace.id = workspace_id
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_workspace
+        mock_db.execute.return_value = mock_result
+
         mock_settings = MagicMock()
         mock_settings.telegram_enabled = False
         mock_settings.email_enabled = False
@@ -298,7 +307,7 @@ class TestNotificationService:
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_webhook") as mock_webhook:
                     await service.send_subscription_expired(
-                        mock_db, workspace_id, tasks_paused=5
+                        mock_db, user_id, tasks_paused=5
                     )
 
                     mock_webhook.assert_called_once()
