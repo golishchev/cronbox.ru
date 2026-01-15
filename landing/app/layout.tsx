@@ -7,6 +7,7 @@ import { JsonLd } from '@/components/JsonLd'
 import './globals.css'
 
 const YANDEX_METRIKA_ID = 106267474
+const VK_PIXEL_ID = '3734002'
 
 const inter = Inter({
   subsets: ['cyrillic', 'latin'],
@@ -170,6 +171,30 @@ export default function RootLayout({
               src={`https://mc.yandex.ru/watch/${YANDEX_METRIKA_ID}`}
               style={{ position: 'absolute', left: '-9999px' }}
               alt=""
+            />
+          </div>
+        </noscript>
+
+        {/* Top.Mail.Ru (VK Pixel) counter */}
+        <Script id="vk-pixel" strategy="afterInteractive">
+          {`
+            var _tmr = window._tmr || (window._tmr = []);
+            _tmr.push({id: "${VK_PIXEL_ID}", type: "pageView", start: (new Date()).getTime()});
+            (function (d, w, id) {
+              if (d.getElementById(id)) return;
+              var ts = d.createElement("script"); ts.type = "text/javascript"; ts.async = true; ts.id = id;
+              ts.src = "https://top-fwz1.mail.ru/js/code.js";
+              var f = function () {var s = d.getElementsByTagName("script")[0]; s.parentNode.insertBefore(ts, s);};
+              if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); }
+            })(document, window, "tmr-code");
+          `}
+        </Script>
+        <noscript>
+          <div>
+            <img
+              src={`https://top-fwz1.mail.ru/counter?id=${VK_PIXEL_ID};js=na`}
+              style={{ position: 'absolute', left: '-9999px' }}
+              alt="Top.Mail.Ru"
             />
           </div>
         </noscript>
