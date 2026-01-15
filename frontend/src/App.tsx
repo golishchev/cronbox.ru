@@ -67,9 +67,24 @@ function App() {
             setCurrentWorkspace(null)
           }
 
-          const hash = window.location.hash.slice(1) || 'dashboard'
-          if (PROTECTED_ROUTES.includes(hash)) {
-            setRoute(hash as Route)
+          const fullHash = window.location.hash.slice(1) || 'dashboard'
+          const [hashPath] = fullHash.split('?')
+          const routePath = hashPath.split('/').filter(Boolean)[0] || 'dashboard'
+
+          // Don't override verify-email route - it needs to work for authenticated users too
+          if (routePath === 'verify-email') {
+            setRoute('verify-email')
+            // Extract token from query string
+            const queryString = fullHash.split('?')[1]
+            if (queryString) {
+              const params = new URLSearchParams(queryString)
+              const token = params.get('token')
+              if (token) {
+                setVerifyEmailToken(token)
+              }
+            }
+          } else if (PROTECTED_ROUTES.includes(routePath)) {
+            setRoute(routePath as Route)
           } else {
             setRoute('dashboard')
           }
