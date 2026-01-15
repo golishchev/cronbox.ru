@@ -16,6 +16,7 @@ wheels/
 
 # Node.js
 node_modules/
+.next/
 
 # Test coverage artifacts
 .coverage
