@@ -20,9 +20,7 @@ class BaseRepository(Generic[ModelType]):
         """Get a record by its ID."""
         return await self.db.get(self.model, id)
 
-    async def get_all(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[ModelType]:
+    async def get_all(self, skip: int = 0, limit: int = 100) -> list[ModelType]:
         """Get all records with pagination."""
         stmt = select(self.model).offset(skip).limit(limit)
         result = await self.db.execute(stmt)

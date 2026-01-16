@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, func, select, union_all, literal, cast, String
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
@@ -29,11 +29,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         end_date: datetime | None = None,
     ) -> list[Execution]:
         """Get executions for a workspace with filters."""
-        stmt = (
-            select(Execution)
-            .where(Execution.workspace_id == workspace_id)
-            .order_by(Execution.started_at.desc())
-        )
+        stmt = select(Execution).where(Execution.workspace_id == workspace_id).order_by(Execution.started_at.desc())
 
         if task_type is not None:
             stmt = stmt.where(Execution.task_type == task_type)
@@ -60,11 +56,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         end_date: datetime | None = None,
     ) -> int:
         """Count executions for a workspace with filters."""
-        stmt = (
-            select(func.count())
-            .select_from(Execution)
-            .where(Execution.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(Execution).where(Execution.workspace_id == workspace_id)
 
         if task_type is not None:
             stmt = stmt.where(Execution.task_type == task_type)
@@ -112,9 +104,7 @@ class ExecutionRepository(BaseRepository[Execution]):
 
         # Failed count
         failed_stmt = (
-            select(func.count())
-            .select_from(Execution)
-            .where(and_(*base_filter, Execution.status == TaskStatus.FAILED))
+            select(func.count()).select_from(Execution).where(and_(*base_filter, Execution.status == TaskStatus.FAILED))
         )
         failed_result = await self.db.execute(failed_stmt)
         failed = failed_result.scalar_one()
@@ -226,26 +216,32 @@ class ExecutionRepository(BaseRepository[Execution]):
         rows = result.all()
 
         # Build result with all days (including days with no executions)
-        stats_by_date = {str(row.date): {"success": row.success, "failed": row.failed, "total": row.total} for row in rows}
+        stats_by_date = {
+            str(row.date): {"success": row.success, "failed": row.failed, "total": row.total} for row in rows
+        }
 
         daily_stats = []
         for i in range(days):
             date = start_date + timedelta(days=i)
             date_str = date.strftime("%Y-%m-%d")
             if date_str in stats_by_date:
-                daily_stats.append({
-                    "date": date_str,
-                    "success": stats_by_date[date_str]["success"],
-                    "failed": stats_by_date[date_str]["failed"],
-                    "total": stats_by_date[date_str]["total"],
-                })
+                daily_stats.append(
+                    {
+                        "date": date_str,
+                        "success": stats_by_date[date_str]["success"],
+                        "failed": stats_by_date[date_str]["failed"],
+                        "total": stats_by_date[date_str]["total"],
+                    }
+                )
             else:
-                daily_stats.append({
-                    "date": date_str,
-                    "success": 0,
-                    "failed": 0,
-                    "total": 0,
-                })
+                daily_stats.append(
+                    {
+                        "date": date_str,
+                        "success": 0,
+                        "failed": 0,
+                        "total": 0,
+                    }
+                )
 
         return daily_stats
 
@@ -285,11 +281,7 @@ class ExecutionRepository(BaseRepository[Execution]):
 
         # Get regular executions (cron and delayed) if not filtered to chains only
         if task_type is None or task_type in ("cron", "delayed"):
-            stmt = (
-                select(Execution)
-                .where(Execution.workspace_id == workspace_id)
-                .order_by(Execution.started_at.desc())
-            )
+            stmt = select(Execution).where(Execution.workspace_id == workspace_id).order_by(Execution.started_at.desc())
 
             if task_type in ("cron", "delayed"):
                 stmt = stmt.where(Execution.task_type == task_type)
@@ -304,28 +296,30 @@ class ExecutionRepository(BaseRepository[Execution]):
             executions = result.scalars().all()
 
             for ex in executions:
-                results.append({
-                    "id": ex.id,
-                    "workspace_id": ex.workspace_id,
-                    "task_type": ex.task_type,
-                    "task_id": ex.task_id,
-                    "task_name": ex.task_name,
-                    "status": ex.status.value,
-                    "started_at": ex.started_at,
-                    "finished_at": ex.finished_at,
-                    "duration_ms": ex.duration_ms,
-                    "retry_attempt": ex.retry_attempt,
-                    "request_url": ex.request_url,
-                    "request_method": ex.request_method.value if ex.request_method else None,
-                    "response_status_code": ex.response_status_code,
-                    "error_message": ex.error_message,
-                    "error_type": ex.error_type,
-                    "created_at": ex.created_at,
-                    "total_steps": None,
-                    "completed_steps": None,
-                    "failed_steps": None,
-                    "skipped_steps": None,
-                })
+                results.append(
+                    {
+                        "id": ex.id,
+                        "workspace_id": ex.workspace_id,
+                        "task_type": ex.task_type,
+                        "task_id": ex.task_id,
+                        "task_name": ex.task_name,
+                        "status": ex.status.value,
+                        "started_at": ex.started_at,
+                        "finished_at": ex.finished_at,
+                        "duration_ms": ex.duration_ms,
+                        "retry_attempt": ex.retry_attempt,
+                        "request_url": ex.request_url,
+                        "request_method": ex.request_method.value if ex.request_method else None,
+                        "response_status_code": ex.response_status_code,
+                        "error_message": ex.error_message,
+                        "error_type": ex.error_type,
+                        "created_at": ex.created_at,
+                        "total_steps": None,
+                        "completed_steps": None,
+                        "failed_steps": None,
+                        "skipped_steps": None,
+                    }
+                )
 
         # Get chain executions if not filtered to cron/delayed only
         if task_type is None or task_type == "chain":
@@ -345,9 +339,7 @@ class ExecutionRepository(BaseRepository[Execution]):
                     TaskStatus.FAILED: ChainStatus.FAILED,
                 }
                 if status in chain_status_map:
-                    chain_stmt = chain_stmt.where(
-                        ChainExecution.status == chain_status_map[status]
-                    )
+                    chain_stmt = chain_stmt.where(ChainExecution.status == chain_status_map[status])
 
             if start_date is not None:
                 chain_stmt = chain_stmt.where(ChainExecution.started_at >= start_date)
@@ -369,28 +361,30 @@ class ExecutionRepository(BaseRepository[Execution]):
                     ChainStatus.PARTIAL: "partial",
                     ChainStatus.CANCELLED: "cancelled",
                 }
-                results.append({
-                    "id": chain_ex.id,
-                    "workspace_id": chain_ex.workspace_id,
-                    "task_type": "chain",
-                    "task_id": chain_ex.chain_id,
-                    "task_name": chain_name,
-                    "status": status_map.get(chain_ex.status, "unknown"),
-                    "started_at": chain_ex.started_at,
-                    "finished_at": chain_ex.finished_at,
-                    "duration_ms": chain_ex.duration_ms,
-                    "retry_attempt": None,
-                    "request_url": None,
-                    "request_method": None,
-                    "response_status_code": None,
-                    "error_message": chain_ex.error_message,
-                    "error_type": None,
-                    "created_at": chain_ex.created_at,
-                    "total_steps": chain_ex.total_steps,
-                    "completed_steps": chain_ex.completed_steps,
-                    "failed_steps": chain_ex.failed_steps,
-                    "skipped_steps": chain_ex.skipped_steps,
-                })
+                results.append(
+                    {
+                        "id": chain_ex.id,
+                        "workspace_id": chain_ex.workspace_id,
+                        "task_type": "chain",
+                        "task_id": chain_ex.chain_id,
+                        "task_name": chain_name,
+                        "status": status_map.get(chain_ex.status, "unknown"),
+                        "started_at": chain_ex.started_at,
+                        "finished_at": chain_ex.finished_at,
+                        "duration_ms": chain_ex.duration_ms,
+                        "retry_attempt": None,
+                        "request_url": None,
+                        "request_method": None,
+                        "response_status_code": None,
+                        "error_message": chain_ex.error_message,
+                        "error_type": None,
+                        "created_at": chain_ex.created_at,
+                        "total_steps": chain_ex.total_steps,
+                        "completed_steps": chain_ex.completed_steps,
+                        "failed_steps": chain_ex.failed_steps,
+                        "skipped_steps": chain_ex.skipped_steps,
+                    }
+                )
 
         # Sort by started_at descending
         results.sort(key=lambda x: x["started_at"], reverse=True)
@@ -411,11 +405,7 @@ class ExecutionRepository(BaseRepository[Execution]):
 
         # Count regular executions
         if task_type is None or task_type in ("cron", "delayed"):
-            stmt = (
-                select(func.count())
-                .select_from(Execution)
-                .where(Execution.workspace_id == workspace_id)
-            )
+            stmt = select(func.count()).select_from(Execution).where(Execution.workspace_id == workspace_id)
 
             if task_type in ("cron", "delayed"):
                 stmt = stmt.where(Execution.task_type == task_type)
@@ -432,9 +422,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         # Count chain executions
         if task_type is None or task_type == "chain":
             chain_stmt = (
-                select(func.count())
-                .select_from(ChainExecution)
-                .where(ChainExecution.workspace_id == workspace_id)
+                select(func.count()).select_from(ChainExecution).where(ChainExecution.workspace_id == workspace_id)
             )
 
             if status is not None:
@@ -445,9 +433,7 @@ class ExecutionRepository(BaseRepository[Execution]):
                     TaskStatus.FAILED: ChainStatus.FAILED,
                 }
                 if status in chain_status_map:
-                    chain_stmt = chain_stmt.where(
-                        ChainExecution.status == chain_status_map[status]
-                    )
+                    chain_stmt = chain_stmt.where(ChainExecution.status == chain_status_map[status])
 
             if start_date is not None:
                 chain_stmt = chain_stmt.where(ChainExecution.started_at >= start_date)

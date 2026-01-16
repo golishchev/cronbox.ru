@@ -1,4 +1,5 @@
 """Tests for worker tasks module."""
+
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -640,17 +641,14 @@ class TestExecuteCronTask:
                         "error_type": "server_error",
                     }
 
-                    result = await execute_cron_task(
-                        ctx, task_id=str(task_id), retry_attempt=0
-                    )
+                    result = await execute_cron_task(ctx, task_id=str(task_id), retry_attempt=0)
 
                     assert result["success"] is False
                     # Verify retry was scheduled (enqueue_job called for retry)
                     mock_redis.enqueue_job.assert_called()
                     # Find the retry call
                     retry_calls = [
-                        call for call in mock_redis.enqueue_job.call_args_list
-                        if call[0][0] == "execute_cron_task"
+                        call for call in mock_redis.enqueue_job.call_args_list if call[0][0] == "execute_cron_task"
                     ]
                     assert len(retry_calls) == 1
                     assert retry_calls[0][1]["retry_attempt"] == 1
@@ -860,16 +858,13 @@ class TestExecuteDelayedTask:
                         "error": "Server error",
                     }
 
-                    result = await execute_delayed_task(
-                        ctx, task_id=str(task_id), retry_attempt=0
-                    )
+                    result = await execute_delayed_task(ctx, task_id=str(task_id), retry_attempt=0)
 
                     assert result["success"] is False
                     mock_delayed_repo.increment_retry.assert_called_once()
                     # Verify retry was scheduled
                     retry_calls = [
-                        call for call in mock_redis.enqueue_job.call_args_list
-                        if call[0][0] == "execute_delayed_task"
+                        call for call in mock_redis.enqueue_job.call_args_list if call[0][0] == "execute_delayed_task"
                     ]
                     assert len(retry_calls) == 1
 
@@ -919,9 +914,7 @@ class TestExecuteDelayedTask:
                     }
 
                     # Max retries reached
-                    result = await execute_delayed_task(
-                        ctx, task_id=str(task_id), retry_attempt=3
-                    )
+                    result = await execute_delayed_task(ctx, task_id=str(task_id), retry_attempt=3)
 
                     assert result["success"] is False
                     # Should mark as failed, not increment retry

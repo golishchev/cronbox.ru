@@ -1,4 +1,5 @@
 """Webhook endpoints for external services."""
+
 import ipaddress
 
 import httpx

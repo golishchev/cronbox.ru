@@ -1,4 +1,5 @@
 """Email log model for tracking sent emails."""
+
 import enum
 from datetime import datetime
 from uuid import UUID
@@ -70,9 +71,7 @@ class EmailLog(Base, UUIDMixin, TimestampMixin):
     text_body: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Postal tracking
-    postal_message_id: Mapped[str | None] = mapped_column(
-        String(255), unique=True, nullable=True, index=True
-    )
+    postal_message_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)
     postal_server: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Status tracking
@@ -84,24 +83,12 @@ class EmailLog(Base, UUIDMixin, TimestampMixin):
     status_details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Delivery timestamps
-    sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    delivered_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    opened_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    clicked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    bounced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    failed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    bounced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Tracking stats
     open_count: Mapped[int] = mapped_column(Integer, default=0)

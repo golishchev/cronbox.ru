@@ -166,9 +166,7 @@ async def require_active_subscription(
         )
 
     # Get subscription for USER (not workspace)
-    result = await db.execute(
-        select(Subscription).where(Subscription.user_id == current_user.id)
-    )
+    result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
     subscription = result.scalar_one_or_none()
 
     # No subscription = free plan, allowed (limits checked in endpoints)

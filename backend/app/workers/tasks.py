@@ -597,9 +597,7 @@ async def execute_chain(
                             condition_details=condition_details,
                         )
                         exec_context.update_from_step_result(StepStatus.SKIPPED)
-                        log_step_execution(
-                            chain, step, step.step_order, step.url, StepStatus.SKIPPED
-                        )
+                        log_step_execution(chain, step, step.step_order, step.url, StepStatus.SKIPPED)
                         continue
 
                 # Prepare request with variable substitution
@@ -628,9 +626,7 @@ async def execute_chain(
                         error_type=error_type,
                     )
                     exec_context.update_from_step_result(StepStatus.FAILED)
-                    log_step_execution(
-                        chain, step, step.step_order, step.url, StepStatus.FAILED, error=error_message
-                    )
+                    log_step_execution(chain, step, step.step_order, step.url, StepStatus.FAILED, error=error_message)
 
                     if not exec_context.should_continue(step, StepStatus.FAILED):
                         break
@@ -671,9 +667,7 @@ async def execute_chain(
                     step_status = StepStatus.SUCCESS
                     # Extract variables from response
                     if step.extract_variables:
-                        extracted_vars = extract_variables_from_response(
-                            response_body, step.extract_variables
-                        )
+                        extracted_vars = extract_variables_from_response(response_body, step.extract_variables)
                 else:
                     step_status = StepStatus.FAILED
                     error_message = result.get("error")
@@ -703,7 +697,11 @@ async def execute_chain(
                 )
 
                 log_step_execution(
-                    chain, step, step.step_order, url, step_status,
+                    chain,
+                    step,
+                    step.step_order,
+                    url,
+                    step_status,
                     duration_ms=result.get("duration_ms"),
                     error=error_message,
                 )
@@ -763,7 +761,8 @@ async def execute_chain(
         # Log completion
         duration_ms = int((datetime.utcnow() - exec_context.started_at).total_seconds() * 1000)
         log_chain_execution_complete(
-            chain, final_status,
+            chain,
+            final_status,
             exec_context.completed_steps,
             exec_context.failed_steps,
             exec_context.skipped_steps,

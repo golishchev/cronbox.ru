@@ -1,4 +1,5 @@
 """Tests for custom exceptions."""
+
 import pytest
 from fastapi import status
 

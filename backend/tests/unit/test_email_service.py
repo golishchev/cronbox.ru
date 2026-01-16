@@ -1,4 +1,5 @@
 """Tests for EmailService."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,6 +19,7 @@ class TestEmailServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             assert service.host == "smtp.example.com"
@@ -36,6 +38,7 @@ class TestEmailServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             assert service.is_configured is True
@@ -51,6 +54,7 @@ class TestEmailServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             assert service.is_configured is False
@@ -66,6 +70,7 @@ class TestEmailServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             assert service.is_configured is False
@@ -86,6 +91,7 @@ class TestEmailServiceSendEmail:
             mock_settings.email_from = None
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             result = await service.send_email(
@@ -111,6 +117,7 @@ class TestEmailServiceSendEmail:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             result = await service.send_email(
@@ -138,6 +145,7 @@ class TestEmailServiceSendEmail:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             result = await service.send_email(
@@ -163,6 +171,7 @@ class TestEmailServiceSendEmail:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             result = await service.send_email(
@@ -189,6 +198,7 @@ class TestEmailServiceTaskNotifications:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             with patch.object(service, "send_email", new_callable=AsyncMock) as mock_send:
@@ -222,6 +232,7 @@ class TestEmailServiceTaskNotifications:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             with patch.object(service, "send_email", new_callable=AsyncMock) as mock_send:
@@ -249,6 +260,7 @@ class TestEmailServiceTaskNotifications:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             with patch.object(service, "send_email", new_callable=AsyncMock) as mock_send:
@@ -279,6 +291,7 @@ class TestEmailServiceTaskNotifications:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             with patch.object(service, "send_email", new_callable=AsyncMock) as mock_send:
@@ -310,6 +323,7 @@ class TestEmailServiceTaskNotifications:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.email import EmailService
+
             service = EmailService()
 
             with patch.object(service, "send_email", new_callable=AsyncMock) as mock_send:

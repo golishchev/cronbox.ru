@@ -11,7 +11,6 @@ from app.models.chain_execution import StepStatus
 from app.models.cron_task import HttpMethod
 from app.models.task_chain import ChainStatus, TriggerType
 
-
 # ============================================================================
 # Chain Step Schemas
 # ============================================================================
@@ -254,9 +253,7 @@ class TaskChainResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer(
-        "execute_at", "last_run_at", "next_run_at", "created_at", "updated_at"
-    )
+    @field_serializer("execute_at", "last_run_at", "next_run_at", "created_at", "updated_at")
     def serialize_datetime(self, dt: datetime | None) -> str | None:
         if dt is None:
             return None

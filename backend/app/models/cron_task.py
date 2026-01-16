@@ -56,9 +56,7 @@ class CronTask(Base, UUIDMixin, TimestampMixin):
 
     # HTTP Request
     url: Mapped[str] = mapped_column(String(2048))
-    method: Mapped[HttpMethod] = mapped_column(
-        SQLEnum(HttpMethod), default=HttpMethod.GET
-    )
+    method: Mapped[HttpMethod] = mapped_column(SQLEnum(HttpMethod), default=HttpMethod.GET)
     headers: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -75,9 +73,7 @@ class CronTask(Base, UUIDMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     is_paused: Mapped[bool] = mapped_column(Boolean, default=False)
     last_run_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    last_status: Mapped[TaskStatus | None] = mapped_column(
-        SQLEnum(TaskStatus), nullable=True
-    )
+    last_status: Mapped[TaskStatus | None] = mapped_column(SQLEnum(TaskStatus), nullable=True)
     next_run_at: Mapped[datetime | None] = mapped_column(index=True, nullable=True)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
 

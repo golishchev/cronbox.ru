@@ -1,4 +1,5 @@
 """Tests for security module."""
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import uuid4
@@ -67,7 +68,7 @@ class TestPasswordHashing:
 
     def test_get_password_hash_special_characters(self):
         """Test password hashing with special characters."""
-        password = "P@$$w0rd!#%^&*(){}[]|\\:\";<>,.?/"
+        password = 'P@$$w0rd!#%^&*(){}[]|\\:";<>,.?/'
         hashed = get_password_hash(password)
 
         assert verify_password(password, hashed) is True

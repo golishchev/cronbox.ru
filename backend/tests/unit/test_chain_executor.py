@@ -1,4 +1,5 @@
 """Unit tests for chain executor service."""
+
 import json
 from datetime import datetime
 from unittest.mock import MagicMock
@@ -161,10 +162,12 @@ class TestExtractVariablesFromResponse:
 
     def test_extract_multiple_variables(self):
         """Test extracting multiple variables."""
-        response_body = json.dumps({
-            "data": {"id": 123, "token": "abc"},
-            "status": "success",
-        })
+        response_body = json.dumps(
+            {
+                "data": {"id": 123, "token": "abc"},
+                "status": "success",
+            }
+        )
         extract_config = {
             "user_id": "$.data.id",
             "auth_token": "$.data.token",
@@ -415,37 +418,27 @@ class TestDetermineChainStatus:
 
     def test_all_success(self):
         """Test all steps successful."""
-        result = determine_chain_status(
-            completed=5, failed=0, skipped=0, total=5, stop_on_failure=True
-        )
+        result = determine_chain_status(completed=5, failed=0, skipped=0, total=5, stop_on_failure=True)
         assert result == ChainStatus.SUCCESS
 
     def test_all_failed(self):
         """Test all steps failed."""
-        result = determine_chain_status(
-            completed=0, failed=5, skipped=0, total=5, stop_on_failure=True
-        )
+        result = determine_chain_status(completed=0, failed=5, skipped=0, total=5, stop_on_failure=True)
         assert result == ChainStatus.FAILED
 
     def test_partial_success(self):
         """Test partial success (some completed, some failed)."""
-        result = determine_chain_status(
-            completed=3, failed=2, skipped=0, total=5, stop_on_failure=False
-        )
+        result = determine_chain_status(completed=3, failed=2, skipped=0, total=5, stop_on_failure=False)
         assert result == ChainStatus.PARTIAL
 
     def test_all_skipped(self):
         """Test all steps skipped."""
-        result = determine_chain_status(
-            completed=0, failed=0, skipped=5, total=5, stop_on_failure=True
-        )
+        result = determine_chain_status(completed=0, failed=0, skipped=5, total=5, stop_on_failure=True)
         assert result == ChainStatus.FAILED
 
     def test_partial_with_skipped(self):
         """Test partial with some skipped."""
-        result = determine_chain_status(
-            completed=2, failed=0, skipped=3, total=5, stop_on_failure=True
-        )
+        result = determine_chain_status(completed=2, failed=0, skipped=3, total=5, stop_on_failure=True)
         assert result == ChainStatus.PARTIAL
 
 

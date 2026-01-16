@@ -1,4 +1,5 @@
 """Main notification orchestrator service."""
+
 from uuid import UUID
 
 import httpx
@@ -29,11 +30,7 @@ class NotificationService:
         workspace_id: UUID,
     ) -> NotificationSettings | None:
         """Get notification settings for a workspace."""
-        result = await db.execute(
-            select(NotificationSettings).where(
-                NotificationSettings.workspace_id == workspace_id
-            )
-        )
+        result = await db.execute(select(NotificationSettings).where(NotificationSettings.workspace_id == workspace_id))
         return result.scalar_one_or_none()
 
     async def get_or_create_settings(
@@ -50,14 +47,10 @@ class NotificationService:
             await db.refresh(settings)
         return settings
 
-    async def _get_workspace_info(
-        self, db: AsyncSession, workspace_id: UUID
-    ) -> tuple[str, str]:
+    async def _get_workspace_info(self, db: AsyncSession, workspace_id: UUID) -> tuple[str, str]:
         """Get workspace name and owner's preferred language."""
         result = await db.execute(
-            select(Workspace)
-            .options(selectinload(Workspace.owner))
-            .where(Workspace.id == workspace_id)
+            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
         )
         workspace = result.scalar_one_or_none()
 
@@ -77,9 +70,7 @@ class NotificationService:
         variables: dict,
     ) -> None:
         """Send Telegram notification using template."""
-        template = await template_service.get_template(
-            db, template_code, language, NotificationChannel.TELEGRAM
-        )
+        template = await template_service.get_template(db, template_code, language, NotificationChannel.TELEGRAM)
         _, body = template_service.render(template, variables)
 
         if body:
@@ -97,9 +88,7 @@ class NotificationService:
         tag: str | None = None,
     ) -> None:
         """Send email notification using template."""
-        template = await template_service.get_template(
-            db, template_code, language, NotificationChannel.EMAIL
-        )
+        template = await template_service.get_template(db, template_code, language, NotificationChannel.EMAIL)
         subject, body = template_service.render(template, variables)
 
         if not body:
@@ -148,9 +137,7 @@ class NotificationService:
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            await self._send_templated_telegram(
-                db, settings.telegram_chat_ids, "task_failure", language, variables
-            )
+            await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_failure", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -202,9 +189,7 @@ class NotificationService:
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            await self._send_templated_telegram(
-                db, settings.telegram_chat_ids, "task_recovery", language, variables
-            )
+            await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_recovery", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -256,9 +241,7 @@ class NotificationService:
 
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
-            await self._send_templated_telegram(
-                db, settings.telegram_chat_ids, "task_success", language, variables
-            )
+            await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_success", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -359,10 +342,7 @@ class NotificationService:
         """Send subscription expired notifications through all enabled channels."""
         # Get user's first workspace for notification settings
         workspace_result = await db.execute(
-            select(Workspace)
-            .where(Workspace.owner_id == user_id)
-            .order_by(Workspace.created_at.asc())
-            .limit(1)
+            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
         )
         workspace = workspace_result.scalar_one_or_none()
         if not workspace:
@@ -433,10 +413,7 @@ class NotificationService:
         """Send subscription auto-renewed notification."""
         # Get user's first workspace for notification settings
         workspace_result = await db.execute(
-            select(Workspace)
-            .where(Workspace.owner_id == user_id)
-            .order_by(Workspace.created_at.asc())
-            .limit(1)
+            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
         )
         workspace = workspace_result.scalar_one_or_none()
         if not workspace:
@@ -546,9 +523,7 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             try:
-                await self._send_templated_telegram(
-                    db, settings.telegram_chat_ids, template_code, language, variables
-                )
+                await self._send_templated_telegram(db, settings.telegram_chat_ids, template_code, language, variables)
             except Exception as e:
                 # Template might not exist, send a generic message
                 logger.warning(

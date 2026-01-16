@@ -152,47 +152,55 @@ class CronBoxWorker:
                 finished_at = datetime.now(timezone.utc)
                 duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
-                result.update({
-                    "status_code": response.status_code,
-                    "response_body": response.text[:10000] if response.text else None,
-                    "response_headers": dict(response.headers),
-                    "finished_at": finished_at.isoformat(),
-                    "duration_ms": duration_ms,
-                })
+                result.update(
+                    {
+                        "status_code": response.status_code,
+                        "response_body": response.text[:10000] if response.text else None,
+                        "response_headers": dict(response.headers),
+                        "finished_at": finished_at.isoformat(),
+                        "duration_ms": duration_ms,
+                    }
+                )
 
                 print(f"[Task {task_name}] Completed: {response.status_code} ({duration_ms}ms)")
 
         except httpx.TimeoutException:
             finished_at = datetime.now(timezone.utc)
             duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-            result.update({
-                "finished_at": finished_at.isoformat(),
-                "duration_ms": duration_ms,
-                "error": "Request timed out",
-                "error_type": "timeout",
-            })
+            result.update(
+                {
+                    "finished_at": finished_at.isoformat(),
+                    "duration_ms": duration_ms,
+                    "error": "Request timed out",
+                    "error_type": "timeout",
+                }
+            )
             print(f"[Task {task_name}] Timeout after {duration_ms}ms")
 
         except httpx.ConnectError as e:
             finished_at = datetime.now(timezone.utc)
             duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-            result.update({
-                "finished_at": finished_at.isoformat(),
-                "duration_ms": duration_ms,
-                "error": str(e),
-                "error_type": "connection_error",
-            })
+            result.update(
+                {
+                    "finished_at": finished_at.isoformat(),
+                    "duration_ms": duration_ms,
+                    "error": str(e),
+                    "error_type": "connection_error",
+                }
+            )
             print(f"[Task {task_name}] Connection error: {e}")
 
         except Exception as e:
             finished_at = datetime.now(timezone.utc)
             duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-            result.update({
-                "finished_at": finished_at.isoformat(),
-                "duration_ms": duration_ms,
-                "error": str(e),
-                "error_type": "unknown",
-            })
+            result.update(
+                {
+                    "finished_at": finished_at.isoformat(),
+                    "duration_ms": duration_ms,
+                    "error": str(e),
+                    "error_type": "unknown",
+                }
+            )
             print(f"[Task {task_name}] Error: {e}")
 
         finally:

@@ -1,4 +1,5 @@
 """Tests for cron tasks API."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -87,9 +88,7 @@ class TestCronTasks:
             },
         )
 
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/cron"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/cron")
         assert response.status_code == 200
         data = response.json()
         assert "tasks" in data
@@ -110,9 +109,7 @@ class TestCronTasks:
         task_id = create_response.json()["id"]
 
         # Get task
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/cron/{task_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == task_id
@@ -160,9 +157,7 @@ class TestCronTasks:
         task_id = create_response.json()["id"]
 
         # Pause task
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}/pause"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/pause")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is True
@@ -182,12 +177,8 @@ class TestCronTasks:
         task_id = create_response.json()["id"]
 
         # Pause then resume
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}/pause"
-        )
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}/resume"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/pause")
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/resume")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is False
@@ -207,15 +198,11 @@ class TestCronTasks:
         task_id = create_response.json()["id"]
 
         # Delete task
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/cron/{task_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/cron/{task_id}")
         assert get_response.status_code == 404
 
     async def test_trigger_cron_task(self, authenticated_client: AsyncClient, workspace):
@@ -233,9 +220,7 @@ class TestCronTasks:
         task_id = create_response.json()["id"]
 
         # Trigger task - endpoint may or may not exist
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/cron/{task_id}/trigger"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/trigger")
         # Accept 200, 202, or 404 (if endpoint not implemented)
         assert response.status_code in [200, 202, 404]
 
@@ -289,9 +274,7 @@ class TestCronTasks:
             )
 
         # List with limit
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/cron?limit=2"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/cron?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["tasks"]) <= 2

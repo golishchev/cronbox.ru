@@ -70,9 +70,7 @@ async def create_delayed_task(
 
     # Check idempotency key
     if data.idempotency_key:
-        existing = await delayed_repo.get_by_idempotency_key(
-            workspace.id, data.idempotency_key
-        )
+        existing = await delayed_repo.get_by_idempotency_key(workspace.id, data.idempotency_key)
         if existing:
             return DelayedTaskResponse.model_validate(existing)
 

@@ -35,9 +35,7 @@ class RedisClient:
         """Get a value from Redis."""
         return await self.client.get(key)
 
-    async def set(
-        self, key: str, value: str, expire: int | None = None
-    ) -> None:
+    async def set(self, key: str, value: str, expire: int | None = None) -> None:
         """Set a value in Redis with optional expiration."""
         await self.client.set(key, value, ex=expire)
 

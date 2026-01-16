@@ -1,4 +1,5 @@
 """Tests for workers API."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -43,9 +44,7 @@ class TestWorkers:
             json={"name": "List Test Worker"},
         )
 
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/workers"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/workers")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list) or "items" in data
@@ -62,9 +61,7 @@ class TestWorkers:
         worker_id = create_response.json()["id"]
 
         # Get worker
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/workers/{worker_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/workers/{worker_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == worker_id
@@ -104,15 +101,11 @@ class TestWorkers:
         worker_id = create_response.json()["id"]
 
         # Delete worker
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/workers/{worker_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/workers/{worker_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/workers/{worker_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/workers/{worker_id}")
         assert get_response.status_code == 404
 
     async def test_regenerate_worker_key(self, authenticated_client: AsyncClient, workspace):

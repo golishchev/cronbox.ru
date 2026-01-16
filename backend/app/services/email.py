@@ -1,4 +1,5 @@
 """Email notification service using SMTP."""
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -103,9 +104,9 @@ class EmailService:
                     <td style="padding: 8px 0; color: #666;">Type</td>
                     <td style="padding: 8px 0;">{task_type}</td>
                 </tr>
-                {f'<tr><td style="padding: 8px 0; color: #666;">URL</td><td style="padding: 8px 0;">{task_url}</td></tr>' if task_url else ''}
+                {f'<tr><td style="padding: 8px 0; color: #666;">URL</td><td style="padding: 8px 0;">{task_url}</td></tr>' if task_url else ""}
             </table>
-            {f'<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 4px; color: #991b1b;"><strong>Error:</strong> {error_message[:500] if error_message else "Unknown error"}</div>' if error_message else ''}
+            {f'<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 4px; color: #991b1b;"><strong>Error:</strong> {error_message[:500] if error_message else "Unknown error"}</div>' if error_message else ""}
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
                 This is an automated notification from CronBox.
             </p>
@@ -117,8 +118,8 @@ class EmailService:
 Workspace: {workspace_name}
 Task: {task_name}
 Type: {task_type}
-{f'URL: {task_url}' if task_url else ''}
-{f'Error: {error_message[:500]}' if error_message else ''}
+{f"URL: {task_url}" if task_url else ""}
+{f"Error: {error_message[:500]}" if error_message else ""}
 
 This is an automated notification from CronBox.
 """
@@ -201,7 +202,7 @@ This is an automated notification from CronBox.
                     <td style="padding: 8px 0; color: #666;">Type</td>
                     <td style="padding: 8px 0;">{task_type}</td>
                 </tr>
-                {f'<tr><td style="padding: 8px 0; color: #666;">Duration</td><td style="padding: 8px 0;">{duration_ms}ms</td></tr>' if duration_ms else ''}
+                {f'<tr><td style="padding: 8px 0; color: #666;">Duration</td><td style="padding: 8px 0;">{duration_ms}ms</td></tr>' if duration_ms else ""}
             </table>
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
                 This is an automated notification from CronBox.
@@ -214,7 +215,7 @@ This is an automated notification from CronBox.
 Workspace: {workspace_name}
 Task: {task_name}
 Type: {task_type}
-{f'Duration: {duration_ms}ms' if duration_ms else ''}
+{f"Duration: {duration_ms}ms" if duration_ms else ""}
 
 This is an automated notification from CronBox.
 """

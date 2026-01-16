@@ -23,11 +23,7 @@ class PlanRepository(BaseRepository[Plan]):
 
     async def get_public_plans(self) -> list[Plan]:
         """Get all public active plans."""
-        stmt = (
-            select(Plan)
-            .where(Plan.is_active.is_(True), Plan.is_public.is_(True))
-            .order_by(Plan.sort_order)
-        )
+        stmt = select(Plan).where(Plan.is_active.is_(True), Plan.is_public.is_(True)).order_by(Plan.sort_order)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 

@@ -13,33 +13,35 @@ import structlog
 logger = structlog.get_logger()
 
 # Blocked hostnames that could be used for SSRF
-BLOCKED_HOSTNAMES = frozenset({
-    "localhost",
-    "localhost.localdomain",
-    "127.0.0.1",
-    "::1",
-    # Common internal service names
-    "redis",
-    "postgres",
-    "postgresql",
-    "mysql",
-    "mongodb",
-    "mongo",
-    "db",
-    "database",
-    "memcached",
-    "elasticsearch",
-    "rabbitmq",
-    "kafka",
-    "zookeeper",
-    # Kubernetes internal
-    "kubernetes",
-    "kubernetes.default",
-    "kubernetes.default.svc",
-    # Docker internal
-    "host.docker.internal",
-    "gateway.docker.internal",
-})
+BLOCKED_HOSTNAMES = frozenset(
+    {
+        "localhost",
+        "localhost.localdomain",
+        "127.0.0.1",
+        "::1",
+        # Common internal service names
+        "redis",
+        "postgres",
+        "postgresql",
+        "mysql",
+        "mongodb",
+        "mongo",
+        "db",
+        "database",
+        "memcached",
+        "elasticsearch",
+        "rabbitmq",
+        "kafka",
+        "zookeeper",
+        # Kubernetes internal
+        "kubernetes",
+        "kubernetes.default",
+        "kubernetes.default.svc",
+        # Docker internal
+        "host.docker.internal",
+        "gateway.docker.internal",
+    }
+)
 
 # Private and reserved IP ranges (RFC 1918, RFC 5737, etc.)
 BLOCKED_IP_NETWORKS = [
@@ -159,10 +161,7 @@ def validate_url_for_ssrf(url: str, allow_private: bool = False) -> None:
 
         for ip_str in resolved_ips:
             if _is_ip_blocked(ip_str):
-                raise SSRFError(
-                    f"Hostname {hostname} resolves to blocked IP: {ip_str}",
-                    url
-                )
+                raise SSRFError(f"Hostname {hostname} resolves to blocked IP: {ip_str}", url)
 
 
 def is_url_safe(url: str, allow_private: bool = False) -> tuple[bool, str | None]:
@@ -243,7 +242,4 @@ def sanitize_headers_for_logging(headers: dict[str, str] | None) -> dict[str, st
         "x-xsrf-token",
     }
 
-    return {
-        k: "***REDACTED***" if k.lower() in sensitive_keys else v
-        for k, v in headers.items()
-    }
+    return {k: "***REDACTED***" if k.lower() in sensitive_keys else v for k, v in headers.items()}

@@ -1,4 +1,5 @@
 """Tests for database module."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

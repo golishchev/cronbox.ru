@@ -50,9 +50,7 @@ class UserRepository(BaseRepository[User]):
             email_verified=email_verified,
         )
 
-    async def update_telegram(
-        self, user: User, telegram_id: int, telegram_username: str | None = None
-    ) -> User:
+    async def update_telegram(self, user: User, telegram_id: int, telegram_username: str | None = None) -> User:
         """Update user's Telegram info."""
         return await self.update(
             user,
