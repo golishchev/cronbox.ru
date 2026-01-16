@@ -59,9 +59,9 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE"))
 
-    # Clear Redis cache (especially plans cache)
+    # Flush Redis completely (cache + rate limiter keys)
     try:
-        await redis_client.delete("cache:plans:public")
+        await redis_client.client.flushdb()
     except Exception:
         pass  # Ignore if Redis not available
 
