@@ -118,6 +118,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.default_limiter = RateLimiter(
             requests_per_minute=default_requests_per_minute
         )
+        # Cache allowed origins for CORS
+        self.allowed_origins = set(settings.cors_origins)
 
         # Initialize auth-specific rate limiters from settings
         self.AUTH_RATE_LIMITS = {
@@ -149,6 +151,39 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return limiter
         return None
 
+    def _create_rate_limit_response(
+        self,
+        request: Request,
+        limiter: RateLimiter,
+        message: str = "Too many requests. Please try again later.",
+    ) -> JSONResponse:
+        """Create 429 response with CORS headers."""
+        headers = {
+            "Retry-After": "60",
+            "X-RateLimit-Limit": str(limiter.requests_per_minute),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": str(60),
+        }
+
+        # Add CORS headers if origin is allowed
+        origin = request.headers.get("Origin")
+        if origin and origin in self.allowed_origins:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Access-Control-Expose-Headers"] = (
+                "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
+            )
+
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate_limit_exceeded",
+                "message": message,
+                "retry_after": 60,
+            },
+            headers=headers,
+        )
+
     async def dispatch(self, request: Request, call_next: Callable):
         # Skip rate limiting for excluded paths
         if request.url.path in self.EXCLUDED_PATHS:
@@ -168,19 +203,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     ip_identifier
                 )
                 if not is_allowed:
-                    return JSONResponse(
-                        status_code=429,
-                        content={
-                            "error": "rate_limit_exceeded",
-                            "message": "Too many attempts. Please try again later.",
-                            "retry_after": 60,
-                        },
-                        headers={
-                            "Retry-After": "60",
-                            "X-RateLimit-Limit": str(auth_limiter.requests_per_minute),
-                            "X-RateLimit-Remaining": "0",
-                            "X-RateLimit-Reset": str(60),
-                        },
+                    return self._create_rate_limit_response(
+                        request,
+                        auth_limiter,
+                        "Too many attempts. Please try again later.",
                     )
             except Exception:
                 pass  # Continue with default rate limiting
@@ -193,19 +219,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     ip_identifier
                 )
                 if not is_allowed:
-                    return JSONResponse(
-                        status_code=429,
-                        content={
-                            "error": "rate_limit_exceeded",
-                            "message": "Too many requests. Please try again later.",
-                            "retry_after": 60,
-                        },
-                        headers={
-                            "Retry-After": "60",
-                            "X-RateLimit-Limit": str(self.public_limiter.requests_per_minute),
-                            "X-RateLimit-Remaining": "0",
-                            "X-RateLimit-Reset": str(60),
-                        },
+                    return self._create_rate_limit_response(
+                        request, self.public_limiter
                     )
             except Exception:
                 pass  # Continue with default rate limiting
@@ -220,20 +235,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if not is_allowed:
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "error": "rate_limit_exceeded",
-                    "message": "Too many requests. Please try again later.",
-                    "retry_after": 60,
-                },
-                headers={
-                    "Retry-After": "60",
-                    "X-RateLimit-Limit": str(self.default_limiter.requests_per_minute),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(60),
-                },
-            )
+            return self._create_rate_limit_response(request, self.default_limiter)
 
         # Process request and add rate limit headers
         response = await call_next(request)
