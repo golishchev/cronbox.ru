@@ -20,8 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Change slug uniqueness from global to per-owner."""
-    # Drop the global unique constraint on slug
-    op.drop_constraint('ix_workspaces_slug', 'workspaces', type_='unique')
+    # Drop the global unique index on slug
+    # Note: This was created as a UNIQUE INDEX, not a CONSTRAINT
+    op.drop_index('ix_workspaces_slug', table_name='workspaces')
 
     # Create a new unique constraint on (slug, owner_id)
     op.create_unique_constraint(
