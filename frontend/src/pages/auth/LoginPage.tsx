@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { login } from '@/api/auth'
+import { getWorkspaces } from '@/api/workspaces'
 import { getErrorMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +22,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { login: authLogin } = useAuthStore()
+  const { setWorkspaces, setCurrentWorkspace, setLoading: setWorkspacesLoading } = useWorkspaceStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,6 +31,16 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
     try {
       const response = await login({ email, password })
       authLogin(response.user, response.tokens.access_token, response.tokens.refresh_token)
+
+      // Load workspaces after successful login
+      setWorkspacesLoading(true)
+      const workspaces = await getWorkspaces()
+      setWorkspaces(workspaces)
+      if (workspaces.length > 0) {
+        setCurrentWorkspace(workspaces[0])
+      }
+      setWorkspacesLoading(false)
+
       toast({
         title: t('auth.welcomeBack'),
         description: t('auth.loginSuccess'),
@@ -35,6 +48,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       })
       onNavigate('dashboard')
     } catch (err) {
+      setWorkspacesLoading(false)
       toast({
         title: t('auth.loginFailed'),
         description: getErrorMessage(err),

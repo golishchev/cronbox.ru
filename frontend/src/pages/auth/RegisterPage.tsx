@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { register } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,7 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { login: authLogin } = useAuthStore()
+  const { setWorkspaces, setLoading: setWorkspacesLoading } = useWorkspaceStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,6 +51,11 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
     try {
       const response = await register({ name, email, password })
       authLogin(response.user, response.tokens.access_token, response.tokens.refresh_token)
+
+      // New users don't have workspaces yet
+      setWorkspaces([])
+      setWorkspacesLoading(false)
+
       toast({
         title: t('auth.accountCreated'),
         description: t('auth.welcomeToCronBox'),

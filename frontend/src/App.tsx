@@ -103,7 +103,8 @@ function App() {
     }
 
     checkAuth()
-  }, [setUser, setLoading, logout, setWorkspaces, setCurrentWorkspace, currentWorkspace, setWorkspacesLoading, isAuthenticated])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setUser, setLoading, logout, setWorkspaces, setCurrentWorkspace, setWorkspacesLoading])
 
   // Handle hash-based routing
   useEffect(() => {

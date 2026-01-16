@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { requestOTP, verifyOTP } from '@/api/auth'
+import { getWorkspaces } from '@/api/workspaces'
 import { getErrorMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +27,7 @@ export function OTPLoginPage({ onNavigate }: OTPLoginPageProps) {
   const [expiresIn, setExpiresIn] = useState(0)
   const [canResend, setCanResend] = useState(false)
   const { login: authLogin } = useAuthStore()
+  const { setWorkspaces, setCurrentWorkspace, setLoading: setWorkspacesLoading } = useWorkspaceStore()
   const codeInputRef = useRef<HTMLInputElement>(null)
 
   // Countdown timer
@@ -82,6 +85,16 @@ export function OTPLoginPage({ onNavigate }: OTPLoginPageProps) {
     try {
       const response = await verifyOTP({ email, code })
       authLogin(response.user, response.tokens.access_token, response.tokens.refresh_token)
+
+      // Load workspaces after successful login
+      setWorkspacesLoading(true)
+      const workspaces = await getWorkspaces()
+      setWorkspaces(workspaces)
+      if (workspaces.length > 0) {
+        setCurrentWorkspace(workspaces[0])
+      }
+      setWorkspacesLoading(false)
+
       toast({
         title: t('auth.welcomeBack'),
         description: t('auth.loginSuccess'),
@@ -89,6 +102,7 @@ export function OTPLoginPage({ onNavigate }: OTPLoginPageProps) {
       })
       onNavigate('dashboard')
     } catch (err) {
+      setWorkspacesLoading(false)
       toast({
         title: t('auth.otp.invalidCode'),
         description: getErrorMessage(err),
