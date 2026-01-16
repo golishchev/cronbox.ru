@@ -31,6 +31,12 @@ class PlanResponse(BaseModel):
     custom_headers: bool
     retry_on_failure: bool
 
+    # Task Chains limits
+    max_task_chains: int
+    max_chain_steps: int
+    chain_variable_substitution: bool
+    min_chain_interval_minutes: int
+
     # Visibility
     is_active: bool
     is_public: bool

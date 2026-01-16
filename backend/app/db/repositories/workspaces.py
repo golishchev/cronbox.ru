@@ -88,6 +88,13 @@ class WorkspaceRepository(BaseRepository[Workspace]):
             workspace.delayed_tasks_this_month = 0
             await self.db.flush()
 
+    async def update_task_chains_count(self, workspace: Workspace, delta: int) -> Workspace:
+        """Update task chains count by delta."""
+        workspace.task_chains_count = max(0, workspace.task_chains_count + delta)
+        await self.db.flush()
+        await self.db.refresh(workspace)
+        return workspace
+
     async def get_best_plan_for_owner(self, owner_id: UUID) -> Plan | None:
         """Get the best plan among all owner's workspaces (by max_workspaces limit)."""
         stmt = (

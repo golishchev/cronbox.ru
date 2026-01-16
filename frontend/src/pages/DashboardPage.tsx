@@ -36,7 +36,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { WorkspaceWithStats, Execution, TaskStatus } from '@/types'
+import type { WorkspaceWithStats, Execution, ExecutionStatus } from '@/types'
 
 interface DailyStats {
   date: string
@@ -170,7 +170,7 @@ export function DashboardPage() {
     loadDailyStats()
   }, [currentWorkspace, i18n.language])
 
-  const getStatusBadge = (status: TaskStatus) => {
+  const getStatusBadge = (status: ExecutionStatus) => {
     switch (status) {
       case 'success':
         return <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" />{t('common.success')}</Badge>
@@ -180,6 +180,10 @@ export function DashboardPage() {
         return <Badge variant="default" className="gap-1"><Loader2 className="h-3 w-3 animate-spin" />{t('common.running')}</Badge>
       case 'pending':
         return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />{t('common.pending')}</Badge>
+      case 'partial':
+        return <Badge variant="warning" className="gap-1"><XCircle className="h-3 w-3" />{t('executions.partial')}</Badge>
+      case 'cancelled':
+        return <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" />{t('executions.cancelled')}</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }

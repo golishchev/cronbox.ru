@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_serializer
 
-from app.models.cron_task import HttpMethod, TaskStatus
+from app.models.cron_task import HttpMethod
 from app.schemas.cron_task import PaginationMeta
 
 
@@ -14,20 +14,25 @@ class ExecutionResponse(BaseModel):
 
     id: UUID
     workspace_id: UUID
-    task_type: str
+    task_type: str  # 'cron', 'delayed', or 'chain'
     task_id: UUID
     task_name: str | None
-    status: TaskStatus
+    status: str  # TaskStatus values + ChainStatus values (partial, cancelled)
     started_at: datetime
     finished_at: datetime | None
     duration_ms: int | None
-    retry_attempt: int
-    request_url: str
-    request_method: HttpMethod
-    response_status_code: int | None
-    error_message: str | None
-    error_type: str | None
+    retry_attempt: int | None = None  # None for chains
+    request_url: str | None = None  # None for chains
+    request_method: HttpMethod | None = None  # None for chains
+    response_status_code: int | None = None
+    error_message: str | None = None
+    error_type: str | None = None
     created_at: datetime
+    # Chain-specific fields (optional)
+    total_steps: int | None = None
+    completed_steps: int | None = None
+    failed_steps: int | None = None
+    skipped_steps: int | None = None
 
     @field_serializer("started_at", "finished_at", "created_at")
     def serialize_datetime(self, dt: datetime | None) -> str | None:
@@ -40,11 +45,13 @@ class ExecutionResponse(BaseModel):
 class ExecutionDetailResponse(ExecutionResponse):
     """Schema for detailed execution response."""
 
-    request_headers: dict | None
-    request_body: str | None
-    response_headers: dict | None
-    response_body: str | None
-    response_size_bytes: int | None
+    request_headers: dict | None = None
+    request_body: str | None = None
+    response_headers: dict | None = None
+    response_body: str | None = None
+    response_size_bytes: int | None = None
+    # Chain execution details (optional)
+    chain_variables: dict | None = None
 
 
 class ExecutionListResponse(BaseModel):

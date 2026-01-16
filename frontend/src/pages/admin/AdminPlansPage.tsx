@@ -64,6 +64,11 @@ const defaultPlanData: CreatePlanRequest = {
   webhook_callbacks: false,
   custom_headers: true,
   retry_on_failure: false,
+  // Task Chains
+  max_task_chains: 0,
+  max_chain_steps: 5,
+  chain_variable_substitution: false,
+  min_chain_interval_minutes: 15,
   is_active: true,
   is_public: true,
   sort_order: 0,
@@ -128,6 +133,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       webhook_callbacks: plan.webhook_callbacks,
       custom_headers: plan.custom_headers,
       retry_on_failure: plan.retry_on_failure,
+      // Task Chains
+      max_task_chains: plan.max_task_chains,
+      max_chain_steps: plan.max_chain_steps,
+      chain_variable_substitution: plan.chain_variable_substitution,
+      min_chain_interval_minutes: plan.min_chain_interval_minutes,
       is_active: plan.is_active,
       is_public: plan.is_public,
       sort_order: plan.sort_order,
@@ -388,6 +398,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                 <Input
                   id="price_monthly"
                   type="number"
+                  min={0}
                   value={formData.price_monthly}
                   onChange={(e) => setFormData({ ...formData, price_monthly: parseInt(e.target.value) || 0 })}
                 />
@@ -398,6 +409,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                 <Input
                   id="price_yearly"
                   type="number"
+                  min={0}
                   value={formData.price_yearly}
                   onChange={(e) => setFormData({ ...formData, price_yearly: parseInt(e.target.value) || 0 })}
                 />
@@ -413,6 +425,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="max_cron_tasks"
                     type="number"
+                    min={0}
                     value={formData.max_cron_tasks}
                     onChange={(e) => setFormData({ ...formData, max_cron_tasks: parseInt(e.target.value) || 0 })}
                   />
@@ -422,6 +435,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="max_delayed"
                     type="number"
+                    min={0}
                     value={formData.max_delayed_tasks_per_month}
                     onChange={(e) => setFormData({ ...formData, max_delayed_tasks_per_month: parseInt(e.target.value) || 0 })}
                   />
@@ -431,8 +445,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="max_workspaces"
                     type="number"
+                    min={1}
                     value={formData.max_workspaces}
-                    onChange={(e) => setFormData({ ...formData, max_workspaces: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, max_workspaces: parseInt(e.target.value) || 1 })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -440,8 +455,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="history_days"
                     type="number"
+                    min={1}
                     value={formData.max_execution_history_days}
-                    onChange={(e) => setFormData({ ...formData, max_execution_history_days: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, max_execution_history_days: parseInt(e.target.value) || 1 })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -449,8 +465,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="min_interval"
                     type="number"
+                    min={1}
                     value={formData.min_cron_interval_minutes}
-                    onChange={(e) => setFormData({ ...formData, min_cron_interval_minutes: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, min_cron_interval_minutes: parseInt(e.target.value) || 1 })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -509,6 +526,51 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     onCheckedChange={(checked) => setFormData({ ...formData, retry_on_failure: checked })}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Task Chains */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">{t('admin.plans.taskChains')}</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_task_chains" className="text-sm">{t('admin.plans.maxTaskChains')}</Label>
+                  <Input
+                    id="max_task_chains"
+                    type="number"
+                    min={0}
+                    value={formData.max_task_chains}
+                    onChange={(e) => setFormData({ ...formData, max_task_chains: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max_chain_steps" className="text-sm">{t('admin.plans.maxChainSteps')}</Label>
+                  <Input
+                    id="max_chain_steps"
+                    type="number"
+                    min={1}
+                    value={formData.max_chain_steps}
+                    onChange={(e) => setFormData({ ...formData, max_chain_steps: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="min_chain_interval" className="text-sm">{t('admin.plans.minChainInterval')}</Label>
+                  <Input
+                    id="min_chain_interval"
+                    type="number"
+                    min={1}
+                    value={formData.min_chain_interval_minutes}
+                    onChange={(e) => setFormData({ ...formData, min_chain_interval_minutes: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-2 px-3 rounded-md border">
+                <Label htmlFor="chain_variables" className="text-sm font-normal">{t('admin.plans.chainVariableSubstitution')}</Label>
+                <Switch
+                  id="chain_variables"
+                  checked={formData.chain_variable_substitution}
+                  onCheckedChange={(checked) => setFormData({ ...formData, chain_variable_substitution: checked })}
+                />
               </div>
             </div>
 

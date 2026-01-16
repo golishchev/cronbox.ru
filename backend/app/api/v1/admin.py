@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -630,6 +630,11 @@ class PlanListItem(BaseModel):
     webhook_callbacks: bool
     custom_headers: bool
     retry_on_failure: bool
+    # Task Chains limits
+    max_task_chains: int
+    max_chain_steps: int
+    chain_variable_substitution: bool
+    min_chain_interval_minutes: int
     is_active: bool
     is_public: bool
     sort_order: int
@@ -653,18 +658,23 @@ class CreatePlanRequest(BaseModel):
     name: str
     display_name: str
     description: str | None = None
-    price_monthly: int = 0
-    price_yearly: int = 0
-    max_cron_tasks: int = 5
-    max_delayed_tasks_per_month: int = 100
-    max_workspaces: int = 1
-    max_execution_history_days: int = 7
-    min_cron_interval_minutes: int = 5
+    price_monthly: int = Field(default=0, ge=0)
+    price_yearly: int = Field(default=0, ge=0)
+    max_cron_tasks: int = Field(default=5, ge=0)
+    max_delayed_tasks_per_month: int = Field(default=100, ge=0)
+    max_workspaces: int = Field(default=1, ge=1)
+    max_execution_history_days: int = Field(default=7, ge=1)
+    min_cron_interval_minutes: int = Field(default=5, ge=1)
     telegram_notifications: bool = False
     email_notifications: bool = False
     webhook_callbacks: bool = False
     custom_headers: bool = True
     retry_on_failure: bool = False
+    # Task Chains limits
+    max_task_chains: int = Field(default=0, ge=0)
+    max_chain_steps: int = Field(default=5, ge=1)
+    chain_variable_substitution: bool = False
+    min_chain_interval_minutes: int = Field(default=15, ge=1)
     is_active: bool = True
     is_public: bool = True
     sort_order: int = 0
@@ -675,18 +685,23 @@ class UpdatePlanRequest(BaseModel):
 
     display_name: str | None = None
     description: str | None = None
-    price_monthly: int | None = None
-    price_yearly: int | None = None
-    max_cron_tasks: int | None = None
-    max_delayed_tasks_per_month: int | None = None
-    max_workspaces: int | None = None
-    max_execution_history_days: int | None = None
-    min_cron_interval_minutes: int | None = None
+    price_monthly: int | None = Field(default=None, ge=0)
+    price_yearly: int | None = Field(default=None, ge=0)
+    max_cron_tasks: int | None = Field(default=None, ge=0)
+    max_delayed_tasks_per_month: int | None = Field(default=None, ge=0)
+    max_workspaces: int | None = Field(default=None, ge=1)
+    max_execution_history_days: int | None = Field(default=None, ge=1)
+    min_cron_interval_minutes: int | None = Field(default=None, ge=1)
     telegram_notifications: bool | None = None
     email_notifications: bool | None = None
     webhook_callbacks: bool | None = None
     custom_headers: bool | None = None
     retry_on_failure: bool | None = None
+    # Task Chains limits
+    max_task_chains: int | None = Field(default=None, ge=0)
+    max_chain_steps: int | None = Field(default=None, ge=1)
+    chain_variable_substitution: bool | None = None
+    min_chain_interval_minutes: int | None = Field(default=None, ge=1)
     is_active: bool | None = None
     is_public: bool | None = None
     sort_order: int | None = None
@@ -726,6 +741,10 @@ async def list_plans(admin: AdminUser, db: DB):
                 webhook_callbacks=plan.webhook_callbacks,
                 custom_headers=plan.custom_headers,
                 retry_on_failure=plan.retry_on_failure,
+                max_task_chains=plan.max_task_chains,
+                max_chain_steps=plan.max_chain_steps,
+                chain_variable_substitution=plan.chain_variable_substitution,
+                min_chain_interval_minutes=plan.min_chain_interval_minutes,
                 is_active=plan.is_active,
                 is_public=plan.is_public,
                 sort_order=plan.sort_order,
@@ -770,6 +789,10 @@ async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
+        max_task_chains=plan.max_task_chains,
+        max_chain_steps=plan.max_chain_steps,
+        chain_variable_substitution=plan.chain_variable_substitution,
+        min_chain_interval_minutes=plan.min_chain_interval_minutes,
         is_active=plan.is_active,
         is_public=plan.is_public,
         sort_order=plan.sort_order,
@@ -809,6 +832,10 @@ async def get_plan(admin: AdminUser, db: DB, plan_id: str):
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
+        max_task_chains=plan.max_task_chains,
+        max_chain_steps=plan.max_chain_steps,
+        chain_variable_substitution=plan.chain_variable_substitution,
+        min_chain_interval_minutes=plan.min_chain_interval_minutes,
         is_active=plan.is_active,
         is_public=plan.is_public,
         sort_order=plan.sort_order,
@@ -858,6 +885,10 @@ async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRe
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
+        max_task_chains=plan.max_task_chains,
+        max_chain_steps=plan.max_chain_steps,
+        chain_variable_substitution=plan.chain_variable_substitution,
+        min_chain_interval_minutes=plan.min_chain_interval_minutes,
         is_active=plan.is_active,
         is_public=plan.is_public,
         sort_order=plan.sort_order,

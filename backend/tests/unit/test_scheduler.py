@@ -325,12 +325,16 @@ class TestCalculateNextRunTimes:
         mock_cron_repo = AsyncMock()
         mock_cron_repo.get_tasks_needing_next_run_update.return_value = [mock_task]
 
+        mock_chain_repo = AsyncMock()
+        mock_chain_repo.get_chains_needing_next_run_update.return_value = []
+
         with patch("app.workers.scheduler.async_session_factory") as mock_factory:
             mock_session = AsyncMock()
             mock_factory.return_value.__aenter__.return_value = mock_session
 
             with patch("app.workers.scheduler.CronTaskRepository", return_value=mock_cron_repo):
-                await scheduler._calculate_next_run_times()
+                with patch("app.workers.scheduler.TaskChainRepository", return_value=mock_chain_repo):
+                    await scheduler._calculate_next_run_times()
 
         # Should have set next_run_at
         assert mock_task.next_run_at is not None
@@ -349,13 +353,17 @@ class TestCalculateNextRunTimes:
         mock_cron_repo = AsyncMock()
         mock_cron_repo.get_tasks_needing_next_run_update.return_value = [mock_task]
 
+        mock_chain_repo = AsyncMock()
+        mock_chain_repo.get_chains_needing_next_run_update.return_value = []
+
         with patch("app.workers.scheduler.async_session_factory") as mock_factory:
             mock_session = AsyncMock()
             mock_factory.return_value.__aenter__.return_value = mock_session
 
             with patch("app.workers.scheduler.CronTaskRepository", return_value=mock_cron_repo):
-                # Should not raise
-                await scheduler._calculate_next_run_times()
+                with patch("app.workers.scheduler.TaskChainRepository", return_value=mock_chain_repo):
+                    # Should not raise
+                    await scheduler._calculate_next_run_times()
 
         # Should still commit
         mock_session.commit.assert_called_once()

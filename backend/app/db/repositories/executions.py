@@ -1,12 +1,14 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, union_all, literal, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
+from app.models.chain_execution import ChainExecution
 from app.models.cron_task import HttpMethod, TaskStatus
 from app.models.execution import Execution
+from app.models.task_chain import ChainStatus, TaskChain
 
 
 class ExecutionRepository(BaseRepository[Execution]):
@@ -264,3 +266,195 @@ class ExecutionRepository(BaseRepository[Execution]):
         result = await self.db.execute(stmt)
         await self.db.flush()
         return result.rowcount
+
+    async def get_unified_executions(
+        self,
+        workspace_id: UUID,
+        skip: int = 0,
+        limit: int = 100,
+        task_type: str | None = None,
+        status: TaskStatus | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[dict]:
+        """Get unified executions from both regular executions and chain executions.
+
+        Returns a list of dicts with unified schema, sorted by started_at desc.
+        """
+        results = []
+
+        # Get regular executions (cron and delayed) if not filtered to chains only
+        if task_type is None or task_type in ("cron", "delayed"):
+            stmt = (
+                select(Execution)
+                .where(Execution.workspace_id == workspace_id)
+                .order_by(Execution.started_at.desc())
+            )
+
+            if task_type in ("cron", "delayed"):
+                stmt = stmt.where(Execution.task_type == task_type)
+            if status is not None:
+                stmt = stmt.where(Execution.status == status)
+            if start_date is not None:
+                stmt = stmt.where(Execution.started_at >= start_date)
+            if end_date is not None:
+                stmt = stmt.where(Execution.started_at <= end_date)
+
+            result = await self.db.execute(stmt)
+            executions = result.scalars().all()
+
+            for ex in executions:
+                results.append({
+                    "id": ex.id,
+                    "workspace_id": ex.workspace_id,
+                    "task_type": ex.task_type,
+                    "task_id": ex.task_id,
+                    "task_name": ex.task_name,
+                    "status": ex.status.value,
+                    "started_at": ex.started_at,
+                    "finished_at": ex.finished_at,
+                    "duration_ms": ex.duration_ms,
+                    "retry_attempt": ex.retry_attempt,
+                    "request_url": ex.request_url,
+                    "request_method": ex.request_method.value if ex.request_method else None,
+                    "response_status_code": ex.response_status_code,
+                    "error_message": ex.error_message,
+                    "error_type": ex.error_type,
+                    "created_at": ex.created_at,
+                    "total_steps": None,
+                    "completed_steps": None,
+                    "failed_steps": None,
+                    "skipped_steps": None,
+                })
+
+        # Get chain executions if not filtered to cron/delayed only
+        if task_type is None or task_type == "chain":
+            chain_stmt = (
+                select(ChainExecution, TaskChain.name)
+                .join(TaskChain, ChainExecution.chain_id == TaskChain.id)
+                .where(ChainExecution.workspace_id == workspace_id)
+                .order_by(ChainExecution.started_at.desc())
+            )
+
+            # Map TaskStatus to ChainStatus for filtering
+            if status is not None:
+                chain_status_map = {
+                    TaskStatus.PENDING: ChainStatus.PENDING,
+                    TaskStatus.RUNNING: ChainStatus.RUNNING,
+                    TaskStatus.SUCCESS: ChainStatus.SUCCESS,
+                    TaskStatus.FAILED: ChainStatus.FAILED,
+                }
+                if status in chain_status_map:
+                    chain_stmt = chain_stmt.where(
+                        ChainExecution.status == chain_status_map[status]
+                    )
+
+            if start_date is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.started_at >= start_date)
+            if end_date is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.started_at <= end_date)
+
+            chain_result = await self.db.execute(chain_stmt)
+            chain_executions = chain_result.all()
+
+            for row in chain_executions:
+                chain_ex = row[0]
+                chain_name = row[1]
+                # Map ChainStatus to TaskStatus string
+                status_map = {
+                    ChainStatus.PENDING: "pending",
+                    ChainStatus.RUNNING: "running",
+                    ChainStatus.SUCCESS: "success",
+                    ChainStatus.FAILED: "failed",
+                    ChainStatus.PARTIAL: "partial",
+                    ChainStatus.CANCELLED: "cancelled",
+                }
+                results.append({
+                    "id": chain_ex.id,
+                    "workspace_id": chain_ex.workspace_id,
+                    "task_type": "chain",
+                    "task_id": chain_ex.chain_id,
+                    "task_name": chain_name,
+                    "status": status_map.get(chain_ex.status, "unknown"),
+                    "started_at": chain_ex.started_at,
+                    "finished_at": chain_ex.finished_at,
+                    "duration_ms": chain_ex.duration_ms,
+                    "retry_attempt": None,
+                    "request_url": None,
+                    "request_method": None,
+                    "response_status_code": None,
+                    "error_message": chain_ex.error_message,
+                    "error_type": None,
+                    "created_at": chain_ex.created_at,
+                    "total_steps": chain_ex.total_steps,
+                    "completed_steps": chain_ex.completed_steps,
+                    "failed_steps": chain_ex.failed_steps,
+                    "skipped_steps": chain_ex.skipped_steps,
+                })
+
+        # Sort by started_at descending
+        results.sort(key=lambda x: x["started_at"], reverse=True)
+
+        # Apply pagination
+        return results[skip : skip + limit]
+
+    async def count_unified_executions(
+        self,
+        workspace_id: UUID,
+        task_type: str | None = None,
+        status: TaskStatus | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> int:
+        """Count unified executions from both regular executions and chain executions."""
+        total = 0
+
+        # Count regular executions
+        if task_type is None or task_type in ("cron", "delayed"):
+            stmt = (
+                select(func.count())
+                .select_from(Execution)
+                .where(Execution.workspace_id == workspace_id)
+            )
+
+            if task_type in ("cron", "delayed"):
+                stmt = stmt.where(Execution.task_type == task_type)
+            if status is not None:
+                stmt = stmt.where(Execution.status == status)
+            if start_date is not None:
+                stmt = stmt.where(Execution.started_at >= start_date)
+            if end_date is not None:
+                stmt = stmt.where(Execution.started_at <= end_date)
+
+            result = await self.db.execute(stmt)
+            total += result.scalar_one()
+
+        # Count chain executions
+        if task_type is None or task_type == "chain":
+            chain_stmt = (
+                select(func.count())
+                .select_from(ChainExecution)
+                .where(ChainExecution.workspace_id == workspace_id)
+            )
+
+            if status is not None:
+                chain_status_map = {
+                    TaskStatus.PENDING: ChainStatus.PENDING,
+                    TaskStatus.RUNNING: ChainStatus.RUNNING,
+                    TaskStatus.SUCCESS: ChainStatus.SUCCESS,
+                    TaskStatus.FAILED: ChainStatus.FAILED,
+                }
+                if status in chain_status_map:
+                    chain_stmt = chain_stmt.where(
+                        ChainExecution.status == chain_status_map[status]
+                    )
+
+            if start_date is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.started_at >= start_date)
+            if end_date is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.started_at <= end_date)
+
+            chain_result = await self.db.execute(chain_stmt)
+            total += chain_result.scalar_one()
+
+        return total

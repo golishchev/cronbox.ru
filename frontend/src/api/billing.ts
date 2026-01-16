@@ -17,6 +17,7 @@ export interface Plan {
   webhook_callbacks: boolean
   custom_headers: boolean
   retry_on_failure: boolean
+  max_task_chains: number
 }
 
 export interface Subscription {

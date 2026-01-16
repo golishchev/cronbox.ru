@@ -502,6 +502,124 @@ class NotificationService:
             payment_id=str(payment.id),
         )
 
+    async def send_chain_notification(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        chain_name: str,
+        event: str,  # "success", "failure", "partial"
+        duration_ms: int | None = None,
+        error_message: str | None = None,
+        completed_steps: int | None = None,
+        failed_steps: int | None = None,
+        total_steps: int | None = None,
+    ) -> None:
+        """Send task chain notifications through all enabled channels."""
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        # Check notification settings based on event
+        if event == "success" and not settings.notify_on_success:
+            return
+        if event == "failure" and not settings.notify_on_failure:
+            return
+        # For partial, we use failure notification setting
+        if event == "partial" and not settings.notify_on_failure:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "chain_name": chain_name,
+            "completed_steps": str(completed_steps or 0),
+            "failed_steps": str(failed_steps or 0),
+            "total_steps": str(total_steps or 0),
+            "duration_ms": str(duration_ms or 0),
+            "error_message": error_message or "",
+        }
+
+        # Determine template code based on event
+        template_code = f"chain_{event}"
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            try:
+                await self._send_templated_telegram(
+                    db, settings.telegram_chat_ids, template_code, language, variables
+                )
+            except Exception as e:
+                # Template might not exist, send a generic message
+                logger.warning(
+                    "Chain notification template not found, using fallback",
+                    template=template_code,
+                    error=str(e),
+                )
+                message = self._format_chain_notification_fallback(
+                    chain_name, event, completed_steps, failed_steps, total_steps, error_message
+                )
+                for chat_id in settings.telegram_chat_ids:
+                    await telegram_service.send_message(chat_id, message)
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            try:
+                await self._send_templated_email(
+                    db,
+                    settings.email_addresses,
+                    template_code,
+                    language,
+                    variables,
+                    workspace_id,
+                    tag=f"chain-{event}",
+                )
+            except Exception:
+                # Template might not exist, skip email
+                pass
+
+        # Send Webhook notifications
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event=f"chain.{event}",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "chain_name": chain_name,
+                    "completed_steps": completed_steps,
+                    "failed_steps": failed_steps,
+                    "total_steps": total_steps,
+                    "duration_ms": duration_ms,
+                    "error_message": error_message,
+                },
+            )
+
+    def _format_chain_notification_fallback(
+        self,
+        chain_name: str,
+        event: str,
+        completed_steps: int | None,
+        failed_steps: int | None,
+        total_steps: int | None,
+        error_message: str | None,
+    ) -> str:
+        """Format chain notification as plain text fallback."""
+        if event == "success":
+            return f"Chain '{chain_name}' completed successfully ({completed_steps}/{total_steps} steps)"
+        elif event == "failure":
+            msg = f"Chain '{chain_name}' failed ({completed_steps}/{total_steps} steps)"
+            if error_message:
+                msg += f"\nError: {error_message}"
+            return msg
+        elif event == "partial":
+            return (
+                f"Chain '{chain_name}' partially completed\n"
+                f"Completed: {completed_steps}, Failed: {failed_steps}, Total: {total_steps}"
+            )
+        return f"Chain '{chain_name}': {event}"
+
     async def _send_webhook(
         self,
         url: str,

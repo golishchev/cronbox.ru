@@ -32,6 +32,12 @@ class Plan(Base, UUIDMixin, TimestampMixin):
     custom_headers: Mapped[bool] = mapped_column(Boolean, default=True)
     retry_on_failure: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Task Chains limits
+    max_task_chains: Mapped[int] = mapped_column(Integer, default=0)
+    max_chain_steps: Mapped[int] = mapped_column(Integer, default=5)
+    chain_variable_substitution: Mapped[bool] = mapped_column(Boolean, default=False)
+    min_chain_interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
+
     # Status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)

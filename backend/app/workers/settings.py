@@ -4,9 +4,11 @@ from arq.connections import RedisSettings
 
 from app.config import settings
 from app.workers.tasks import (
+    execute_chain,
     execute_cron_task,
     execute_delayed_task,
     execute_http_task,
+    send_chain_notification,
     send_task_notification,
 )
 
@@ -45,7 +47,9 @@ class WorkerSettings:
         execute_http_task,
         execute_cron_task,
         execute_delayed_task,
+        execute_chain,
         send_task_notification,
+        send_chain_notification,
     ]
 
     # Startup and shutdown hooks

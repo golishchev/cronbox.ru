@@ -228,6 +228,7 @@ async def delete_cron_task(
 async def run_cron_task(
     task_id: UUID,
     workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
     db: DB,
 ):
     """Manually trigger a cron task execution."""
@@ -246,6 +247,19 @@ async def run_cron_task(
             detail="Cannot run inactive task",
         )
 
+    # Check rate limit based on plan
+    from datetime import timedelta, timezone as dt_tz
+    if task.last_run_at:
+        min_interval = timedelta(minutes=user_plan.min_cron_interval_minutes)
+        now = datetime.now(dt_tz.utc)
+        last_run = task.last_run_at if task.last_run_at.tzinfo else task.last_run_at.replace(tzinfo=dt_tz.utc)
+        time_since_last_run = now - last_run
+        if time_since_last_run < min_interval:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+            )
+
     # Enqueue task for immediate execution via arq
     try:
         from arq import create_pool
@@ -259,6 +273,10 @@ async def run_cron_task(
             retry_attempt=0,
         )
         await redis.close()
+
+        # Update last_run_at to prevent rapid re-runs
+        await cron_repo.update(task, last_run_at=datetime.utcnow())
+        await db.commit()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -198,23 +198,31 @@ export interface UpdateDelayedTaskRequest {
 }
 
 // Execution types
+export type ExecutionTaskType = 'cron' | 'delayed' | 'chain'
+export type ExecutionStatus = TaskStatus | 'partial' | 'cancelled'
+
 export interface Execution {
   id: string
   workspace_id: string
-  task_type: 'cron' | 'delayed'
+  task_type: ExecutionTaskType
   task_id: string
   task_name: string | null
-  status: TaskStatus
+  status: ExecutionStatus
   started_at: string
   finished_at: string | null
   duration_ms: number | null
-  retry_attempt: number
-  request_url: string
-  request_method: HttpMethod
+  retry_attempt: number | null  // null for chains
+  request_url: string | null    // null for chains
+  request_method: HttpMethod | null  // null for chains
   response_status_code: number | null
   error_message: string | null
   error_type: string | null
   created_at: string
+  // Chain-specific fields
+  total_steps?: number | null
+  completed_steps?: number | null
+  failed_steps?: number | null
+  skipped_steps?: number | null
 }
 
 export interface ExecutionDetail extends Execution {
@@ -223,6 +231,8 @@ export interface ExecutionDetail extends Execution {
   response_headers: Record<string, string> | null
   response_body: string | null
   response_size_bytes: number | null
+  // Chain-specific
+  chain_variables?: Record<string, unknown> | null
 }
 
 export interface ExecutionStats {

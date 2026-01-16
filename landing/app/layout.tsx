@@ -111,8 +111,7 @@ export const metadata: Metadata = {
     canonical: 'https://cronbox.ru',
   },
   verification: {
-    yandex: 'YANDEX_VERIFICATION_CODE', // Получить в Яндекс.Вебмастер
-    google: 'GOOGLE_VERIFICATION_CODE', // Получить в Google Search Console
+
   },
 }
 

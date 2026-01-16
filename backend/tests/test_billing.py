@@ -35,6 +35,11 @@ async def basic_plan(db_session: AsyncSession) -> Plan:
         webhook_callbacks=False,
         custom_headers=True,
         retry_on_failure=False,
+        # Chain limits
+        max_task_chains=5,
+        max_chain_steps=5,
+        chain_variable_substitution=False,
+        min_chain_interval_minutes=5,
         is_active=True,
         is_public=True,
         sort_order=1,
@@ -64,6 +69,11 @@ async def max_plan(db_session: AsyncSession) -> Plan:
         webhook_callbacks=True,
         custom_headers=True,
         retry_on_failure=True,
+        # Chain limits
+        max_task_chains=50,
+        max_chain_steps=20,
+        chain_variable_substitution=True,
+        min_chain_interval_minutes=1,
         is_active=True,
         is_public=True,
         sort_order=2,

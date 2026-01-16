@@ -8,6 +8,7 @@ from app.api.v1 import (
     delayed_tasks,
     executions,
     notifications,
+    task_chains,
     webhooks,
     workers,
     workspaces,
@@ -20,6 +21,7 @@ api_router.include_router(auth.router)
 api_router.include_router(workspaces.router)
 api_router.include_router(cron_tasks.router)
 api_router.include_router(delayed_tasks.router)
+api_router.include_router(task_chains.router)
 api_router.include_router(executions.router)
 api_router.include_router(notifications.router)
 api_router.include_router(billing.router)

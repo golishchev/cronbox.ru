@@ -47,6 +47,7 @@ import { DelayedTaskForm } from '@/components/delayed/DelayedTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { getErrorMessage } from '@/api/client'
+import { translateApiError } from '@/lib/translateApiError'
 import type { DelayedTask, PaginationMeta, TaskStatus } from '@/types'
 
 interface DelayedTasksPageProps {
@@ -81,7 +82,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     } catch (err) {
       toast({
         title: t('delayedTasks.errorLoading'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -108,7 +109,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     } catch (err) {
       toast({
         title: t('delayedTasks.failedToCancelTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -135,7 +136,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     } catch (err) {
       toast({
         title: t('delayedTasks.failedToRescheduleTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -171,7 +172,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
     } catch (err) {
       toast({
         title: t('delayedTasks.failedToCopyTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {

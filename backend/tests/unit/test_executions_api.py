@@ -17,7 +17,33 @@ def create_mock_workspace(**kwargs):
 
 
 def create_mock_execution(**kwargs):
-    """Create a mock execution."""
+    """Create a mock execution as a dictionary (matches get_unified_executions return type)."""
+    return {
+        "id": kwargs.get("id", uuid4()),
+        "workspace_id": kwargs.get("workspace_id", uuid4()),
+        "task_id": kwargs.get("task_id", uuid4()),
+        "task_type": kwargs.get("task_type", "cron"),
+        "task_name": kwargs.get("task_name", "Test Task"),
+        "status": kwargs.get("status", TaskStatus.SUCCESS.value),
+        "started_at": kwargs.get("started_at", datetime.now(timezone.utc)),
+        "finished_at": kwargs.get("finished_at", datetime.now(timezone.utc)),
+        "duration_ms": kwargs.get("duration_ms", 100),
+        "request_url": kwargs.get("request_url", "https://example.com/api"),
+        "request_method": kwargs.get("request_method", "GET"),
+        "response_status_code": kwargs.get("response_status_code", 200),
+        "error_message": kwargs.get("error_message", None),
+        "error_type": kwargs.get("error_type", None),
+        "retry_attempt": kwargs.get("retry_attempt", 0),
+        "created_at": kwargs.get("created_at", datetime.now(timezone.utc)),
+        "total_steps": kwargs.get("total_steps", None),
+        "completed_steps": kwargs.get("completed_steps", None),
+        "failed_steps": kwargs.get("failed_steps", None),
+        "skipped_steps": kwargs.get("skipped_steps", None),
+    }
+
+
+def create_mock_execution_orm(**kwargs):
+    """Create a mock execution ORM object (for get_by_id)."""
     mock = MagicMock()
     mock.id = kwargs.get("id", uuid4())
     mock.workspace_id = kwargs.get("workspace_id", uuid4())
@@ -35,11 +61,17 @@ def create_mock_execution(**kwargs):
     mock.response_status_code = kwargs.get("response_status_code", 200)
     mock.response_headers = kwargs.get("response_headers", {})
     mock.response_body = kwargs.get("response_body", '{"ok": true}')
+    mock.response_size_bytes = kwargs.get("response_size_bytes", None)
     mock.error = kwargs.get("error", None)
     mock.error_message = kwargs.get("error_message", None)
     mock.error_type = kwargs.get("error_type", None)
     mock.retry_attempt = kwargs.get("retry_attempt", 0)
     mock.created_at = kwargs.get("created_at", datetime.now(timezone.utc))
+    mock.total_steps = kwargs.get("total_steps", None)
+    mock.completed_steps = kwargs.get("completed_steps", None)
+    mock.failed_steps = kwargs.get("failed_steps", None)
+    mock.skipped_steps = kwargs.get("skipped_steps", None)
+    mock.chain_variables = kwargs.get("chain_variables", None)
     return mock
 
 
@@ -61,8 +93,8 @@ class TestListExecutions:
 
         with patch("app.api.v1.executions.ExecutionRepository") as mock_repo_class:
             mock_repo = MagicMock()
-            mock_repo.get_by_workspace = AsyncMock(return_value=mock_executions)
-            mock_repo.count_by_workspace = AsyncMock(return_value=2)
+            mock_repo.get_unified_executions = AsyncMock(return_value=mock_executions)
+            mock_repo.count_unified_executions = AsyncMock(return_value=2)
             mock_repo_class.return_value = mock_repo
 
             result = await list_executions(
@@ -93,8 +125,8 @@ class TestListExecutions:
 
         with patch("app.api.v1.executions.ExecutionRepository") as mock_repo_class:
             mock_repo = MagicMock()
-            mock_repo.get_by_workspace = AsyncMock(return_value=mock_executions)
-            mock_repo.count_by_workspace = AsyncMock(return_value=1)
+            mock_repo.get_unified_executions = AsyncMock(return_value=mock_executions)
+            mock_repo.count_unified_executions = AsyncMock(return_value=1)
             mock_repo_class.return_value = mock_repo
 
             result = await list_executions(
@@ -110,7 +142,7 @@ class TestListExecutions:
             )
 
             assert len(result.executions) == 1
-            mock_repo.get_by_workspace.assert_called_once()
+            mock_repo.get_unified_executions.assert_called_once()
 
 
 class TestGetExecutionStats:
@@ -191,7 +223,7 @@ class TestGetExecution:
         mock_db = AsyncMock()
         workspace_id = uuid4()
         mock_workspace = create_mock_workspace(id=workspace_id)
-        mock_execution = create_mock_execution(workspace_id=workspace_id)
+        mock_execution = create_mock_execution_orm(workspace_id=workspace_id)
 
         with patch("app.api.v1.executions.ExecutionRepository") as mock_repo_class:
             mock_repo = MagicMock()
@@ -240,7 +272,7 @@ class TestGetExecution:
 
         mock_db = AsyncMock()
         mock_workspace = create_mock_workspace()
-        mock_execution = create_mock_execution(workspace_id=uuid4())  # Different workspace
+        mock_execution = create_mock_execution_orm(workspace_id=uuid4())  # Different workspace
 
         with patch("app.api.v1.executions.ExecutionRepository") as mock_repo_class:
             mock_repo = MagicMock()

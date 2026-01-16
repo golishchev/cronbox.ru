@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Shield,
+  Link2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -26,6 +27,7 @@ const mainNav: NavItem[] = [
   { titleKey: 'nav.dashboard', route: 'dashboard', icon: LayoutDashboard },
   { titleKey: 'nav.cronTasks', route: 'cron', icon: Clock },
   { titleKey: 'nav.delayedTasks', route: 'delayed', icon: Calendar },
+  { titleKey: 'nav.chains', route: 'chains', icon: Link2 },
   { titleKey: 'nav.executions', route: 'executions', icon: History },
 ]
 

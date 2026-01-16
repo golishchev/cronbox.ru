@@ -19,7 +19,9 @@ from croniter import croniter
 from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
+from app.db.repositories.task_chains import TaskChainRepository
 from app.models.cron_task import TaskStatus
+from app.models.task_chain import TriggerType
 from app.schemas.worker import WorkerTaskInfo
 from app.services.worker import worker_service
 from app.workers.settings import get_redis_settings
@@ -45,6 +47,7 @@ class TaskScheduler:
         await asyncio.gather(
             self._poll_cron_tasks(),
             self._poll_delayed_tasks(),
+            self._poll_task_chains(),
             self._update_next_run_times(),
             self._check_subscriptions(),
             self._check_pending_payments(),
@@ -76,6 +79,16 @@ class TaskScheduler:
                 logger.error("Error processing delayed tasks", error=str(e))
 
             await asyncio.sleep(1)
+
+    async def _poll_task_chains(self):
+        """Poll for due task chains every 5 seconds."""
+        while self.running:
+            try:
+                await self._process_due_chains()
+            except Exception as e:
+                logger.error("Error processing task chains", error=str(e))
+
+            await asyncio.sleep(5)
 
     async def _update_next_run_times(self):
         """Update next_run_at for tasks that need it, every minute."""
@@ -365,8 +378,9 @@ class TaskScheduler:
             logger.info(f"Processed {processed} delayed tasks")
 
     async def _calculate_next_run_times(self):
-        """Calculate next_run_at for tasks that don't have it set."""
+        """Calculate next_run_at for tasks and chains that don't have it set."""
         async with async_session_factory() as db:
+            # Update cron tasks
             cron_repo = CronTaskRepository(db)
             tasks = await cron_repo.get_tasks_needing_next_run_update(limit=100)
 
@@ -381,18 +395,110 @@ class TaskScheduler:
                     task.next_run_at = next_run_utc
 
                     logger.debug(
-                        "Updated next_run_at",
+                        "Updated next_run_at for cron task",
                         task_id=str(task.id),
                         next_run_at=next_run_utc.isoformat(),
                     )
                 except Exception as e:
                     logger.error(
-                        "Error calculating next run time",
+                        "Error calculating next run time for cron task",
                         task_id=str(task.id),
                         error=str(e),
                     )
 
+            # Update task chains
+            chain_repo = TaskChainRepository(db)
+            chains = await chain_repo.get_chains_needing_next_run_update(limit=100)
+
+            for chain in chains:
+                try:
+                    tz = pytz.timezone(chain.timezone)
+                    now_tz = datetime.now(tz)
+                    cron = croniter(chain.schedule, now_tz)
+                    next_run = cron.get_next(datetime)
+                    next_run_utc = next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+
+                    chain.next_run_at = next_run_utc
+
+                    logger.debug(
+                        "Updated next_run_at for chain",
+                        chain_id=str(chain.id),
+                        next_run_at=next_run_utc.isoformat(),
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Error calculating next run time for chain",
+                        chain_id=str(chain.id),
+                        error=str(e),
+                    )
+
             await db.commit()
+
+    async def _process_due_chains(self):
+        """Find and enqueue due task chains.
+
+        Each chain is processed in a separate transaction to ensure
+        FOR UPDATE lock is held until commit for that specific chain.
+        """
+        now = datetime.utcnow()
+        processed = 0
+        max_chains_per_cycle = 50
+
+        while processed < max_chains_per_cycle:
+            async with async_session_factory() as db:
+                chain_repo = TaskChainRepository(db)
+                # Fetch ONE chain at a time with row lock
+                due_chains = await chain_repo.get_due_chains(now, limit=1)
+
+                if not due_chains:
+                    break  # No more due chains
+
+                chain = due_chains[0]
+                try:
+                    # Calculate next run time for cron chains
+                    next_run_utc = None
+                    if chain.trigger_type == TriggerType.CRON and chain.schedule:
+                        tz = pytz.timezone(chain.timezone)
+                        now_tz = datetime.now(tz)
+                        cron = croniter(chain.schedule, now_tz)
+                        next_run = cron.get_next(datetime)
+                        next_run_utc = next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+                        chain.next_run_at = next_run_utc
+                    elif chain.trigger_type == TriggerType.DELAYED:
+                        # Delayed chains run once and deactivate
+                        chain.next_run_at = None
+
+                    # Enqueue chain for execution
+                    # Note: External workers for chains are not supported yet
+                    await self.redis_pool.enqueue_job(
+                        "execute_chain",
+                        chain_id=str(chain.id),
+                        initial_variables={},
+                    )
+
+                    logger.info(
+                        "Enqueued task chain for execution",
+                        chain_id=str(chain.id),
+                        chain_name=chain.name,
+                        trigger_type=chain.trigger_type.value,
+                        next_run_at=next_run_utc.isoformat() if next_run_utc else None,
+                    )
+
+                    # Commit releases the row lock after successful enqueue
+                    await db.commit()
+                    processed += 1
+
+                except Exception as e:
+                    await db.rollback()
+                    logger.error(
+                        "Error processing task chain",
+                        chain_id=str(chain.id),
+                        error=str(e),
+                    )
+                    # Continue to next chain on error
+
+        if processed > 0:
+            logger.info(f"Processed {processed} task chains")
 
 
 async def run_scheduler():

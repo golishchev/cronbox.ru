@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Execution, ExecutionDetail, ExecutionStats, PaginationMeta } from '@/types'
+import type { Execution, ExecutionDetail, ExecutionStats, ExecutionTaskType, PaginationMeta } from '@/types'
 
 export interface ExecutionsResponse {
   executions: Execution[]
@@ -9,7 +9,7 @@ export interface ExecutionsResponse {
 export interface ExecutionFilters {
   page?: number
   limit?: number
-  task_type?: 'cron' | 'delayed'
+  task_type?: ExecutionTaskType
   status?: string
   task_id?: string
 }
@@ -34,10 +34,12 @@ export async function getExecutions(
 
 export async function getExecution(
   workspaceId: string,
-  executionId: string
+  executionId: string,
+  executionType?: ExecutionTaskType
 ): Promise<ExecutionDetail> {
+  const params = executionType ? `?execution_type=${executionType}` : ''
   const response = await apiClient.get<ExecutionDetail>(
-    `/workspaces/${workspaceId}/executions/${executionId}`
+    `/workspaces/${workspaceId}/executions/${executionId}${params}`
   )
   return response.data
 }

@@ -35,6 +35,7 @@ import { CronTaskForm } from '@/components/cron/CronTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { getErrorMessage } from '@/api/client'
+import { translateApiError } from '@/lib/translateApiError'
 import type { CronTask } from '@/types'
 import cronstrue from 'cronstrue/i18n'
 import i18n from 'i18next'
@@ -62,7 +63,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.errorLoading'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -96,7 +97,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.actionFailed'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -118,7 +119,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.failedToRunTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -141,7 +142,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.failedToDeleteTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {
@@ -163,7 +164,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
     } catch (err) {
       toast({
         title: t('cronTasks.failedToCopyTask'),
-        description: getErrorMessage(err),
+        description: translateApiError(getErrorMessage(err), t),
         variant: 'destructive',
       })
     } finally {

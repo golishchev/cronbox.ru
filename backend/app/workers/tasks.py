@@ -1,5 +1,6 @@
 """Worker tasks for executing HTTP requests."""
 
+import asyncio
 from datetime import datetime
 from uuid import UUID
 
@@ -499,3 +500,368 @@ async def execute_delayed_task(
             "duration_ms": result.get("duration_ms"),
             "error": result.get("error"),
         }
+
+
+async def execute_chain(
+    ctx: dict,
+    *,
+    chain_id: str,
+    initial_variables: dict | None = None,
+) -> dict:
+    """Execute a task chain by ID.
+
+    Creates chain and step execution records, performs HTTP requests
+    for each step with variable substitution, and handles conditions.
+    """
+    from uuid import UUID
+
+    from app.db.repositories.chain_executions import (
+        ChainExecutionRepository,
+        StepExecutionRepository,
+    )
+    from app.db.repositories.task_chains import TaskChainRepository
+    from app.models.chain_execution import StepStatus
+    from app.models.task_chain import ChainStatus, TriggerType
+    from app.services.chain_executor import (
+        ChainExecutionContext,
+        VariableSubstitutionError,
+        evaluate_condition,
+        extract_variables_from_response,
+        log_chain_execution_complete,
+        log_chain_execution_start,
+        log_step_execution,
+        prepare_step_request,
+    )
+
+    db_factory = ctx["db_factory"]
+    initial_variables = initial_variables or {}
+
+    async with db_factory() as db:
+        chain_repo = TaskChainRepository(db)
+        exec_repo = ChainExecutionRepository(db)
+        step_exec_repo = StepExecutionRepository(db)
+
+        # Get the chain with steps
+        chain = await chain_repo.get_with_steps(UUID(chain_id))
+        if not chain:
+            logger.warning("Chain not found", chain_id=chain_id)
+            return {"success": False, "error": "Chain not found"}
+
+        if not chain.is_active or chain.is_paused:
+            logger.info("Chain is not active or paused", chain_id=chain_id)
+            return {"success": False, "error": "Chain not active"}
+
+        if not chain.steps:
+            logger.info("Chain has no steps", chain_id=chain_id)
+            return {"success": False, "error": "Chain has no steps"}
+
+        # Create execution context
+        exec_context = ChainExecutionContext(chain, initial_variables)
+        log_chain_execution_start(chain, exec_context.variables)
+
+        # Create chain execution record
+        chain_execution = await exec_repo.create_execution(
+            workspace_id=chain.workspace_id,
+            chain_id=chain.id,
+            total_steps=len(chain.steps),
+            initial_variables=initial_variables,
+        )
+        await db.commit()
+
+        # Execute each step
+        for step in chain.steps:
+            step_status = StepStatus.PENDING
+            status_code = None
+            response_body = None
+            extracted_vars = {}
+            error_message = None
+            error_type = None
+
+            try:
+                # Check condition if present
+                if step.condition:
+                    condition_met, condition_details = evaluate_condition(
+                        step.condition,
+                        exec_context.previous_status_code,
+                        exec_context.previous_response_body,
+                    )
+                    if not condition_met:
+                        # Skip this step
+                        await step_exec_repo.mark_as_skipped(
+                            chain_execution_id=chain_execution.id,
+                            step_id=step.id,
+                            step_order=step.step_order,
+                            step_name=step.name,
+                            request_url=step.url,
+                            request_method=step.method.value,
+                            condition_details=condition_details,
+                        )
+                        exec_context.update_from_step_result(StepStatus.SKIPPED)
+                        log_step_execution(
+                            chain, step, step.step_order, step.url, StepStatus.SKIPPED
+                        )
+                        continue
+
+                # Prepare request with variable substitution
+                try:
+                    url, headers, body = prepare_step_request(step, exec_context.variables)
+                except VariableSubstitutionError as e:
+                    step_status = StepStatus.FAILED
+                    error_message = str(e)
+                    error_type = "variable_substitution"
+
+                    # Create step execution record for the failure
+                    step_execution = await step_exec_repo.create_step_execution(
+                        chain_execution_id=chain_execution.id,
+                        step_id=step.id,
+                        step_order=step.step_order,
+                        step_name=step.name,
+                        request_url=step.url,
+                        request_method=step.method.value,
+                        request_headers=step.headers,
+                        request_body=step.body,
+                    )
+                    await step_exec_repo.complete_step_execution(
+                        step_execution,
+                        status=StepStatus.FAILED,
+                        error_message=error_message,
+                        error_type=error_type,
+                    )
+                    exec_context.update_from_step_result(StepStatus.FAILED)
+                    log_step_execution(
+                        chain, step, step.step_order, step.url, StepStatus.FAILED, error=error_message
+                    )
+
+                    if not exec_context.should_continue(step, StepStatus.FAILED):
+                        break
+                    continue
+
+                # Create step execution record
+                step_execution = await step_exec_repo.create_step_execution(
+                    chain_execution_id=chain_execution.id,
+                    step_id=step.id,
+                    step_order=step.step_order,
+                    step_name=step.name,
+                    request_url=url,
+                    request_method=step.method.value,
+                    request_headers=headers,
+                    request_body=body,
+                )
+
+                # Execute HTTP request with retry
+                result = None
+                for attempt in range(step.retry_count + 1):
+                    result = await execute_http_task(
+                        ctx,
+                        url=url,
+                        method=step.method.value,
+                        headers=headers,
+                        body=body,
+                        timeout_seconds=step.timeout_seconds,
+                    )
+                    if result["success"]:
+                        break
+                    if attempt < step.retry_count:
+                        await asyncio.sleep(step.retry_delay_seconds)
+
+                status_code = result.get("status_code")
+                response_body = result.get("body")
+
+                if result["success"]:
+                    step_status = StepStatus.SUCCESS
+                    # Extract variables from response
+                    if step.extract_variables:
+                        extracted_vars = extract_variables_from_response(
+                            response_body, step.extract_variables
+                        )
+                else:
+                    step_status = StepStatus.FAILED
+                    error_message = result.get("error")
+                    error_type = result.get("error_type")
+
+                # Complete step execution
+                await step_exec_repo.complete_step_execution(
+                    step_execution,
+                    status=step_status,
+                    response_status_code=status_code,
+                    response_headers=result.get("headers"),
+                    response_body=response_body,
+                    response_size_bytes=result.get("size_bytes"),
+                    extracted_variables=extracted_vars,
+                    condition_met=True if step.condition else None,
+                    error_message=error_message,
+                    error_type=error_type,
+                    retry_attempt=result.get("retry_attempt", 0),
+                )
+
+                # Update context
+                exec_context.update_from_step_result(
+                    step_status,
+                    status_code=status_code,
+                    response_body=response_body,
+                    extracted_variables=extracted_vars,
+                )
+
+                log_step_execution(
+                    chain, step, step.step_order, url, step_status,
+                    duration_ms=result.get("duration_ms"),
+                    error=error_message,
+                )
+
+                # Check if we should continue
+                if step_status == StepStatus.FAILED:
+                    if not exec_context.should_continue(step, step_status):
+                        exec_context.error_message = f"Chain stopped at step {step.step_order}: {error_message}"
+                        break
+
+            except Exception as e:
+                logger.error(
+                    "Unexpected error executing step",
+                    chain_id=chain_id,
+                    step_id=str(step.id),
+                    error=str(e),
+                )
+                exec_context.update_from_step_result(StepStatus.FAILED)
+                exec_context.error_message = f"Unexpected error at step {step.step_order}: {str(e)}"
+                if not exec_context.should_continue(step, StepStatus.FAILED):
+                    break
+
+        # Update chain execution with final status
+        final_status = exec_context.get_final_status(len(chain.steps))
+        await exec_repo.update_step_counts(
+            chain_execution,
+            completed=exec_context.completed_steps,
+            failed=exec_context.failed_steps,
+            skipped=exec_context.skipped_steps,
+        )
+        await exec_repo.update_variables(chain_execution, exec_context.variables)
+        await exec_repo.complete_execution(
+            chain_execution,
+            status=final_status,
+            error_message=exec_context.error_message,
+        )
+
+        # Calculate next run time for cron chains
+        next_run_at = None
+        if chain.trigger_type == TriggerType.CRON and chain.schedule:
+            tz = pytz.timezone(chain.timezone)
+            now = datetime.now(tz)
+            cron = croniter(chain.schedule, now)
+            next_run = cron.get_next(datetime)
+            next_run_at = next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+
+        # Update chain status
+        await chain_repo.update_last_run(
+            chain=chain,
+            status=final_status,
+            run_at=exec_context.started_at,
+            next_run_at=next_run_at,
+        )
+
+        await db.commit()
+
+        # Log completion
+        duration_ms = int((datetime.utcnow() - exec_context.started_at).total_seconds() * 1000)
+        log_chain_execution_complete(
+            chain, final_status,
+            exec_context.completed_steps,
+            exec_context.failed_steps,
+            exec_context.skipped_steps,
+            duration_ms,
+        )
+
+        # Enqueue notifications asynchronously
+        redis = ctx["redis"]
+        try:
+            if final_status == ChainStatus.SUCCESS and chain.notify_on_success:
+                await redis.enqueue_job(
+                    "send_chain_notification",
+                    workspace_id=str(chain.workspace_id),
+                    chain_name=chain.name,
+                    event="success",
+                    duration_ms=duration_ms,
+                    completed_steps=exec_context.completed_steps,
+                    total_steps=len(chain.steps),
+                )
+            elif final_status == ChainStatus.FAILED and chain.notify_on_failure:
+                await redis.enqueue_job(
+                    "send_chain_notification",
+                    workspace_id=str(chain.workspace_id),
+                    chain_name=chain.name,
+                    event="failure",
+                    error_message=exec_context.error_message,
+                    completed_steps=exec_context.completed_steps,
+                    total_steps=len(chain.steps),
+                )
+            elif final_status == ChainStatus.PARTIAL and chain.notify_on_partial:
+                await redis.enqueue_job(
+                    "send_chain_notification",
+                    workspace_id=str(chain.workspace_id),
+                    chain_name=chain.name,
+                    event="partial",
+                    completed_steps=exec_context.completed_steps,
+                    failed_steps=exec_context.failed_steps,
+                    total_steps=len(chain.steps),
+                )
+        except Exception as e:
+            logger.error("Failed to enqueue chain notification", error=str(e), chain_id=chain_id)
+
+        return {
+            "success": final_status == ChainStatus.SUCCESS,
+            "status": final_status.value,
+            "completed_steps": exec_context.completed_steps,
+            "failed_steps": exec_context.failed_steps,
+            "skipped_steps": exec_context.skipped_steps,
+            "duration_ms": duration_ms,
+            "error": exec_context.error_message,
+        }
+
+
+async def send_chain_notification(
+    ctx: dict,
+    *,
+    workspace_id: str,
+    chain_name: str,
+    event: str,  # "success", "failure", "partial"
+    duration_ms: int | None = None,
+    error_message: str | None = None,
+    completed_steps: int | None = None,
+    failed_steps: int | None = None,
+    total_steps: int | None = None,
+) -> dict:
+    """Send chain notification asynchronously."""
+    db_factory = ctx["db_factory"]
+
+    async with db_factory() as db:
+        try:
+            from uuid import UUID
+
+            from app.services.notifications import notification_service
+
+            await notification_service.send_chain_notification(
+                db=db,
+                workspace_id=UUID(workspace_id),
+                chain_name=chain_name,
+                event=event,
+                duration_ms=duration_ms,
+                error_message=error_message,
+                completed_steps=completed_steps,
+                failed_steps=failed_steps,
+                total_steps=total_steps,
+            )
+
+            logger.info(
+                "Chain notification sent",
+                notification_event=event,
+                chain_name=chain_name,
+            )
+            return {"success": True}
+
+        except Exception as e:
+            logger.error(
+                "Failed to send chain notification",
+                error=str(e),
+                notification_event=event,
+                chain_name=chain_name,
+            )
+            return {"success": False, "error": str(e)}

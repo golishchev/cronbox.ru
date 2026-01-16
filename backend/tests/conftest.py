@@ -60,6 +60,12 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE"))
 
+    # Clear Redis cache (especially plans cache)
+    try:
+        await redis_client.delete("cache:plans:public")
+    except Exception:
+        pass  # Ignore if Redis not available
+
     async with async_session() as session:
         yield session
         await session.rollback()
@@ -102,6 +108,11 @@ async def free_plan(db_session: AsyncSession) -> Plan:
         webhook_callbacks=False,
         custom_headers=True,
         retry_on_failure=False,
+        # Chain limits
+        max_task_chains=3,
+        max_chain_steps=5,
+        chain_variable_substitution=True,
+        min_chain_interval_minutes=5,
         is_active=True,
         is_public=True,
         sort_order=0,
@@ -131,6 +142,11 @@ async def pro_plan(db_session: AsyncSession) -> Plan:
         webhook_callbacks=True,
         custom_headers=True,
         retry_on_failure=True,
+        # Chain limits
+        max_task_chains=20,
+        max_chain_steps=20,
+        chain_variable_substitution=True,
+        min_chain_interval_minutes=1,
         is_active=True,
         is_public=True,
         sort_order=1,

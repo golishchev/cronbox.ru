@@ -123,6 +123,11 @@ export interface AdminPlan {
   webhook_callbacks: boolean
   custom_headers: boolean
   retry_on_failure: boolean
+  // Task Chains limits
+  max_task_chains: number
+  max_chain_steps: number
+  chain_variable_substitution: boolean
+  min_chain_interval_minutes: number
   is_active: boolean
   is_public: boolean
   sort_order: number
@@ -151,6 +156,11 @@ export interface CreatePlanRequest {
   webhook_callbacks?: boolean
   custom_headers?: boolean
   retry_on_failure?: boolean
+  // Task Chains limits
+  max_task_chains?: number
+  max_chain_steps?: number
+  chain_variable_substitution?: boolean
+  min_chain_interval_minutes?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number
@@ -171,6 +181,11 @@ export interface UpdatePlanRequest {
   webhook_callbacks?: boolean
   custom_headers?: boolean
   retry_on_failure?: boolean
+  // Task Chains limits
+  max_task_chains?: number
+  max_chain_steps?: number
+  chain_variable_substitution?: boolean
+  min_chain_interval_minutes?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number

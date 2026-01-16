@@ -107,6 +107,11 @@ class BillingService:
                         "webhook_callbacks": p.webhook_callbacks,
                         "custom_headers": p.custom_headers,
                         "retry_on_failure": p.retry_on_failure,
+                        # Task chain limits
+                        "max_task_chains": p.max_task_chains,
+                        "max_chain_steps": p.max_chain_steps,
+                        "chain_variable_substitution": p.chain_variable_substitution,
+                        "min_chain_interval_minutes": p.min_chain_interval_minutes,
                         "is_active": p.is_active,
                         "is_public": p.is_public,
                         "sort_order": p.sort_order,

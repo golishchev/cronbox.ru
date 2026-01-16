@@ -18,6 +18,8 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ de
 const CronTasksPage = lazy(() => import('@/pages/cron/CronTasksPage').then(m => ({ default: m.CronTasksPage })))
 const DelayedTasksPage = lazy(() => import('@/pages/delayed/DelayedTasksPage').then(m => ({ default: m.DelayedTasksPage })))
 const ExecutionsPage = lazy(() => import('@/pages/executions/ExecutionsPage').then(m => ({ default: m.ExecutionsPage })))
+const ChainsPage = lazy(() => import('@/pages/chains/ChainsPage').then(m => ({ default: m.ChainsPage })))
+const ChainDetailPage = lazy(() => import('@/pages/chains/ChainDetailPage').then(m => ({ default: m.ChainDetailPage })))
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage').then(m => ({ default: m.BillingPage })))
@@ -30,10 +32,10 @@ const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 const AdminNotificationTemplatesPage = lazy(() => import('@/pages/admin/AdminNotificationTemplatesPage').then(m => ({ default: m.AdminNotificationTemplatesPage })))
 
-type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
+type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'chains' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
 
 const AUTH_ROUTES = ['login', 'register', 'verify-email', 'otp-login']
-const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
+const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'chains', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
 
 function PageLoader() {
   return (
@@ -48,6 +50,7 @@ function App() {
   const { workspaces, setWorkspaces, setCurrentWorkspace, currentWorkspace, isLoading: isWorkspacesLoading, setLoading: setWorkspacesLoading } = useWorkspaceStore()
   const [route, setRoute] = useState<Route>('login')
   const [verifyEmailToken, setVerifyEmailToken] = useState<string>('')
+  const [routeParams, setRouteParams] = useState<string[]>([])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -112,11 +115,13 @@ function App() {
       const fullHash = window.location.hash.slice(1) || 'login'
       // Parse route and query params (e.g., "verify-email?token=abc")
       const [hash, queryString] = fullHash.split('?')
-      const routePath = hash.split('/').filter(Boolean)[0] || 'login'
+      const pathParts = hash.split('/').filter(Boolean)
+      const routePath = pathParts[0] || 'login'
 
       const allRoutes = [...AUTH_ROUTES, ...PROTECTED_ROUTES]
       if (allRoutes.includes(routePath)) {
         setRoute(routePath as Route)
+        setRouteParams(pathParts.slice(1))
         window.scrollTo(0, 0)
 
         // Extract token for verify-email route
@@ -240,6 +245,12 @@ function App() {
         return <CronTasksPage onNavigate={navigate} />
       case 'delayed':
         return <DelayedTasksPage onNavigate={navigate} />
+      case 'chains':
+        // Handle nested routes like chains/:id
+        if (routeParams.length > 0) {
+          return <ChainDetailPage chainId={routeParams[0]} onNavigate={navigate} />
+        }
+        return <ChainsPage onNavigate={navigate} />
       case 'executions':
         return <ExecutionsPage onNavigate={navigate} />
       case 'api-keys':

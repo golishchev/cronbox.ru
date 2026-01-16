@@ -8,8 +8,21 @@ interface ErrorPattern {
 
 const errorPatterns: ErrorPattern[] = [
   {
+    pattern: /Chain stopped at step (\d+): (.+)/i,
+    key: 'apiErrors.chainStoppedAtStep',
+    extractParams: (match) => ({
+      step: parseInt(match[1], 10),
+      error: match[2] === 'None' ? '' : `: ${match[2]}`
+    }),
+  },
+  {
     pattern: /Cron interval too frequent.*minimum (\d+) minute/i,
     key: 'apiErrors.cronIntervalTooFrequent',
+    extractParams: (match) => ({ minutes: parseInt(match[1], 10) }),
+  },
+  {
+    pattern: /Chain interval too frequent.*minimum (\d+) minute/i,
+    key: 'apiErrors.chainIntervalTooFrequent',
     extractParams: (match) => ({ minutes: parseInt(match[1], 10) }),
   },
   {
@@ -24,6 +37,11 @@ const errorPatterns: ErrorPattern[] = [
   {
     pattern: /All connection attempts failed/i,
     key: 'apiErrors.connectionFailed',
+  },
+  {
+    pattern: /Request failed with status code (\d+)/i,
+    key: 'apiErrors.requestFailedWithStatus',
+    extractParams: (match) => ({ status: parseInt(match[1], 10) }),
   },
 ]
 

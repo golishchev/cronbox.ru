@@ -35,12 +35,14 @@ import {
   ChevronRight,
   Eye,
   RefreshCw,
+  AlertCircle,
+  Link2,
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { NoWorkspaceState } from '@/components/NoWorkspaceState'
 import { translateApiError } from '@/lib/translateApiError'
-import type { Execution, ExecutionDetail, PaginationMeta, TaskStatus } from '@/types'
+import type { Execution, ExecutionDetail, ExecutionStatus, ExecutionTaskType, PaginationMeta } from '@/types'
 
 interface ExecutionsPageProps {
   onNavigate: (route: string) => void
@@ -69,7 +71,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
         page,
         limit: 20,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        task_type: typeFilter !== 'all' ? typeFilter as 'cron' | 'delayed' : undefined,
+        task_type: typeFilter !== 'all' ? typeFilter as ExecutionTaskType : undefined,
       })
       setExecutions(response.executions)
       setPagination(response.pagination)
@@ -88,7 +90,11 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
     if (!currentWorkspace) return
     setLoadingDetail(true)
     try {
-      const detail = await getExecution(currentWorkspace.id, execution.id)
+      const detail = await getExecution(
+        currentWorkspace.id,
+        execution.id,
+        execution.task_type === 'chain' ? 'chain' : undefined
+      )
       setSelectedExecution(detail)
     } catch (err) {
       setError(getErrorMessage(err))
@@ -97,7 +103,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
     }
   }
 
-  const getStatusBadge = (status: TaskStatus) => {
+  const getStatusBadge = (status: ExecutionStatus) => {
     switch (status) {
       case 'pending':
         return (
@@ -125,6 +131,20 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
           <Badge variant="destructive" className="gap-1">
             <XCircle className="h-3 w-3" />
             {t('common.failed')}
+          </Badge>
+        )
+      case 'partial':
+        return (
+          <Badge variant="warning" className="gap-1">
+            <AlertCircle className="h-3 w-3" />
+            {t('executions.partial')}
+          </Badge>
+        )
+      case 'cancelled':
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <XCircle className="h-3 w-3" />
+            {t('executions.cancelled')}
           </Badge>
         )
       default:
@@ -203,13 +223,14 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{t('common.type')}:</span>
           <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('common.all')}</SelectItem>
               <SelectItem value="cron">Cron</SelectItem>
               <SelectItem value="delayed">{t('executions.delayed')}</SelectItem>
+              <SelectItem value="chain">{t('executions.chain')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -253,14 +274,24 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                       <p className="font-medium">
                         {execution.task_name || t('executions.unnamedTask')}
                       </p>
-                      <p className="text-sm text-muted-foreground truncate max-w-[250px]">
-                        {execution.request_url}
-                      </p>
+                      {execution.task_type === 'chain' ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t('executions.stepsInfo', {
+                            completed: execution.completed_steps ?? 0,
+                            total: execution.total_steps ?? 0,
+                          })}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground truncate max-w-[250px]">
+                          {execution.request_url}
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {execution.task_type}
+                    <Badge variant="outline" className="gap-1">
+                      {execution.task_type === 'chain' && <Link2 className="h-3 w-3" />}
+                      {execution.task_type === 'chain' ? t('executions.chain') : execution.task_type}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -276,11 +307,21 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   <TableCell>{getStatusBadge(execution.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getStatusCodeBadge(execution.response_status_code)}
-                      {execution.error_message && (
-                        <span className="text-xs text-destructive truncate max-w-[150px]" title={translateApiError(execution.error_message, t)}>
-                          {translateApiError(execution.error_message, t)}
-                        </span>
+                      {execution.task_type === 'chain' ? (
+                        execution.failed_steps && execution.failed_steps > 0 ? (
+                          <span className="text-xs text-destructive">
+                            {t('executions.failedSteps', { count: execution.failed_steps })}
+                          </span>
+                        ) : null
+                      ) : (
+                        <>
+                          {getStatusCodeBadge(execution.response_status_code)}
+                          {execution.error_message && (
+                            <span className="text-xs text-destructive truncate max-w-[150px]" title={translateApiError(execution.error_message, t)}>
+                              {translateApiError(execution.error_message, t)}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </TableCell>
@@ -289,7 +330,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleViewDetails(execution)}
-                      title="View details"
+                      title={t('executions.viewDetails')}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -372,67 +413,106 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                 </div>
               </div>
 
-              {/* Request */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">{t('executions.request')}</h3>
-                <div className="rounded-md bg-muted p-4 space-y-2">
-                  <div className="flex gap-2">
-                    <Badge variant="outline">{selectedExecution.request_method}</Badge>
-                    <code className="text-sm break-all">{selectedExecution.request_url}</code>
-                  </div>
-                  {selectedExecution.request_headers && Object.keys(selectedExecution.request_headers).length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
-                      <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
-                        {JSON.stringify(selectedExecution.request_headers, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  {selectedExecution.request_body && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
-                      <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px]">
-                        {selectedExecution.request_body}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Response */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">{t('executions.response')}</h3>
-                <div className="rounded-md bg-muted p-4 space-y-2">
-                  <div className="flex gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{t('executions.statusCode')}</p>
-                      {getStatusCodeBadge(selectedExecution.response_status_code)}
-                    </div>
-                    {selectedExecution.response_size_bytes && (
+              {/* Chain-specific: Steps summary */}
+              {selectedExecution.task_type === 'chain' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">{t('executions.chainSteps')}</h3>
+                  <div className="rounded-md bg-muted p-4 space-y-4">
+                    <div className="grid grid-cols-4 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">{t('executions.size')}</p>
-                        <p className="text-sm">{(selectedExecution.response_size_bytes / 1024).toFixed(2)} KB</p>
+                        <p className="text-sm text-muted-foreground">{t('executions.totalSteps')}</p>
+                        <p className="text-lg font-semibold">{selectedExecution.total_steps ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">{t('executions.completedSteps')}</p>
+                        <p className="text-lg font-semibold text-green-600">{selectedExecution.completed_steps ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">{t('executions.failedStepsLabel')}</p>
+                        <p className="text-lg font-semibold text-red-600">{selectedExecution.failed_steps ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">{t('executions.skippedSteps')}</p>
+                        <p className="text-lg font-semibold text-gray-500">{selectedExecution.skipped_steps ?? 0}</p>
+                      </div>
+                    </div>
+                    {selectedExecution.chain_variables && Object.keys(selectedExecution.chain_variables).length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t('executions.chainVariables')}:</p>
+                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px] whitespace-pre-wrap break-all">
+                          {JSON.stringify(selectedExecution.chain_variables, null, 2)}
+                        </pre>
                       </div>
                     )}
                   </div>
-                  {selectedExecution.response_headers && Object.keys(selectedExecution.response_headers).length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
-                      <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
-                        {JSON.stringify(selectedExecution.response_headers, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  {selectedExecution.response_body && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
-                      <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px]">
-                        {selectedExecution.response_body}
-                      </pre>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
+
+              {/* Request (for non-chain executions) */}
+              {selectedExecution.task_type !== 'chain' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">{t('executions.request')}</h3>
+                  <div className="rounded-md bg-muted p-4 space-y-2">
+                    <div className="flex gap-2">
+                      <Badge variant="outline">{selectedExecution.request_method}</Badge>
+                      <code className="text-sm break-all">{selectedExecution.request_url}</code>
+                    </div>
+                    {selectedExecution.request_headers && Object.keys(selectedExecution.request_headers).length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
+                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
+                          {JSON.stringify(selectedExecution.request_headers, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {selectedExecution.request_body && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
+                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px] whitespace-pre-wrap break-all">
+                          {selectedExecution.request_body}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Response (for non-chain executions) */}
+              {selectedExecution.task_type !== 'chain' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">{t('executions.response')}</h3>
+                  <div className="rounded-md bg-muted p-4 space-y-2">
+                    <div className="flex gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">{t('executions.statusCode')}</p>
+                        {getStatusCodeBadge(selectedExecution.response_status_code)}
+                      </div>
+                      {selectedExecution.response_size_bytes && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executions.size')}</p>
+                          <p className="text-sm">{(selectedExecution.response_size_bytes / 1024).toFixed(2)} KB</p>
+                        </div>
+                      )}
+                    </div>
+                    {selectedExecution.response_headers && Object.keys(selectedExecution.response_headers).length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
+                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
+                          {JSON.stringify(selectedExecution.response_headers, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {selectedExecution.response_body && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
+                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px] whitespace-pre-wrap break-all">
+                          {selectedExecution.response_body}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Error */}
               {selectedExecution.error_message && (
