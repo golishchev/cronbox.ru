@@ -26,7 +26,7 @@ vi.mock('@/api/auth', () => ({
 describe('Header', () => {
   const mockOnNavigate = vi.fn()
   const mockOnLogout = vi.fn()
-  const mockToggleSidebar = vi.fn()
+  const mockToggleMobileSidebar = vi.fn()
   const mockUpdateUser = vi.fn()
 
   beforeEach(() => {
@@ -73,7 +73,10 @@ describe('Header', () => {
     vi.mocked(useUIStore).mockReturnValue({
       sidebarCollapsed: false,
       setSidebarCollapsed: vi.fn(),
-      toggleSidebar: mockToggleSidebar,
+      toggleSidebar: vi.fn(),
+      mobileSidebarOpen: false,
+      setMobileSidebarOpen: vi.fn(),
+      toggleMobileSidebar: mockToggleMobileSidebar,
       theme: 'system',
       setTheme: vi.fn(),
     })
@@ -153,7 +156,7 @@ describe('Header', () => {
     expect(screen.getByText('Русский')).toBeInTheDocument()
   })
 
-  it('should call toggleSidebar when menu button clicked', async () => {
+  it('should call toggleMobileSidebar when menu button clicked', async () => {
     const { user } = render(<Header onNavigate={mockOnNavigate} onLogout={mockOnLogout} />)
 
     const menuButtons = screen.getAllByRole('button')
@@ -161,7 +164,7 @@ describe('Header', () => {
     const menuButton = menuButtons.find(btn => btn.classList.contains('lg:hidden'))
     if (menuButton) {
       await user.click(menuButton)
-      expect(mockToggleSidebar).toHaveBeenCalled()
+      expect(mockToggleMobileSidebar).toHaveBeenCalled()
     }
   })
 

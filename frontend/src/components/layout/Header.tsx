@@ -47,7 +47,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const { user, updateUser } = useAuthStore()
   const { workspaces, currentWorkspace, setCurrentWorkspace, addWorkspace, removeWorkspace } = useWorkspaceStore()
-  const { toggleSidebar, theme, setTheme } = useUIStore()
+  const { toggleMobileSidebar, theme, setTheme } = useUIStore()
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -156,7 +156,7 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
           variant="ghost"
           size="icon"
           className="lg:hidden"
-          onClick={toggleSidebar}
+          onClick={toggleMobileSidebar}
         >
           <Menu className="h-5 w-5" />
         </Button>

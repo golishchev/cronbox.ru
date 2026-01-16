@@ -49,8 +49,14 @@ interface SidebarProps {
 
 export function Sidebar({ currentRoute, onNavigate }: SidebarProps) {
   const { t } = useTranslation()
-  const { sidebarCollapsed, setSidebarCollapsed } = useUIStore()
+  const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useUIStore()
   const { user } = useAuthStore()
+
+  const handleNavigate = (route: string) => {
+    onNavigate(route)
+    // Close mobile sidebar on navigation
+    setMobileSidebarOpen(false)
+  }
 
   const NavLink = ({ item }: { item: NavItem }) => {
     const isActive = currentRoute === item.route
@@ -58,7 +64,7 @@ export function Sidebar({ currentRoute, onNavigate }: SidebarProps) {
 
     return (
       <button
-        onClick={() => onNavigate(item.route)}
+        onClick={() => handleNavigate(item.route)}
         className={cn(
           'flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left',
           isActive
@@ -67,87 +73,104 @@ export function Sidebar({ currentRoute, onNavigate }: SidebarProps) {
         )}
       >
         <Icon className="h-5 w-5 shrink-0" />
-        {!sidebarCollapsed && <span className="text-sm font-medium">{t(item.titleKey)}</span>}
+        {(!sidebarCollapsed || mobileSidebarOpen) && <span className="text-sm font-medium">{t(item.titleKey)}</span>}
       </button>
     )
   }
 
+  const showLabels = !sidebarCollapsed || mobileSidebarOpen
+
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-background border-r transition-all duration-300 hidden lg:block',
-        sidebarCollapsed ? 'w-20' : 'w-64'
+    <>
+      {/* Mobile backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
       )}
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b">
-        {!sidebarCollapsed && (
-          <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-xl">CronBox</span>
-          </button>
-        )}
-        {sidebarCollapsed && (
-          <button onClick={() => onNavigate('dashboard')} className="mx-auto">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <Clock className="h-5 w-5 text-white" />
-            </div>
-          </button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className={cn(sidebarCollapsed && 'mx-auto')}
-        >
-          <ChevronLeft
-            className={cn(
-              'h-5 w-5 transition-transform',
-              sidebarCollapsed && 'rotate-180'
-            )}
-          />
-        </Button>
-      </div>
 
-      {/* Navigation */}
-      <nav className="p-4 space-y-6">
-        <div className="space-y-1">
-          {!sidebarCollapsed && (
-            <p className="text-xs font-medium text-muted-foreground uppercase px-3 mb-2">
-              {t('nav.main')}
-            </p>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-50 h-screen bg-background border-r transition-all duration-300',
+          // Desktop: always visible, respects collapsed state
+          'hidden lg:block',
+          sidebarCollapsed ? 'lg:w-20' : 'lg:w-64',
+          // Mobile: shown as overlay when open
+          mobileSidebarOpen && 'block w-64'
+        )}
+      >
+        {/* Logo */}
+        <div className="flex items-center justify-between h-16 px-4 border-b">
+          {showLabels && (
+            <button onClick={() => handleNavigate('dashboard')} className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold text-xl">CronBox</span>
+            </button>
           )}
-          {mainNav.map((item) => (
-            <NavLink key={item.route} item={item} />
-          ))}
+          {!showLabels && (
+            <button onClick={() => handleNavigate('dashboard')} className="mx-auto">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+            </button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={cn('hidden lg:flex', sidebarCollapsed && 'mx-auto')}
+          >
+            <ChevronLeft
+              className={cn(
+                'h-5 w-5 transition-transform',
+                sidebarCollapsed && 'rotate-180'
+              )}
+            />
+          </Button>
         </div>
 
-        <div className="space-y-1">
-          {!sidebarCollapsed && (
-            <p className="text-xs font-medium text-muted-foreground uppercase px-3 mb-2">
-              {t('nav.settings')}
-            </p>
-          )}
-          {settingsNav.map((item) => (
-            <NavLink key={item.route} item={item} />
-          ))}
-        </div>
-
-        {user?.is_superuser && (
+        {/* Navigation */}
+        <nav className="p-4 space-y-6">
           <div className="space-y-1">
-            {!sidebarCollapsed && (
+            {showLabels && (
               <p className="text-xs font-medium text-muted-foreground uppercase px-3 mb-2">
-                Admin
+                {t('nav.main')}
               </p>
             )}
-            {adminNav.map((item) => (
+            {mainNav.map((item) => (
               <NavLink key={item.route} item={item} />
             ))}
           </div>
-        )}
-      </nav>
-    </aside>
+
+          <div className="space-y-1">
+            {showLabels && (
+              <p className="text-xs font-medium text-muted-foreground uppercase px-3 mb-2">
+                {t('nav.settings')}
+              </p>
+            )}
+            {settingsNav.map((item) => (
+              <NavLink key={item.route} item={item} />
+            ))}
+          </div>
+
+          {user?.is_superuser && (
+            <div className="space-y-1">
+              {showLabels && (
+                <p className="text-xs font-medium text-muted-foreground uppercase px-3 mb-2">
+                  Admin
+                </p>
+              )}
+              {adminNav.map((item) => (
+                <NavLink key={item.route} item={item} />
+              ))}
+            </div>
+          )}
+        </nav>
+      </aside>
+    </>
   )
 }

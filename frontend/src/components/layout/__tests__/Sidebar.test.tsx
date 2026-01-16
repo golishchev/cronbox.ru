@@ -16,6 +16,7 @@ vi.mock('@/stores/authStore', () => ({
 describe('Sidebar', () => {
   const mockOnNavigate = vi.fn()
   const mockSetSidebarCollapsed = vi.fn()
+  const mockSetMobileSidebarOpen = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -23,6 +24,9 @@ describe('Sidebar', () => {
       sidebarCollapsed: false,
       setSidebarCollapsed: mockSetSidebarCollapsed,
       toggleSidebar: vi.fn(),
+      mobileSidebarOpen: false,
+      setMobileSidebarOpen: mockSetMobileSidebarOpen,
+      toggleMobileSidebar: vi.fn(),
     })
     vi.mocked(useAuthStore).mockReturnValue({
       user: {
@@ -139,6 +143,9 @@ describe('Sidebar', () => {
       sidebarCollapsed: true,
       setSidebarCollapsed: mockSetSidebarCollapsed,
       toggleSidebar: vi.fn(),
+      mobileSidebarOpen: false,
+      setMobileSidebarOpen: mockSetMobileSidebarOpen,
+      toggleMobileSidebar: vi.fn(),
     })
 
     render(<Sidebar currentRoute="dashboard" onNavigate={mockOnNavigate} />)
@@ -155,5 +162,38 @@ describe('Sidebar', () => {
     // There are multiple "Settings" elements - the label and nav item
     // Use getAllByText and check at least one exists
     expect(screen.getAllByText('Settings').length).toBeGreaterThan(0)
+  })
+
+  it('should close mobile sidebar when nav item clicked', async () => {
+    const { user } = render(<Sidebar currentRoute="dashboard" onNavigate={mockOnNavigate} />)
+
+    await user.click(screen.getByText('Cron Tasks'))
+
+    expect(mockSetMobileSidebarOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('should close mobile sidebar when logo clicked', async () => {
+    const { user } = render(<Sidebar currentRoute="cron" onNavigate={mockOnNavigate} />)
+
+    await user.click(screen.getByText('CronBox'))
+
+    expect(mockSetMobileSidebarOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('should show labels when mobile sidebar is open even if collapsed', () => {
+    vi.mocked(useUIStore).mockReturnValue({
+      sidebarCollapsed: true,
+      setSidebarCollapsed: mockSetSidebarCollapsed,
+      toggleSidebar: vi.fn(),
+      mobileSidebarOpen: true,
+      setMobileSidebarOpen: mockSetMobileSidebarOpen,
+      toggleMobileSidebar: vi.fn(),
+    })
+
+    render(<Sidebar currentRoute="dashboard" onNavigate={mockOnNavigate} />)
+
+    // Labels should be visible when mobile sidebar is open
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('CronBox')).toBeInTheDocument()
   })
 })
