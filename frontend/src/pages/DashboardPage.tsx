@@ -104,8 +104,12 @@ export function DashboardPage() {
     }
   }
 
+  // Workspaces are loaded by LoginPage/App.tsx after authentication
+  // Only reload if workspaces are empty (e.g., page refresh)
   useEffect(() => {
     const loadWorkspaces = async () => {
+      if (workspaces.length > 0) return // Already loaded
+
       setLoading(true)
       try {
         const ws = await getWorkspaces()
@@ -121,7 +125,8 @@ export function DashboardPage() {
     }
 
     loadWorkspaces()
-  }, [setWorkspaces, setCurrentWorkspace, setLoading, currentWorkspace])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount
 
   useEffect(() => {
     const loadStats = async () => {
