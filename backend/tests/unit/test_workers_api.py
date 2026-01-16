@@ -1,4 +1,5 @@
 """Unit tests for workers API endpoints."""
+
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -47,9 +48,7 @@ class TestListWorkers:
             result = await list_workers(workspace=mock_workspace, db=mock_db)
 
             assert len(result) == 2
-            mock_service.get_workers_by_workspace.assert_called_once_with(
-                mock_db, mock_workspace.id
-            )
+            mock_service.get_workers_by_workspace.assert_called_once_with(mock_db, mock_workspace.id)
 
 
 class TestCreateWorker:

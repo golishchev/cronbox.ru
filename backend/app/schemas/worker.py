@@ -1,4 +1,5 @@
 """Worker schemas for API serialization."""
+
 from datetime import datetime
 from uuid import UUID
 

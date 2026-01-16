@@ -1,4 +1,5 @@
 """Internationalization service for backend translations."""
+
 import json
 from functools import lru_cache
 from pathlib import Path

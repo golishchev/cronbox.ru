@@ -115,9 +115,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app, default_requests_per_minute: int = 100):
         super().__init__(app)
-        self.default_limiter = RateLimiter(
-            requests_per_minute=default_requests_per_minute
-        )
+        self.default_limiter = RateLimiter(requests_per_minute=default_requests_per_minute)
         # Cache allowed origins for CORS
         self.allowed_origins = set(settings.cors_origins)
 
@@ -134,15 +132,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.auth_limiters: dict[str, RateLimiter] = {}
         for path, limit in self.AUTH_RATE_LIMITS.items():
             self.auth_limiters[path] = RateLimiter(
-                requests_per_minute=limit,
-                key_prefix=f"ratelimit:auth:{path.replace('/', '_')}"
+                requests_per_minute=limit, key_prefix=f"ratelimit:auth:{path.replace('/', '_')}"
             )
 
         # Rate limiter for public endpoints (stricter than default)
-        self.public_limiter = RateLimiter(
-            requests_per_minute=settings.public_rate_limit,
-            key_prefix="ratelimit:public"
-        )
+        self.public_limiter = RateLimiter(requests_per_minute=settings.public_rate_limit, key_prefix="ratelimit:public")
 
     def _get_auth_limiter(self, path: str) -> RateLimiter | None:
         """Get rate limiter for auth endpoint if applicable."""
@@ -170,9 +164,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if origin and origin in self.allowed_origins:
             headers["Access-Control-Allow-Origin"] = origin
             headers["Access-Control-Allow-Credentials"] = "true"
-            headers["Access-Control-Expose-Headers"] = (
-                "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
-            )
+            headers["Access-Control-Expose-Headers"] = "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset"
 
         return JSONResponse(
             status_code=429,
@@ -199,9 +191,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # For auth endpoints, always use IP-based limiting
             ip_identifier = self._get_ip_identifier(request)
             try:
-                is_allowed, count, remaining = await auth_limiter.is_allowed(
-                    ip_identifier
-                )
+                is_allowed, count, remaining = await auth_limiter.is_allowed(ip_identifier)
                 if not is_allowed:
                     return self._create_rate_limit_response(
                         request,
@@ -215,21 +205,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if path in self.PUBLIC_ENDPOINTS:
             ip_identifier = self._get_ip_identifier(request)
             try:
-                is_allowed, count, remaining = await self.public_limiter.is_allowed(
-                    ip_identifier
-                )
+                is_allowed, count, remaining = await self.public_limiter.is_allowed(ip_identifier)
                 if not is_allowed:
-                    return self._create_rate_limit_response(
-                        request, self.public_limiter
-                    )
+                    return self._create_rate_limit_response(request, self.public_limiter)
             except Exception:
                 pass  # Continue with default rate limiting
 
         # Check default rate limit
         try:
-            is_allowed, count, remaining = await self.default_limiter.is_allowed(
-                identifier
-            )
+            is_allowed, count, remaining = await self.default_limiter.is_allowed(identifier)
         except Exception:
             # If rate limiting fails, allow the request
             return await call_next(request)
@@ -241,9 +225,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # Add rate limit headers to response
-        response.headers["X-RateLimit-Limit"] = str(
-            self.default_limiter.requests_per_minute
-        )
+        response.headers["X-RateLimit-Limit"] = str(self.default_limiter.requests_per_minute)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(60)
 

@@ -248,7 +248,9 @@ async def run_cron_task(
         )
 
     # Check rate limit based on plan
-    from datetime import timedelta, timezone as dt_tz
+    from datetime import timedelta
+    from datetime import timezone as dt_tz
+
     if task.last_run_at:
         min_interval = timedelta(minutes=user_plan.min_cron_interval_minutes)
         now = datetime.now(dt_tz.utc)

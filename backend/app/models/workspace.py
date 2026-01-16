@@ -11,9 +11,7 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
     """Workspace model - container for tasks."""
 
     __tablename__ = "workspaces"
-    __table_args__ = (
-        UniqueConstraint("slug", "owner_id", name="uq_workspaces_slug_owner"),
-    )
+    __table_args__ = (UniqueConstraint("slug", "owner_id", name="uq_workspaces_slug_owner"),)
 
     # Identification
     name: Mapped[str] = mapped_column(String(255))
@@ -27,9 +25,7 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
 
     # Blocking (for users who downgraded from paid plan)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
-    blocked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Usage counters
     cron_tasks_count: Mapped[int] = mapped_column(Integer, default=0)

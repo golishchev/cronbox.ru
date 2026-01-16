@@ -42,7 +42,7 @@ class ChainExecution(Base, UUIDMixin):
     # Execution status
     status: Mapped[ChainStatus] = mapped_column(
         SQLEnum(ChainStatus, values_callable=lambda x: [e.value for e in x], create_type=False),
-        default=ChainStatus.PENDING
+        default=ChainStatus.PENDING,
     )
     started_at: Mapped[datetime] = mapped_column()
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
@@ -130,7 +130,5 @@ class StepExecution(Base, UUIDMixin):
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     # Relationships
-    chain_execution: Mapped["ChainExecution"] = relationship(
-        back_populates="step_executions"
-    )
+    chain_execution: Mapped["ChainExecution"] = relationship(back_populates="step_executions")
     step: Mapped["ChainStep | None"] = relationship(back_populates="step_executions")

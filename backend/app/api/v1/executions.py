@@ -98,9 +98,7 @@ async def get_daily_execution_stats(
         workspace_id=workspace.id,
         days=days,
     )
-    return DailyExecutionStatsResponse(
-        stats=[DailyExecutionStats(**s) for s in daily_stats]
-    )
+    return DailyExecutionStatsResponse(stats=[DailyExecutionStats(**s) for s in daily_stats])
 
 
 @router.get("/{execution_id}", response_model=ExecutionDetailResponse)

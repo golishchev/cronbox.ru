@@ -97,9 +97,7 @@ async def seed_plans():
     async with AsyncSessionLocal() as db:
         for plan_data in PLANS:
             # Check if plan exists
-            result = await db.execute(
-                select(Plan).where(Plan.name == plan_data["name"])
-            )
+            result = await db.execute(select(Plan).where(Plan.name == plan_data["name"]))
             existing = result.scalar_one_or_none()
 
             if existing:

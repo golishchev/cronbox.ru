@@ -1,4 +1,5 @@
 """Tests for NotificationService."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -128,9 +129,7 @@ class TestNotificationService:
 
         with patch.object(service, "get_settings", return_value=None):
             # Should not raise
-            await service.send_task_failure(
-                mock_db, uuid4(), "Task", "cron", "Error"
-            )
+            await service.send_task_failure(mock_db, uuid4(), "Task", "cron", "Error")
 
     @pytest.mark.asyncio
     async def test_send_task_failure_notifications_disabled(self):
@@ -144,9 +143,7 @@ class TestNotificationService:
         mock_settings.notify_on_failure = False
 
         with patch.object(service, "get_settings", return_value=mock_settings):
-            await service.send_task_failure(
-                mock_db, uuid4(), "Task", "cron", "Error"
-            )
+            await service.send_task_failure(mock_db, uuid4(), "Task", "cron", "Error")
 
     @pytest.mark.asyncio
     async def test_send_task_failure_with_telegram(self):
@@ -167,9 +164,7 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_templated_telegram") as mock_telegram:
-                    await service.send_task_failure(
-                        mock_db, workspace_id, "Test Task", "cron", "Error message"
-                    )
+                    await service.send_task_failure(mock_db, workspace_id, "Test Task", "cron", "Error message")
 
                     mock_telegram.assert_called_once()
 
@@ -193,9 +188,7 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_webhook") as mock_webhook:
-                    await service.send_task_failure(
-                        mock_db, workspace_id, "Test Task", "cron", "Error"
-                    )
+                    await service.send_task_failure(mock_db, workspace_id, "Test Task", "cron", "Error")
 
                     mock_webhook.assert_called_once()
                     call_args = mock_webhook.call_args
@@ -220,9 +213,7 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_templated_telegram") as mock_telegram:
-                    await service.send_task_recovery(
-                        mock_db, workspace_id, "Test Task", "cron"
-                    )
+                    await service.send_task_recovery(mock_db, workspace_id, "Test Task", "cron")
 
                     mock_telegram.assert_called_once()
 
@@ -246,9 +237,7 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_webhook") as mock_webhook:
-                    await service.send_task_success(
-                        mock_db, workspace_id, "Test Task", "cron", duration_ms=150
-                    )
+                    await service.send_task_success(mock_db, workspace_id, "Test Task", "cron", duration_ms=150)
 
                     mock_webhook.assert_called_once()
                     call_args = mock_webhook.call_args
@@ -306,9 +295,7 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_webhook") as mock_webhook:
-                    await service.send_subscription_expired(
-                        mock_db, user_id, tasks_paused=5
-                    )
+                    await service.send_subscription_expired(mock_db, user_id, tasks_paused=5)
 
                     mock_webhook.assert_called_once()
                     call_args = mock_webhook.call_args

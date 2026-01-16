@@ -45,22 +45,14 @@ class Subscription(Base, UUIDMixin, TimestampMixin):
 
     # Cancellation
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
-    cancelled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # YooKassa payment method for auto-renewal
-    yookassa_payment_method_id: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    yookassa_payment_method_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Scheduled plan change (for downgrade or yearly→monthly)
-    scheduled_plan_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("plans.id"), nullable=True
-    )
-    scheduled_billing_period: Mapped[str | None] = mapped_column(
-        String(10), nullable=True
-    )
+    scheduled_plan_id: Mapped[UUID | None] = mapped_column(ForeignKey("plans.id"), nullable=True)
+    scheduled_billing_period: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="subscription")

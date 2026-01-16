@@ -1,4 +1,5 @@
 """Tests for URL validator (SSRF protection)."""
+
 from unittest.mock import patch
 
 import pytest

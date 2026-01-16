@@ -1,4 +1,5 @@
 """Worker service for external task execution."""
+
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -85,9 +86,7 @@ class WorkerService:
     ) -> list[Worker]:
         """Get all workers for a workspace."""
         result = await db.execute(
-            select(Worker)
-            .where(Worker.workspace_id == workspace_id)
-            .order_by(Worker.created_at.desc())
+            select(Worker).where(Worker.workspace_id == workspace_id).order_by(Worker.created_at.desc())
         )
         return list(result.scalars().all())
 
@@ -145,9 +144,7 @@ class WorkerService:
         prefix = Worker.get_key_prefix(api_key)
 
         result = await db.execute(
-            select(Worker)
-            .where(Worker.api_key_prefix == prefix)
-            .where(Worker.is_active == True)  # noqa: E712
+            select(Worker).where(Worker.api_key_prefix == prefix).where(Worker.is_active == True)  # noqa: E712
         )
         workers = result.scalars().all()
 

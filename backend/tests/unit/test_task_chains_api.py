@@ -1,4 +1,5 @@
 """Unit tests for task chains API."""
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -122,7 +123,7 @@ class TestCreateTaskChain:
     async def test_create_chain_plan_not_allow_chains(self):
         """Test creating chain when plan doesn't allow chains."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -160,7 +161,7 @@ class TestCreateTaskChain:
     async def test_create_chain_limit_reached(self):
         """Test creating chain when limit reached."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -203,7 +204,7 @@ class TestCreateTaskChain:
     async def test_create_chain_too_many_steps(self):
         """Test creating chain with too many steps."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -244,7 +245,7 @@ class TestCreateTaskChain:
     async def test_create_cron_chain_no_schedule(self):
         """Test creating cron chain without schedule."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -284,7 +285,7 @@ class TestCreateTaskChain:
     async def test_create_cron_chain_interval_too_frequent(self):
         """Test creating cron chain with too frequent interval."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -324,7 +325,7 @@ class TestCreateTaskChain:
     async def test_create_delayed_chain_no_execute_at(self):
         """Test creating delayed chain without execute_at."""
         from app.api.v1.task_chains import create_task_chain
-        from app.schemas.task_chain import TaskChainCreate, ChainStepBase
+        from app.schemas.task_chain import ChainStepBase, TaskChainCreate
 
         mock_db = AsyncMock()
         mock_workspace = MagicMock()
@@ -584,8 +585,10 @@ class TestCopyTaskChain:
         mock_chain.workspace_id = workspace_id
         mock_chain.name = "Original Chain"
 
-        with patch("app.api.v1.task_chains.TaskChainRepository") as MockRepo, \
-             patch("app.api.v1.task_chains.WorkspaceRepository") as MockWorkspaceRepo:
+        with (
+            patch("app.api.v1.task_chains.TaskChainRepository") as MockRepo,
+            patch("app.api.v1.task_chains.WorkspaceRepository") as MockWorkspaceRepo,
+        ):
             mock_repo = MagicMock()
             mock_repo.get_with_steps = AsyncMock(return_value=mock_chain)
             mock_repo.count_by_workspace = AsyncMock(return_value=3)  # At limit

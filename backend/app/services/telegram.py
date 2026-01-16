@@ -1,4 +1,5 @@
 """Telegram notification service."""
+
 import httpx
 import structlog
 

@@ -1,4 +1,5 @@
 """Tests for SQLAlchemy models."""
+
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 

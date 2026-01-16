@@ -1,4 +1,5 @@
 """Unit tests for chain executions repository."""
+
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -139,9 +140,7 @@ class TestChainExecutionRepository:
         workspace_id = uuid4()
         chain_id = uuid4()
 
-        with patch(
-            "app.db.repositories.chain_executions.ChainExecution"
-        ) as MockExecution:
+        with patch("app.db.repositories.chain_executions.ChainExecution") as MockExecution:
             mock_execution = MagicMock()
             MockExecution.return_value = mock_execution
 
@@ -162,9 +161,7 @@ class TestChainExecutionRepository:
         """Test creating execution without initial variables."""
         mock_db = AsyncMock()
 
-        with patch(
-            "app.db.repositories.chain_executions.ChainExecution"
-        ) as MockExecution:
+        with patch("app.db.repositories.chain_executions.ChainExecution") as MockExecution:
             mock_execution = MagicMock()
             MockExecution.return_value = mock_execution
 
@@ -289,12 +286,8 @@ class TestStepExecutionRepository:
         mock_db = AsyncMock()
         chain_execution_id = uuid4()
         mock_steps = [
-            self.create_mock_step_execution(
-                chain_execution_id=chain_execution_id, step_order=0
-            ),
-            self.create_mock_step_execution(
-                chain_execution_id=chain_execution_id, step_order=1
-            ),
+            self.create_mock_step_execution(chain_execution_id=chain_execution_id, step_order=0),
+            self.create_mock_step_execution(chain_execution_id=chain_execution_id, step_order=1),
         ]
 
         mock_result = MagicMock()
@@ -314,9 +307,7 @@ class TestStepExecutionRepository:
         chain_execution_id = uuid4()
         step_id = uuid4()
 
-        with patch(
-            "app.db.repositories.chain_executions.StepExecution"
-        ) as MockStepExecution:
+        with patch("app.db.repositories.chain_executions.StepExecution") as MockStepExecution:
             mock_step = MagicMock()
             MockStepExecution.return_value = mock_step
 
@@ -341,9 +332,7 @@ class TestStepExecutionRepository:
         """Test creating step execution without body."""
         mock_db = AsyncMock()
 
-        with patch(
-            "app.db.repositories.chain_executions.StepExecution"
-        ) as MockStepExecution:
+        with patch("app.db.repositories.chain_executions.StepExecution") as MockStepExecution:
             mock_step = MagicMock()
             MockStepExecution.return_value = mock_step
 
@@ -432,9 +421,7 @@ class TestStepExecutionRepository:
         mock_db = AsyncMock()
         chain_execution_id = uuid4()
 
-        with patch(
-            "app.db.repositories.chain_executions.StepExecution"
-        ) as MockStepExecution:
+        with patch("app.db.repositories.chain_executions.StepExecution") as MockStepExecution:
             mock_step = MagicMock()
             MockStepExecution.return_value = mock_step
 

@@ -1,4 +1,5 @@
 """Billing API endpoints."""
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -82,9 +83,7 @@ async def preview_price(
 
     # Get current subscription and analyze change
     subscription = await billing_service.get_user_subscription(db, current_user.id)
-    analysis = await billing_service._analyze_plan_change(
-        db, subscription, request.plan_id, request.billing_period
-    )
+    analysis = await billing_service._analyze_plan_change(db, subscription, request.plan_id, request.billing_period)
 
     # Determine final amount based on analysis
     if analysis["requires_deferred"]:
@@ -117,9 +116,7 @@ async def create_subscription_payment(
     """Create a payment to subscribe to a plan. Requires verified email."""
     # Analyze the plan change first (validation before payment system check)
     subscription = await billing_service.get_user_subscription(db, current_user.id)
-    analysis = await billing_service._analyze_plan_change(
-        db, subscription, request.plan_id, request.billing_period
-    )
+    analysis = await billing_service._analyze_plan_change(db, subscription, request.plan_id, request.billing_period)
 
     # Reject same plan
     if analysis["is_same_plan"]:
@@ -180,9 +177,7 @@ async def schedule_plan_change(
 
     # Analyze the plan change
     subscription = await billing_service.get_user_subscription(db, current_user.id)
-    analysis = await billing_service._analyze_plan_change(
-        db, subscription, request.plan_id, request.billing_period
-    )
+    analysis = await billing_service._analyze_plan_change(db, subscription, request.plan_id, request.billing_period)
 
     # Reject same plan
     if analysis["is_same_plan"]:
@@ -251,9 +246,7 @@ async def cancel_subscription(
             detail="No active subscription",
         )
 
-    success = await billing_service.cancel_subscription(
-        db, current_user.id, immediately=request.immediately
-    )
+    success = await billing_service.cancel_subscription(db, current_user.id, immediately=request.immediately)
 
     if not success:
         raise HTTPException(
@@ -272,8 +265,6 @@ async def get_payment_history(
     db: AsyncSession = Depends(get_db),
 ):
     """Get payment history for current user."""
-    payments = await billing_service.get_payment_history(
-        db, current_user.id, limit=limit, offset=offset
-    )
+    payments = await billing_service.get_payment_history(db, current_user.id, limit=limit, offset=offset)
 
     return payments

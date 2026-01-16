@@ -74,17 +74,13 @@ class AuthService:
 
         # Check if account is locked (even if user doesn't exist, continue to prevent enumeration)
         if user and user.is_locked():
-            remaining_minutes = int(
-                (user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60
-            ) + 1
+            remaining_minutes = int((user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60) + 1
             logger.warning(
                 "Login attempt on locked account",
                 email=email,
                 locked_until=user.locked_until.isoformat() if user.locked_until else None,
             )
-            raise UnauthorizedError(
-                f"Account is temporarily locked. Try again in {remaining_minutes} minutes."
-            )
+            raise UnauthorizedError(f"Account is temporarily locked. Try again in {remaining_minutes} minutes.")
 
         # Verify password (timing-safe via bcrypt)
         password_valid = user is not None and verify_password(password, user.password_hash)
@@ -114,9 +110,7 @@ class AuthService:
 
         # Check if we should lock the account
         if user.failed_login_attempts >= settings.max_failed_login_attempts:
-            user.locked_until = datetime.now(timezone.utc) + timedelta(
-                minutes=settings.account_lockout_minutes
-            )
+            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=settings.account_lockout_minutes)
             logger.warning(
                 "Account locked due to too many failed attempts",
                 user_id=str(user.id),
@@ -157,9 +151,7 @@ class AuthService:
 
         return self._create_tokens(user)
 
-    async def change_password(
-        self, user: User, current_password: str, new_password: str
-    ) -> None:
+    async def change_password(self, user: User, current_password: str, new_password: str) -> None:
         """Change user's password."""
         if not verify_password(current_password, user.password_hash):
             raise BadRequestError("Current password is incorrect")
@@ -167,9 +159,7 @@ class AuthService:
         password_hash = get_password_hash(new_password)
         await self.user_repo.update_password(user, password_hash)
 
-    async def link_telegram_by_code(
-        self, code: str, telegram_id: int, telegram_username: str | None
-    ) -> User | None:
+    async def link_telegram_by_code(self, code: str, telegram_id: int, telegram_username: str | None) -> User | None:
         """Link Telegram account by verification code."""
         # Get user_id from Redis
         redis_key = f"{TELEGRAM_LINK_PREFIX}{code}"
@@ -349,9 +339,7 @@ class AuthService:
         await redis_client.delete(attempts_key)
 
         # Set cooldown
-        await redis_client.set(
-            cooldown_key, "1", expire=settings.otp_request_cooldown_seconds
-        )
+        await redis_client.set(cooldown_key, "1", expire=settings.otp_request_cooldown_seconds)
 
         logger.info("OTP code generated", email=email_lower)
         return code, expire_seconds, user

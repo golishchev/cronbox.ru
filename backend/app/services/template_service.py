@@ -1,4 +1,5 @@
 """Template service for multilingual notification templates."""
+
 from uuid import UUID
 
 import structlog
@@ -360,9 +361,7 @@ class TemplateService:
 
         return template
 
-    def render(
-        self, template: NotificationTemplate | None, variables: dict
-    ) -> tuple[str | None, str]:
+    def render(self, template: NotificationTemplate | None, variables: dict) -> tuple[str | None, str]:
         """
         Render template with variables using str.format().
         Returns (subject, body). Subject is None for Telegram.
@@ -398,9 +397,7 @@ class TemplateService:
 
     async def get_user_language(self, db: AsyncSession, workspace_id: UUID) -> str:
         """Get preferred language from workspace owner."""
-        result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
+        result = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
         workspace = result.scalar_one_or_none()
 
         if workspace and workspace.owner:
@@ -438,9 +435,7 @@ class TemplateService:
 
         return created
 
-    async def get_all_templates(
-        self, db: AsyncSession
-    ) -> list[NotificationTemplate]:
+    async def get_all_templates(self, db: AsyncSession) -> list[NotificationTemplate]:
         """Get all templates for admin UI."""
         result = await db.execute(
             select(NotificationTemplate).order_by(
@@ -451,9 +446,7 @@ class TemplateService:
         )
         return list(result.scalars().all())
 
-    async def get_template_by_id(
-        self, db: AsyncSession, template_id: UUID
-    ) -> NotificationTemplate | None:
+    async def get_template_by_id(self, db: AsyncSession, template_id: UUID) -> NotificationTemplate | None:
         """Get template by ID."""
         return await db.get(NotificationTemplate, template_id)
 
@@ -477,19 +470,13 @@ class TemplateService:
         await db.refresh(template)
         return template
 
-    def get_default_template(
-        self, code: str, language: str, channel: NotificationChannel | str
-    ) -> dict | None:
+    def get_default_template(self, code: str, language: str, channel: NotificationChannel | str) -> dict | None:
         """Get default template data for reset functionality."""
         if isinstance(channel, str):
             channel = NotificationChannel(channel)
 
         for template in DEFAULT_TEMPLATES:
-            if (
-                template["code"] == code
-                and template["language"] == language
-                and template["channel"] == channel
-            ):
+            if template["code"] == code and template["language"] == language and template["channel"] == channel:
                 return template
         return None
 

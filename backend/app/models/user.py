@@ -16,9 +16,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255))
 
     # Telegram integration
-    telegram_id: Mapped[int | None] = mapped_column(
-        BigInteger, unique=True, index=True, nullable=True
-    )
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
     telegram_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Status flags
@@ -27,20 +25,14 @@ class User(Base, UUIDMixin, TimestampMixin):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Preferences
-    preferred_language: Mapped[str] = mapped_column(
-        String(5), default="ru", server_default="ru"
-    )
+    preferred_language: Mapped[str] = mapped_column(String(5), default="ru", server_default="ru")
 
     # Avatar
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Account lockout (brute force protection)
-    failed_login_attempts: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    locked_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     workspaces: Mapped[list["Workspace"]] = relationship(
@@ -62,4 +54,5 @@ class User(Base, UUIDMixin, TimestampMixin):
         if self.locked_until is None:
             return False
         from datetime import timezone
+
         return datetime.now(timezone.utc) < self.locked_until

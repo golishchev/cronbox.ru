@@ -57,15 +57,11 @@ class TaskChain(Base, UUIDMixin, TimestampMixin):
     # Trigger settings
     trigger_type: Mapped[TriggerType] = mapped_column(
         SQLEnum(TriggerType, values_callable=lambda x: [e.value for e in x], create_type=False),
-        default=TriggerType.MANUAL
+        default=TriggerType.MANUAL,
     )
-    schedule: Mapped[str | None] = mapped_column(
-        String(100), nullable=True
-    )  # Cron expression for cron trigger
+    schedule: Mapped[str | None] = mapped_column(String(100), nullable=True)  # Cron expression for cron trigger
     timezone: Mapped[str] = mapped_column(String(50), default="Europe/Moscow")
-    execute_at: Mapped[datetime | None] = mapped_column(
-        nullable=True
-    )  # For delayed trigger
+    execute_at: Mapped[datetime | None] = mapped_column(nullable=True)  # For delayed trigger
 
     # Execution settings
     stop_on_failure: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -76,8 +72,7 @@ class TaskChain(Base, UUIDMixin, TimestampMixin):
     is_paused: Mapped[bool] = mapped_column(Boolean, default=False)
     last_run_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_status: Mapped[ChainStatus | None] = mapped_column(
-        SQLEnum(ChainStatus, values_callable=lambda x: [e.value for e in x], create_type=False),
-        nullable=True
+        SQLEnum(ChainStatus, values_callable=lambda x: [e.value for e in x], create_type=False), nullable=True
     )
     next_run_at: Mapped[datetime | None] = mapped_column(index=True, nullable=True)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
@@ -117,8 +112,7 @@ class ChainStep(Base, UUIDMixin, TimestampMixin):
     # HTTP Request (supports {{variable}} placeholders)
     url: Mapped[str] = mapped_column(String(2048))
     method: Mapped[HttpMethod] = mapped_column(
-        SQLEnum(HttpMethod, values_callable=lambda x: [e.value for e in x], create_type=False),
-        default=HttpMethod.GET
+        SQLEnum(HttpMethod, values_callable=lambda x: [e.value for e in x], create_type=False), default=HttpMethod.GET
     )
     headers: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -1,4 +1,5 @@
 """Tests for delayed tasks API."""
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -64,9 +65,7 @@ class TestDelayedTasks:
         assert data["headers"]["X-API-Key"] == "secret123"
         assert data["body"] == '{"event": "reminder", "user_id": "123"}'
 
-    async def test_create_delayed_task_with_idempotency_key(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_create_delayed_task_with_idempotency_key(self, authenticated_client: AsyncClient, workspace):
         """Test creating delayed task with idempotency key prevents duplicates."""
         execute_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
         task_data = {
@@ -123,17 +122,13 @@ class TestDelayedTasks:
             },
         )
 
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/delayed"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/delayed")
         assert response.status_code == 200
         data = response.json()
         assert "tasks" in data
         assert len(data["tasks"]) >= 1
 
-    async def test_list_delayed_tasks_filter_by_status(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_list_delayed_tasks_filter_by_status(self, authenticated_client: AsyncClient, workspace):
         """Test filtering delayed tasks by status."""
         response = await authenticated_client.get(
             f"/v1/workspaces/{workspace['id']}/delayed",
@@ -161,9 +156,7 @@ class TestDelayedTasks:
         task_id = create_response.json()["id"]
 
         # Get task
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/delayed/{task_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/delayed/{task_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == task_id
@@ -186,15 +179,11 @@ class TestDelayedTasks:
         task_id = create_response.json()["id"]
 
         # Cancel task
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/delayed/{task_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/delayed/{task_id}")
         assert response.status_code == 204
 
         # Verify cancelled
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/delayed/{task_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/delayed/{task_id}")
         # Task should either be deleted or have cancelled status
         if get_response.status_code == 200:
             assert get_response.json()["status"] == "cancelled"
@@ -239,9 +228,7 @@ class TestDelayedTasks:
             )
 
         # List with limit
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/delayed?limit=2"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/delayed?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["tasks"]) <= 2

@@ -1,7 +1,9 @@
 """Tests for task chains API."""
+
+from datetime import datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
-from datetime import datetime, timedelta
 
 pytestmark = pytest.mark.asyncio
 
@@ -176,9 +178,7 @@ class TestTaskChains:
             },
         )
 
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains")
         assert response.status_code == 200
         data = response.json()
         assert "chains" in data
@@ -204,9 +204,7 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Get chain
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == chain_id
@@ -264,9 +262,7 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Pause chain
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/pause"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/pause")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is True
@@ -291,12 +287,8 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Pause then resume
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/pause"
-        )
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/resume"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/pause")
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/resume")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is False
@@ -321,15 +313,11 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Delete chain
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}")
         assert get_response.status_code == 404
 
     async def test_run_chain(self, authenticated_client: AsyncClient, workspace):
@@ -352,9 +340,7 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Run chain
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
         assert response.status_code == 202
 
     async def test_run_inactive_chain(self, authenticated_client: AsyncClient, workspace):
@@ -383,9 +369,7 @@ class TestTaskChains:
         )
 
         # Try to run
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
         assert response.status_code == 400
 
     async def test_run_chain_without_steps(self, authenticated_client: AsyncClient, workspace):
@@ -402,9 +386,7 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Try to run
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
         assert response.status_code == 400
 
     async def test_copy_chain(self, authenticated_client: AsyncClient, workspace):
@@ -428,9 +410,7 @@ class TestTaskChains:
         chain_id = create_response.json()["id"]
 
         # Copy chain
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/copy"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/copy")
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Original Chain (copy)"
@@ -561,9 +541,7 @@ class TestChainSteps:
         assert response.status_code == 204
 
         # Verify chain has one step
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}")
         assert len(get_response.json()["steps"]) == 1
 
     async def test_reorder_steps(self, authenticated_client: AsyncClient, workspace):
@@ -612,9 +590,7 @@ class TestChainSteps:
         assert response.status_code == 200
 
         # Verify order
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}")
         reordered_steps = get_response.json()["steps"]
         assert reordered_steps[0]["name"] == "Step C"
         assert reordered_steps[1]["name"] == "Step A"
@@ -729,21 +705,18 @@ class TestChainRateLimiting:
         chain_id = create_response.json()["id"]
 
         # First run - may succeed (202) or fail if Redis not available (503)
-        response1 = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run"
-        )
+        response1 = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
 
         if response1.status_code == 503:
             # Redis/arq not available in test env, skip rate limit test
             import pytest
+
             pytest.skip("Redis/arq worker not available for rate limit test")
 
         assert response1.status_code == 202
 
         # Immediate second run should fail (rate limited)
-        response2 = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run"
-        )
+        response2 = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
         assert response2.status_code == 429
         assert "interval" in response2.json()["detail"].lower()
 
@@ -771,9 +744,7 @@ class TestChainExecutions:
         chain_id = create_response.json()["id"]
 
         # List executions (may be empty)
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/executions"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/executions")
         assert response.status_code == 200
         data = response.json()
         assert "executions" in data

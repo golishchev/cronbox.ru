@@ -1,4 +1,5 @@
 """Unit tests for billing service."""
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -236,9 +237,7 @@ class TestBillingServiceCreatePayment:
             mock_settings.yookassa_secret_key = None
 
             service = BillingService()
-            result = await service.create_payment(
-                mock_db, uuid4(), uuid4(), "monthly"
-            )
+            result = await service.create_payment(mock_db, uuid4(), uuid4(), "monthly")
 
             assert result is None
 
@@ -254,9 +253,7 @@ class TestBillingServiceCreatePayment:
             service = BillingService()
             service.get_plan_by_id = AsyncMock(return_value=None)
 
-            result = await service.create_payment(
-                mock_db, uuid4(), uuid4(), "monthly"
-            )
+            result = await service.create_payment(mock_db, uuid4(), uuid4(), "monthly")
 
             assert result is None
 
@@ -276,9 +273,7 @@ class TestBillingServiceCreatePayment:
             service = BillingService()
             service.get_plan_by_id = AsyncMock(return_value=mock_plan)
 
-            result = await service.create_payment(
-                mock_db, uuid4(), uuid4(), "monthly"
-            )
+            result = await service.create_payment(mock_db, uuid4(), uuid4(), "monthly")
 
             assert result is None
 

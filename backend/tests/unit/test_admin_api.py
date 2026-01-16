@@ -1,4 +1,5 @@
 """Unit tests for admin API endpoints."""
+
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -300,6 +301,7 @@ class TestListWorkspaces:
         mock_sub = create_mock_subscription()
 
         call_count = 0
+
         async def mock_scalar(query):
             nonlocal call_count
             call_count += 1
@@ -334,6 +336,7 @@ class TestListWorkspaces:
         mock_sub = create_mock_subscription()
 
         call_count = 0
+
         async def mock_scalar(query):
             nonlocal call_count
             call_count += 1
@@ -393,6 +396,7 @@ class TestGetWorkspace:
         mock_sub = create_mock_subscription()
 
         call_count = 0
+
         async def mock_scalar(query):
             nonlocal call_count
             call_count += 1

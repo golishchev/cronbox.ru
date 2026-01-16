@@ -1,4 +1,5 @@
 """Tests for billing API."""
+
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -151,9 +152,7 @@ class TestPlans:
 
     async def test_get_nonexistent_plan(self, authenticated_client: AsyncClient):
         """Test getting a non-existent plan."""
-        response = await authenticated_client.get(
-            "/v1/billing/plans/00000000-0000-0000-0000-000000000000"
-        )
+        response = await authenticated_client.get("/v1/billing/plans/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
 
@@ -314,7 +313,7 @@ class TestPreviewPriceProration:
             user_id=test_user.id,
             plan_id=max_plan.id,
             status=SubscriptionStatus.ACTIVE,
-                current_period_start=start_date,
+            current_period_start=start_date,
             current_period_end=end_date,
             cancel_at_period_end=False,
         )
@@ -455,7 +454,7 @@ class TestSchedulePlanChange:
             user_id=test_user.id,
             plan_id=max_plan.id,
             status=SubscriptionStatus.ACTIVE,
-                current_period_start=start_date,
+            current_period_start=start_date,
             current_period_end=end_date,
             cancel_at_period_end=False,
         )
@@ -499,7 +498,7 @@ class TestSchedulePlanChange:
             user_id=test_user.id,
             plan_id=max_plan.id,
             status=SubscriptionStatus.ACTIVE,
-                current_period_start=start_date,
+            current_period_start=start_date,
             current_period_end=end_date,
             cancel_at_period_end=False,
             scheduled_plan_id=basic_plan.id,
@@ -570,7 +569,7 @@ class TestSubscribeValidation:
             user_id=test_user.id,
             plan_id=max_plan.id,
             status=SubscriptionStatus.ACTIVE,
-                current_period_start=start_date,
+            current_period_start=start_date,
             current_period_end=end_date,
             cancel_at_period_end=False,
         )

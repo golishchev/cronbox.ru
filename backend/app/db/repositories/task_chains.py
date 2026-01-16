@@ -26,11 +26,7 @@ class TaskChainRepository(BaseRepository[TaskChain]):
         is_active: bool | None = None,
     ) -> list[TaskChain]:
         """Get all task chains for a workspace."""
-        stmt = (
-            select(TaskChain)
-            .where(TaskChain.workspace_id == workspace_id)
-            .order_by(TaskChain.created_at.desc())
-        )
+        stmt = select(TaskChain).where(TaskChain.workspace_id == workspace_id).order_by(TaskChain.created_at.desc())
         if is_active is not None:
             stmt = stmt.where(TaskChain.is_active == is_active)
         stmt = stmt.offset(skip).limit(limit)
@@ -43,11 +39,7 @@ class TaskChainRepository(BaseRepository[TaskChain]):
         is_active: bool | None = None,
     ) -> int:
         """Count task chains for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(TaskChain)
-            .where(TaskChain.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(TaskChain).where(TaskChain.workspace_id == workspace_id)
         if is_active is not None:
             stmt = stmt.where(TaskChain.is_active == is_active)
         result = await self.db.execute(stmt)
@@ -55,11 +47,7 @@ class TaskChainRepository(BaseRepository[TaskChain]):
 
     async def get_with_steps(self, chain_id: UUID) -> TaskChain | None:
         """Get a task chain with its steps loaded."""
-        stmt = (
-            select(TaskChain)
-            .options(selectinload(TaskChain.steps))
-            .where(TaskChain.id == chain_id)
-        )
+        stmt = select(TaskChain).options(selectinload(TaskChain.steps)).where(TaskChain.id == chain_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -215,31 +203,20 @@ class ChainStepRepository(BaseRepository[ChainStep]):
 
     async def get_by_chain(self, chain_id: UUID) -> list[ChainStep]:
         """Get all steps for a chain, ordered by step_order."""
-        stmt = (
-            select(ChainStep)
-            .where(ChainStep.chain_id == chain_id)
-            .order_by(ChainStep.step_order)
-        )
+        stmt = select(ChainStep).where(ChainStep.chain_id == chain_id).order_by(ChainStep.step_order)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_max_step_order(self, chain_id: UUID) -> int:
         """Get the maximum step order for a chain."""
-        stmt = (
-            select(func.max(ChainStep.step_order))
-            .where(ChainStep.chain_id == chain_id)
-        )
+        stmt = select(func.max(ChainStep.step_order)).where(ChainStep.chain_id == chain_id)
         result = await self.db.execute(stmt)
         max_order = result.scalar_one_or_none()
         return max_order if max_order is not None else -1
 
     async def count_by_chain(self, chain_id: UUID) -> int:
         """Count steps for a chain."""
-        stmt = (
-            select(func.count())
-            .select_from(ChainStep)
-            .where(ChainStep.chain_id == chain_id)
-        )
+        stmt = select(func.count()).select_from(ChainStep).where(ChainStep.chain_id == chain_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 

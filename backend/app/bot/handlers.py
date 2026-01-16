@@ -1,4 +1,5 @@
 """Telegram bot command handlers."""
+
 import re
 
 import structlog
@@ -158,7 +159,14 @@ async def cmd_status(message: Message):
             status_text = t("bot.status.active", lang) if user.is_active else t("bot.status.inactive", lang)
             verified_text = t("bot.status.yes", lang) if user.email_verified else t("bot.status.no", lang)
             await message.answer(
-                t("bot.status.linked", lang, email=user.email, name=user.name, status=status_text, email_verified=verified_text),
+                t(
+                    "bot.status.linked",
+                    lang,
+                    email=user.email,
+                    name=user.name,
+                    status=status_text,
+                    email_verified=verified_text,
+                ),
                 parse_mode="HTML",
             )
         else:
@@ -213,6 +221,7 @@ async def run_bot():
 
     # Initialize Redis
     from app.core.redis import redis_client
+
     await redis_client.initialize()
     logger.info("Redis initialized for bot")
 

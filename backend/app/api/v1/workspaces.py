@@ -91,15 +91,11 @@ async def get_workspace(
     exec_repo = ExecutionRepository(db)
 
     active_cron = await cron_repo.count_by_workspace(workspace.id, is_active=True)
-    pending_delayed = await delayed_repo.count_by_workspace(
-        workspace.id, status=TaskStatus.PENDING
-    )
+    pending_delayed = await delayed_repo.count_by_workspace(workspace.id, status=TaskStatus.PENDING)
 
     # Today's executions
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    exec_today = await exec_repo.count_by_workspace(
-        workspace.id, start_date=today_start
-    )
+    exec_today = await exec_repo.count_by_workspace(workspace.id, start_date=today_start)
 
     # 7-day success rate
     week_ago = datetime.utcnow() - timedelta(days=7)
