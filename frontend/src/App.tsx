@@ -45,7 +45,7 @@ function PageLoader() {
 
 function App() {
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } = useAuthStore()
-  const { workspaces, setWorkspaces, setCurrentWorkspace, currentWorkspace } = useWorkspaceStore()
+  const { workspaces, setWorkspaces, setCurrentWorkspace, currentWorkspace, isLoading: isWorkspacesLoading, setLoading: setWorkspacesLoading } = useWorkspaceStore()
   const [route, setRoute] = useState<Route>('login')
   const [verifyEmailToken, setVerifyEmailToken] = useState<string>('')
 
@@ -53,6 +53,8 @@ function App() {
     const checkAuth = async () => {
       const token = localStorage.getItem('access_token')
       if (token) {
+        // Set workspace loading immediately to prevent flash of WorkspaceRequired
+        setWorkspacesLoading(true)
         try {
           const user = await getCurrentUser()
           setUser(user)
@@ -60,6 +62,7 @@ function App() {
           // Load workspaces after successful auth
           const workspaces = await getWorkspaces()
           setWorkspaces(workspaces)
+          setWorkspacesLoading(false)
 
           // Validate that persisted currentWorkspace belongs to current user
           const isValidWorkspace = currentWorkspace && workspaces.some(w => w.id === currentWorkspace.id)
@@ -91,6 +94,7 @@ function App() {
             setRoute('dashboard')
           }
         } catch {
+          setWorkspacesLoading(false)
           logout()
           setRoute('login')
         }
@@ -99,7 +103,7 @@ function App() {
     }
 
     checkAuth()
-  }, [setUser, setLoading, logout, setWorkspaces, setCurrentWorkspace, currentWorkspace])
+  }, [setUser, setLoading, logout, setWorkspaces, setCurrentWorkspace, currentWorkspace, setWorkspacesLoading, isAuthenticated])
 
   // Handle hash-based routing
   useEffect(() => {
@@ -144,11 +148,11 @@ function App() {
     }
   }, [isAuthenticated, isLoading, route])
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && isWorkspacesLoading)) {
     return (
       <>
         <div className="flex h-screen items-center justify-center">
-          <div className="text-lg">Loading...</div>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
         <Toaster />
       </>
