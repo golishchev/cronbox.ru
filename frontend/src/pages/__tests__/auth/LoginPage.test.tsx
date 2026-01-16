@@ -2,16 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import * as authApi from '@/api/auth'
+import * as workspacesApi from '@/api/workspaces'
 import { useAuthStore } from '@/stores/authStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 // Mock API
 vi.mock('@/api/auth', () => ({
   login: vi.fn(),
 }))
 
+vi.mock('@/api/workspaces', () => ({
+  getWorkspaces: vi.fn(),
+}))
+
 // Mock authStore
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(),
+}))
+
+// Mock workspaceStore
+vi.mock('@/stores/workspaceStore', () => ({
+  useWorkspaceStore: vi.fn(),
 }))
 
 // Mock toast
@@ -22,6 +33,9 @@ vi.mock('@/hooks/use-toast', () => ({
 describe('LoginPage', () => {
   const mockOnNavigate = vi.fn()
   const mockLogin = vi.fn()
+  const mockSetWorkspaces = vi.fn()
+  const mockSetCurrentWorkspace = vi.fn()
+  const mockSetWorkspacesLoading = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -34,6 +48,19 @@ describe('LoginPage', () => {
       updateUser: vi.fn(),
       clearAuth: vi.fn(),
     })
+    vi.mocked(useWorkspaceStore).mockReturnValue({
+      workspaces: [],
+      currentWorkspace: null,
+      setWorkspaces: mockSetWorkspaces,
+      setCurrentWorkspace: mockSetCurrentWorkspace,
+      addWorkspace: vi.fn(),
+      updateWorkspace: vi.fn(),
+      removeWorkspace: vi.fn(),
+      clearWorkspaces: vi.fn(),
+      isLoading: false,
+      setLoading: mockSetWorkspacesLoading,
+    })
+    vi.mocked(workspacesApi.getWorkspaces).mockResolvedValue([])
   })
 
   it('should render login form', () => {

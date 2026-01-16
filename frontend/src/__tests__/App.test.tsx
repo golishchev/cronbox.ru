@@ -9,6 +9,10 @@ vi.mock('@/api/auth', () => ({
   getCurrentUser: vi.fn(),
 }))
 
+vi.mock('@/api/workspaces', () => ({
+  getWorkspaces: vi.fn(() => Promise.resolve([])),
+}))
+
 // Mock stores
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(),
@@ -24,6 +28,8 @@ vi.mock('@/stores/workspaceStore', () => ({
     updateWorkspace: vi.fn(),
     removeWorkspace: vi.fn(),
     clearWorkspaces: vi.fn(),
+    isLoading: false,
+    setLoading: vi.fn(),
   })),
 }))
 

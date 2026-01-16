@@ -150,7 +150,33 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('button', { name: /create workspace/i })).toBeInTheDocument()
   })
 
-  it('should load workspaces on mount', async () => {
+  it('should skip loading workspaces if already loaded', async () => {
+    // workspaces is [mockWorkspace] by default in beforeEach
+    render(<DashboardPage />)
+
+    // Wait for effects to run
+    await waitFor(() => {
+      expect(workspacesApi.getWorkspace).toHaveBeenCalled() // Stats are loaded
+    })
+
+    // But getWorkspaces should NOT be called since workspaces already exist
+    expect(workspacesApi.getWorkspaces).not.toHaveBeenCalled()
+  })
+
+  it('should load workspaces on mount if empty', async () => {
+    vi.mocked(useWorkspaceStore).mockReturnValue({
+      workspaces: [],
+      currentWorkspace: null,
+      setWorkspaces: mockSetWorkspaces,
+      setCurrentWorkspace: mockSetCurrentWorkspace,
+      addWorkspace: vi.fn(),
+      updateWorkspace: vi.fn(),
+      removeWorkspace: vi.fn(),
+      clearWorkspaces: vi.fn(),
+      isLoading: false,
+      setLoading: mockSetLoading,
+    })
+
     render(<DashboardPage />)
 
     await waitFor(() => {
@@ -202,8 +228,8 @@ describe('DashboardPage', () => {
 
   it('should show error state on load failure', async () => {
     vi.mocked(useWorkspaceStore).mockReturnValue({
-      workspaces: [mockWorkspace],
-      currentWorkspace: mockWorkspace,
+      workspaces: [],
+      currentWorkspace: null,
       setWorkspaces: mockSetWorkspaces,
       setCurrentWorkspace: mockSetCurrentWorkspace,
       addWorkspace: vi.fn(),
@@ -214,13 +240,18 @@ describe('DashboardPage', () => {
       setLoading: mockSetLoading,
     })
 
-    // This simulates error by setting it in render
-    // Dashboard handles errors internally, not throwing
+    vi.mocked(workspacesApi.getWorkspaces).mockRejectedValue(new Error('Failed'))
+
     render(<DashboardPage />)
 
-    // Dashboard should still try to render
+    // Dashboard should try to load workspaces when empty
     await waitFor(() => {
       expect(workspacesApi.getWorkspaces).toHaveBeenCalled()
+    })
+
+    // Error message should be shown
+    await waitFor(() => {
+      expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
     })
   })
 
