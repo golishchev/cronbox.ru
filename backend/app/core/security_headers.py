@@ -77,10 +77,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Frontend should have its own CSP configured in nginx/CDN
         if self._is_api_response(response):
             response.headers["Content-Security-Policy"] = (
-                "default-src 'none'; "
-                "frame-ancestors 'none'; "
-                "base-uri 'none'; "
-                "form-action 'none'"
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
             )
 
         # Prevent caching of sensitive responses

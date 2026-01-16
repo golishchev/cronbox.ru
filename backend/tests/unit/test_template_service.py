@@ -1,4 +1,5 @@
 """Tests for TemplateService."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -24,9 +25,7 @@ class TestTemplateServiceGetTemplate:
         mock_result.scalar_one_or_none.return_value = mock_template
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_template(
-            mock_db, "task_failure", "en", NotificationChannel.EMAIL
-        )
+        result = await service.get_template(mock_db, "task_failure", "en", NotificationChannel.EMAIL)
 
         assert result == mock_template
 
@@ -52,9 +51,7 @@ class TestTemplateServiceGetTemplate:
 
         mock_db.execute.side_effect = [mock_result_ru, mock_result_en]
 
-        result = await service.get_template(
-            mock_db, "task_failure", "ru", NotificationChannel.EMAIL
-        )
+        result = await service.get_template(mock_db, "task_failure", "ru", NotificationChannel.EMAIL)
 
         assert result == mock_english_template
         assert mock_db.execute.call_count == 2
@@ -72,9 +69,7 @@ class TestTemplateServiceGetTemplate:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_template(
-            mock_db, "nonexistent", "en", NotificationChannel.EMAIL
-        )
+        result = await service.get_template(mock_db, "nonexistent", "en", NotificationChannel.EMAIL)
 
         assert result is None
 
@@ -91,9 +86,7 @@ class TestTemplateServiceGetTemplate:
         mock_result.scalar_one_or_none.return_value = mock_template
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_template(
-            mock_db, "task_failure", "en", "email"
-        )
+        result = await service.get_template(mock_db, "task_failure", "en", "email")
 
         assert result == mock_template
 
@@ -358,9 +351,7 @@ class TestTemplateServiceUpdateTemplate:
         mock_template = MagicMock()
         mock_template.subject = "Old Subject"
 
-        result = await service.update_template(
-            mock_db, mock_template, subject="New Subject"
-        )
+        result = await service.update_template(mock_db, mock_template, subject="New Subject")
 
         assert mock_template.subject == "New Subject"
         mock_db.commit.assert_called_once()
@@ -377,9 +368,7 @@ class TestTemplateServiceUpdateTemplate:
         mock_template = MagicMock()
         mock_template.body = "Old Body"
 
-        result = await service.update_template(
-            mock_db, mock_template, body="New Body"
-        )
+        result = await service.update_template(mock_db, mock_template, body="New Body")
 
         assert mock_template.body == "New Body"
 
@@ -394,9 +383,7 @@ class TestTemplateServiceUpdateTemplate:
         mock_template = MagicMock()
         mock_template.is_active = True
 
-        result = await service.update_template(
-            mock_db, mock_template, is_active=False
-        )
+        result = await service.update_template(mock_db, mock_template, is_active=False)
 
         assert mock_template.is_active is False
 
@@ -411,9 +398,7 @@ class TestTemplateServiceGetDefaultTemplate:
 
         service = TemplateService()
 
-        result = service.get_default_template(
-            "task_failure", "en", NotificationChannel.EMAIL
-        )
+        result = service.get_default_template("task_failure", "en", NotificationChannel.EMAIL)
 
         assert result is not None
         assert result["code"] == "task_failure"
@@ -426,9 +411,7 @@ class TestTemplateServiceGetDefaultTemplate:
 
         service = TemplateService()
 
-        result = service.get_default_template(
-            "nonexistent", "xx", NotificationChannel.EMAIL
-        )
+        result = service.get_default_template("nonexistent", "xx", NotificationChannel.EMAIL)
 
         assert result is None
 

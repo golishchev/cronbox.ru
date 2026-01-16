@@ -141,34 +141,22 @@ async def get_admin_stats(admin: AdminUser, db: DB):
 
     # User stats
     total_users = await db.scalar(select(func.count(User.id)))
-    active_users = await db.scalar(
-        select(func.count(User.id)).where(User.is_active.is_(True))
-    )
-    verified_users = await db.scalar(
-        select(func.count(User.id)).where(User.email_verified.is_(True))
-    )
+    active_users = await db.scalar(select(func.count(User.id)).where(User.is_active.is_(True)))
+    verified_users = await db.scalar(select(func.count(User.id)).where(User.email_verified.is_(True)))
 
     # Workspace stats
     total_workspaces = await db.scalar(select(func.count(Workspace.id)))
 
     # Task stats
     total_cron = await db.scalar(select(func.count(CronTask.id)))
-    active_cron = await db.scalar(
-        select(func.count(CronTask.id)).where(CronTask.is_active.is_(True))
-    )
+    active_cron = await db.scalar(select(func.count(CronTask.id)).where(CronTask.is_active.is_(True)))
     total_delayed = await db.scalar(select(func.count(DelayedTask.id)))
-    pending_delayed = await db.scalar(
-        select(func.count(DelayedTask.id)).where(DelayedTask.status == "pending")
-    )
+    pending_delayed = await db.scalar(select(func.count(DelayedTask.id)).where(DelayedTask.status == "pending"))
 
     # Execution stats
     total_executions = await db.scalar(select(func.count(Execution.id)))
-    executions_today = await db.scalar(
-        select(func.count(Execution.id)).where(Execution.started_at >= today)
-    )
-    executions_this_week = await db.scalar(
-        select(func.count(Execution.id)).where(Execution.started_at >= week_ago)
-    )
+    executions_today = await db.scalar(select(func.count(Execution.id)).where(Execution.started_at >= today))
+    executions_this_week = await db.scalar(select(func.count(Execution.id)).where(Execution.started_at >= week_ago))
 
     # Success rate (last 7 days)
     successful = await db.scalar(
@@ -194,12 +182,15 @@ async def get_admin_stats(admin: AdminUser, db: DB):
     )
 
     # Revenue (this month) - sum of successful payments
-    revenue = await db.scalar(
-        select(func.sum(Payment.amount)).where(
-            Payment.created_at >= month_start,
-            Payment.status == PaymentStatus.SUCCEEDED,
+    revenue = (
+        await db.scalar(
+            select(func.sum(Payment.amount)).where(
+                Payment.created_at >= month_start,
+                Payment.status == PaymentStatus.SUCCEEDED,
+            )
         )
-    ) or 0
+        or 0
+    )
 
     return AdminStatsResponse(
         total_users=total_users or 0,
@@ -235,9 +226,7 @@ async def list_users(
 
     if search:
         search_filter = f"%{search}%"
-        query = query.where(
-            (User.email.ilike(search_filter)) | (User.name.ilike(search_filter))
-        )
+        query = query.where((User.email.ilike(search_filter)) | (User.name.ilike(search_filter)))
 
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
@@ -251,13 +240,9 @@ async def list_users(
     # Get workspace and task counts for each user
     user_items = []
     for user in users:
-        workspace_count = await db.scalar(
-            select(func.count(Workspace.id)).where(Workspace.owner_id == user.id)
-        )
+        workspace_count = await db.scalar(select(func.count(Workspace.id)).where(Workspace.owner_id == user.id))
         tasks_count = await db.scalar(
-            select(func.count(CronTask.id))
-            .join(Workspace)
-            .where(Workspace.owner_id == user.id)
+            select(func.count(CronTask.id)).join(Workspace).where(Workspace.owner_id == user.id)
         )
 
         user_items.append(
@@ -290,14 +275,8 @@ async def get_user(admin: AdminUser, db: DB, user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    workspace_count = await db.scalar(
-        select(func.count(Workspace.id)).where(Workspace.owner_id == user.id)
-    )
-    tasks_count = await db.scalar(
-        select(func.count(CronTask.id))
-        .join(Workspace)
-        .where(Workspace.owner_id == user.id)
-    )
+    workspace_count = await db.scalar(select(func.count(Workspace.id)).where(Workspace.owner_id == user.id))
+    tasks_count = await db.scalar(select(func.count(CronTask.id)).join(Workspace).where(Workspace.owner_id == user.id))
 
     return UserListItem(
         id=str(user.id),
@@ -377,9 +356,7 @@ async def assign_user_plan(
     db.add(subscription)
     await db.commit()
 
-    return {
-        "message": f"Plan '{plan.display_name}' assigned to user for {data.duration_days} days"
-    }
+    return {"message": f"Plan '{plan.display_name}' assigned to user for {data.duration_days} days"}
 
 
 class WorkspaceDetailResponse(BaseModel):
@@ -448,15 +425,9 @@ async def list_workspaces(
     # Build response with counts
     workspace_items = []
     for ws in workspaces:
-        cron_count = await db.scalar(
-            select(func.count(CronTask.id)).where(CronTask.workspace_id == ws.id)
-        )
-        delayed_count = await db.scalar(
-            select(func.count(DelayedTask.id)).where(DelayedTask.workspace_id == ws.id)
-        )
-        exec_count = await db.scalar(
-            select(func.count(Execution.id)).where(Execution.workspace_id == ws.id)
-        )
+        cron_count = await db.scalar(select(func.count(CronTask.id)).where(CronTask.workspace_id == ws.id))
+        delayed_count = await db.scalar(select(func.count(DelayedTask.id)).where(DelayedTask.workspace_id == ws.id))
+        exec_count = await db.scalar(select(func.count(Execution.id)).where(Execution.workspace_id == ws.id))
 
         # Get subscription plan
         sub = await db.scalar(
@@ -497,38 +468,28 @@ async def list_workspaces(
 async def get_workspace(admin: AdminUser, db: DB, workspace_id: str):
     """Get workspace details by ID."""
     result = await db.execute(
-        select(Workspace)
-        .options(selectinload(Workspace.owner))
-        .where(Workspace.id == workspace_id)
+        select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
     )
     workspace = result.scalar_one_or_none()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
 
     # Get counts
-    cron_count = await db.scalar(
-        select(func.count(CronTask.id)).where(CronTask.workspace_id == workspace.id)
-    )
+    cron_count = await db.scalar(select(func.count(CronTask.id)).where(CronTask.workspace_id == workspace.id))
     active_cron = await db.scalar(
         select(func.count(CronTask.id)).where(
             CronTask.workspace_id == workspace.id,
             CronTask.is_active.is_(True),
         )
     )
-    delayed_count = await db.scalar(
-        select(func.count(DelayedTask.id)).where(
-            DelayedTask.workspace_id == workspace.id
-        )
-    )
+    delayed_count = await db.scalar(select(func.count(DelayedTask.id)).where(DelayedTask.workspace_id == workspace.id))
     pending_delayed = await db.scalar(
         select(func.count(DelayedTask.id)).where(
             DelayedTask.workspace_id == workspace.id,
             DelayedTask.status == "pending",
         )
     )
-    exec_count = await db.scalar(
-        select(func.count(Execution.id)).where(Execution.workspace_id == workspace.id)
-    )
+    exec_count = await db.scalar(select(func.count(Execution.id)).where(Execution.workspace_id == workspace.id))
 
     # Get subscription plan (subscription is per-user, not per-workspace)
     sub = await db.scalar(
@@ -1087,18 +1048,14 @@ async def preview_notification_template(admin: AdminUser, data: TemplatePreviewR
     try:
         rendered_body = data.body.format(**data.variables)
     except KeyError as e:
-        raise HTTPException(
-            status_code=400, detail=f"Missing variable in body: {e}"
-        )
+        raise HTTPException(status_code=400, detail=f"Missing variable in body: {e}")
 
     rendered_subject = None
     if data.subject:
         try:
             rendered_subject = data.subject.format(**data.variables)
         except KeyError as e:
-            raise HTTPException(
-                status_code=400, detail=f"Missing variable in subject: {e}"
-            )
+            raise HTTPException(status_code=400, detail=f"Missing variable in subject: {e}")
 
     return TemplatePreviewResponse(subject=rendered_subject, body=rendered_body)
 
@@ -1111,9 +1068,7 @@ async def reset_notification_template(admin: AdminUser, db: DB, template_id: str
         raise HTTPException(status_code=404, detail="Template not found")
 
     # Get default template data
-    default = template_service.get_default_template(
-        template.code, template.language, template.channel
-    )
+    default = template_service.get_default_template(template.code, template.language, template.channel)
     if not default:
         raise HTTPException(
             status_code=404,

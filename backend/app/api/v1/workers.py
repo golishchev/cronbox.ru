@@ -1,4 +1,5 @@
 """Worker management API endpoints."""
+
 from datetime import datetime, timezone
 from uuid import UUID
 

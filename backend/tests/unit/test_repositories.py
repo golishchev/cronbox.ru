@@ -1,4 +1,5 @@
 """Tests for repository layer."""
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -46,9 +47,7 @@ class TestDelayedTaskRepository:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        tasks = await repo.get_by_workspace(
-            workspace_id, status=TaskStatus.PENDING
-        )
+        tasks = await repo.get_by_workspace(workspace_id, status=TaskStatus.PENDING)
 
         assert len(tasks) == 0
         mock_db.execute.assert_called_once()

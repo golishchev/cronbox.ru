@@ -20,15 +20,11 @@ class NotificationSettings(Base, UUIDMixin, TimestampMixin):
 
     # Telegram
     telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    telegram_chat_ids: Mapped[list[int] | None] = mapped_column(
-        ARRAY(String), nullable=True, default=list
-    )
+    telegram_chat_ids: Mapped[list[int] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
 
     # Email
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    email_addresses: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String), nullable=True, default=list
-    )
+    email_addresses: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
 
     # Webhook
     webhook_enabled: Mapped[bool] = mapped_column(Boolean, default=False)

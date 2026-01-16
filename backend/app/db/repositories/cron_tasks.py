@@ -23,11 +23,7 @@ class CronTaskRepository(BaseRepository[CronTask]):
         is_active: bool | None = None,
     ) -> list[CronTask]:
         """Get all cron tasks for a workspace."""
-        stmt = (
-            select(CronTask)
-            .where(CronTask.workspace_id == workspace_id)
-            .order_by(CronTask.created_at.desc())
-        )
+        stmt = select(CronTask).where(CronTask.workspace_id == workspace_id).order_by(CronTask.created_at.desc())
         if is_active is not None:
             stmt = stmt.where(CronTask.is_active == is_active)
         stmt = stmt.offset(skip).limit(limit)

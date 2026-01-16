@@ -1,4 +1,5 @@
 """Tests for notifications API."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -23,9 +24,7 @@ class TestNotificationSettings:
 
     async def test_get_notification_settings(self, authenticated_client: AsyncClient, workspace):
         """Test getting notification settings."""
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/notifications"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/notifications")
         assert response.status_code == 200
         data = response.json()
         # Should have default settings

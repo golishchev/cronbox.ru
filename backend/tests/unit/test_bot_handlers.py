@@ -1,4 +1,5 @@
 """Tests for Telegram bot handlers."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,6 +16,7 @@ class TestBotHandlersModule:
             import importlib
 
             import app.bot.handlers as handlers
+
             importlib.reload(handlers)
             # Bot should be None when no token
             # Note: We can't easily test this without modifying the module
@@ -328,9 +330,7 @@ class TestCmdUnlink:
 
                 await cmd_unlink(mock_message)
 
-                mock_repo.update.assert_called_once_with(
-                    mock_user, telegram_id=None, telegram_username=None
-                )
+                mock_repo.update.assert_called_once_with(mock_user, telegram_id=None, telegram_username=None)
                 mock_db.commit.assert_called_once()
                 mock_message.answer.assert_called_once()
                 call_args = mock_message.answer.call_args

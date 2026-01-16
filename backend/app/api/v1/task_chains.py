@@ -11,7 +11,7 @@ from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, User
 from app.db.repositories.chain_executions import ChainExecutionRepository
 from app.db.repositories.task_chains import ChainStepRepository, TaskChainRepository
 from app.db.repositories.workspaces import WorkspaceRepository
-from app.models.task_chain import ChainStep, TriggerType
+from app.models.task_chain import TriggerType
 from app.schemas.task_chain import (
     ChainExecutionDetailResponse,
     ChainExecutionListResponse,
@@ -150,6 +150,7 @@ async def create_task_chain(
                 detail="execute_at is required for delayed trigger type",
             )
         from datetime import timezone as dt_tz
+
         now = datetime.now(dt_tz.utc)
         execute_at = data.execute_at if data.execute_at.tzinfo else data.execute_at.replace(tzinfo=dt_tz.utc)
         if execute_at <= now:
@@ -273,6 +274,7 @@ async def update_task_chain(
     elif trigger_type == TriggerType.DELAYED:
         if execute_at:
             from datetime import timezone as dt_tz
+
             now = datetime.now(dt_tz.utc)
             exec_at_aware = execute_at if execute_at.tzinfo else execute_at.replace(tzinfo=dt_tz.utc)
             if exec_at_aware <= now:
@@ -342,7 +344,9 @@ async def run_task_chain(
         )
 
     # Check rate limit based on plan
-    from datetime import timedelta, timezone as dt_tz
+    from datetime import timedelta
+    from datetime import timezone as dt_tz
+
     if chain.last_run_at:
         min_interval = timedelta(minutes=user_plan.min_chain_interval_minutes)
         now = datetime.now(dt_tz.utc)
@@ -739,7 +743,5 @@ async def get_chain_execution(
 
     return ChainExecutionDetailResponse(
         **ChainExecutionResponse.model_validate(execution).model_dump(),
-        step_executions=[
-            StepExecutionResponse.model_validate(se) for se in execution.step_executions
-        ],
+        step_executions=[StepExecutionResponse.model_validate(se) for se in execution.step_executions],
     )

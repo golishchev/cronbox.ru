@@ -1,4 +1,5 @@
 """Tests for executions API."""
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -40,9 +41,7 @@ class TestExecutions:
 
     async def test_list_executions(self, authenticated_client: AsyncClient, workspace):
         """Test listing executions."""
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/executions"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/executions")
         assert response.status_code == 200
         data = response.json()
         assert "executions" in data or "items" in data or isinstance(data, list)
@@ -58,9 +57,7 @@ class TestExecutions:
         if "pagination" in data:
             assert data["pagination"]["page"] == 1
 
-    async def test_filter_executions_by_task_type(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_filter_executions_by_task_type(self, authenticated_client: AsyncClient, workspace):
         """Test filtering executions by task type."""
         response = await authenticated_client.get(
             f"/v1/workspaces/{workspace['id']}/executions",
@@ -72,9 +69,7 @@ class TestExecutions:
         for item in items:
             assert item.get("task_type") == "cron"
 
-    async def test_filter_executions_by_status(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_filter_executions_by_status(self, authenticated_client: AsyncClient, workspace):
         """Test filtering executions by status."""
         response = await authenticated_client.get(
             f"/v1/workspaces/{workspace['id']}/executions",
@@ -86,9 +81,7 @@ class TestExecutions:
         for item in items:
             assert item.get("status") == "success"
 
-    async def test_filter_executions_by_task_id(
-        self, authenticated_client: AsyncClient, workspace, cron_task
-    ):
+    async def test_filter_executions_by_task_id(self, authenticated_client: AsyncClient, workspace, cron_task):
         """Test filtering executions by task ID."""
         response = await authenticated_client.get(
             f"/v1/workspaces/{workspace['id']}/executions",
@@ -100,9 +93,7 @@ class TestExecutions:
         for item in items:
             assert item.get("task_id") == cron_task["id"]
 
-    async def test_filter_executions_by_date_range(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_filter_executions_by_date_range(self, authenticated_client: AsyncClient, workspace):
         """Test filtering executions by date range."""
         start_date = (datetime.utcnow() - timedelta(days=7)).isoformat()
         end_date = datetime.utcnow().isoformat()
@@ -119,17 +110,13 @@ class TestExecutions:
     async def test_get_execution_details(self, authenticated_client: AsyncClient, workspace):
         """Test getting execution details."""
         # First get list
-        list_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/executions"
-        )
+        list_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/executions")
         data = list_response.json()
         items = data.get("executions", data.get("items", []))
 
         if items:
             execution_id = items[0]["id"]
-            response = await authenticated_client.get(
-                f"/v1/workspaces/{workspace['id']}/executions/{execution_id}"
-            )
+            response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/executions/{execution_id}")
             assert response.status_code == 200
             detail_data = response.json()
             assert detail_data["id"] == execution_id
@@ -149,17 +136,13 @@ class TestExecutionStats:
 
     async def test_get_execution_stats(self, authenticated_client: AsyncClient, workspace):
         """Test getting execution statistics."""
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/executions/stats"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/executions/stats")
         assert response.status_code == 200
         data = response.json()
         # Should have stats fields
         assert "total" in data or "total_executions" in data or isinstance(data, dict)
 
-    async def test_execution_stats_by_date_range(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_execution_stats_by_date_range(self, authenticated_client: AsyncClient, workspace):
         """Test getting execution stats with date range."""
         start_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
         end_date = datetime.utcnow().isoformat()

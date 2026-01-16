@@ -1,4 +1,5 @@
 """Worker model for external task execution."""
+
 import secrets
 from datetime import datetime
 from enum import Enum

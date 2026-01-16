@@ -58,18 +58,12 @@ def substitute_variables(template: str, variables: dict[str, Any]) -> str:
     return VARIABLE_PATTERN.sub(replace_match, template)
 
 
-def substitute_variables_in_dict(
-    data: dict[str, str], variables: dict[str, Any]
-) -> dict[str, str]:
+def substitute_variables_in_dict(data: dict[str, str], variables: dict[str, Any]) -> dict[str, str]:
     """Substitute variables in all values of a dict."""
-    return {
-        key: substitute_variables(value, variables) for key, value in data.items()
-    }
+    return {key: substitute_variables(value, variables) for key, value in data.items()}
 
 
-def extract_variable_from_jsonpath(
-    data: dict | list, jsonpath_expr: str
-) -> Any | None:
+def extract_variable_from_jsonpath(data: dict | list, jsonpath_expr: str) -> Any | None:
     """Extract a value from JSON data using JSONPath.
 
     Args:
@@ -213,7 +207,10 @@ def evaluate_condition(
                 try:
                     pattern = re.compile(str(expected_value))
                     met = bool(pattern.search(str(actual_value))) if actual_value else False
-                    return met, f"{field} = {actual_value} {'matches' if met else 'does not match'} regex {expected_value}"
+                    return (
+                        met,
+                        f"{field} = {actual_value} {'matches' if met else 'does not match'} regex {expected_value}",
+                    )
                 except re.error as e:
                     return False, f"Invalid regex pattern: {e}"
 
@@ -252,9 +249,7 @@ def evaluate_condition(
         return False, f"Evaluation error: {str(e)}"
 
 
-def determine_chain_status(
-    completed: int, failed: int, skipped: int, total: int, stop_on_failure: bool
-) -> ChainStatus:
+def determine_chain_status(completed: int, failed: int, skipped: int, total: int, stop_on_failure: bool) -> ChainStatus:
     """Determine overall chain status based on step results.
 
     Args:
@@ -279,9 +274,7 @@ def determine_chain_status(
         return ChainStatus.PARTIAL
 
 
-def prepare_step_request(
-    step: ChainStep, variables: dict[str, Any]
-) -> tuple[str, dict[str, str], str | None]:
+def prepare_step_request(step: ChainStep, variables: dict[str, Any]) -> tuple[str, dict[str, str], str | None]:
     """Prepare step request with variable substitution.
 
     Args:

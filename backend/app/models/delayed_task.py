@@ -14,11 +14,7 @@ class DelayedTask(Base, UUIDMixin, TimestampMixin):
     """Delayed task model - one-time HTTP requests at a specific time."""
 
     __tablename__ = "delayed_tasks"
-    __table_args__ = (
-        UniqueConstraint(
-            "workspace_id", "idempotency_key", name="uq_delayed_idempotency"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("workspace_id", "idempotency_key", name="uq_delayed_idempotency"),)
 
     workspace_id: Mapped[UUID] = mapped_column(
         ForeignKey("workspaces.id", ondelete="CASCADE"),
@@ -34,17 +30,13 @@ class DelayedTask(Base, UUIDMixin, TimestampMixin):
     )
 
     # Identification
-    idempotency_key: Mapped[str | None] = mapped_column(
-        String(255), index=True, nullable=True
-    )
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tags: Mapped[dict] = mapped_column(JSONB, default=list)
 
     # HTTP Request
     url: Mapped[str] = mapped_column(String(2048))
-    method: Mapped[HttpMethod] = mapped_column(
-        SQLEnum(HttpMethod), default=HttpMethod.POST
-    )
+    method: Mapped[HttpMethod] = mapped_column(SQLEnum(HttpMethod), default=HttpMethod.POST)
     headers: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
 

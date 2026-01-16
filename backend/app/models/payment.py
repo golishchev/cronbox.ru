@@ -49,18 +49,12 @@ class Payment(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # YooKassa data
-    yookassa_payment_id: Mapped[str | None] = mapped_column(
-        String(255), unique=True, nullable=True
-    )
-    yookassa_confirmation_url: Mapped[str | None] = mapped_column(
-        String(2048), nullable=True
-    )
+    yookassa_payment_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    yookassa_confirmation_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     yookassa_payment_method: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Timestamps
-    paid_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Extra data
     extra_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

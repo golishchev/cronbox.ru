@@ -46,17 +46,11 @@ class WorkspaceRepository(BaseRepository[Workspace]):
 
     async def get_with_plan(self, workspace_id: UUID) -> Workspace | None:
         """Get workspace with plan eagerly loaded."""
-        stmt = (
-            select(Workspace)
-            .where(Workspace.id == workspace_id)
-            .options(selectinload(Workspace.plan))
-        )
+        stmt = select(Workspace).where(Workspace.id == workspace_id).options(selectinload(Workspace.plan))
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def slug_exists(
-        self, slug: str, owner_id: UUID, exclude_id: UUID | None = None
-    ) -> bool:
+    async def slug_exists(self, slug: str, owner_id: UUID, exclude_id: UUID | None = None) -> bool:
         """Check if slug already exists for the given owner."""
         stmt = select(Workspace.id).where(
             Workspace.slug == slug,

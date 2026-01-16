@@ -54,27 +54,17 @@ class ChainExecutionRepository(BaseRepository[ChainExecution]):
 
     async def count_by_chain(self, chain_id: UUID) -> int:
         """Count executions for a chain."""
-        stmt = (
-            select(func.count())
-            .select_from(ChainExecution)
-            .where(ChainExecution.chain_id == chain_id)
-        )
+        stmt = select(func.count()).select_from(ChainExecution).where(ChainExecution.chain_id == chain_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         """Count executions for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(ChainExecution)
-            .where(ChainExecution.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(ChainExecution).where(ChainExecution.workspace_id == workspace_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
-    async def get_with_step_executions(
-        self, execution_id: UUID
-    ) -> ChainExecution | None:
+    async def get_with_step_executions(self, execution_id: UUID) -> ChainExecution | None:
         """Get a chain execution with its step executions loaded."""
         stmt = (
             select(ChainExecution)
@@ -117,9 +107,7 @@ class ChainExecutionRepository(BaseRepository[ChainExecution]):
         execution.finished_at = now
         # Normalize to naive datetime for comparison
         started_at = execution.started_at.replace(tzinfo=None) if execution.started_at.tzinfo else execution.started_at
-        execution.duration_ms = int(
-            (now - started_at).total_seconds() * 1000
-        )
+        execution.duration_ms = int((now - started_at).total_seconds() * 1000)
         execution.error_message = error_message
         await self.db.flush()
         await self.db.refresh(execution)
@@ -140,22 +128,16 @@ class ChainExecutionRepository(BaseRepository[ChainExecution]):
         await self.db.refresh(execution)
         return execution
 
-    async def update_variables(
-        self, execution: ChainExecution, variables: dict
-    ) -> ChainExecution:
+    async def update_variables(self, execution: ChainExecution, variables: dict) -> ChainExecution:
         """Update accumulated variables on execution."""
         execution.variables = variables
         await self.db.flush()
         await self.db.refresh(execution)
         return execution
 
-    async def delete_old_executions(
-        self, workspace_id: UUID, keep_days: int
-    ) -> int:
+    async def delete_old_executions(self, workspace_id: UUID, keep_days: int) -> int:
         """Delete executions older than keep_days."""
-        cutoff = datetime.utcnow().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        cutoff = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         from datetime import timedelta
 
         cutoff = cutoff - timedelta(days=keep_days)
@@ -175,9 +157,7 @@ class StepExecutionRepository(BaseRepository[StepExecution]):
     def __init__(self, db: AsyncSession):
         super().__init__(StepExecution, db)
 
-    async def get_by_chain_execution(
-        self, chain_execution_id: UUID
-    ) -> list[StepExecution]:
+    async def get_by_chain_execution(self, chain_execution_id: UUID) -> list[StepExecution]:
         """Get all step executions for a chain execution, ordered by step_order."""
         stmt = (
             select(StepExecution)
@@ -239,10 +219,12 @@ class StepExecutionRepository(BaseRepository[StepExecution]):
         step_execution.finished_at = now
         if step_execution.started_at:
             # Normalize to naive datetime for comparison
-            started_at = step_execution.started_at.replace(tzinfo=None) if step_execution.started_at.tzinfo else step_execution.started_at
-            step_execution.duration_ms = int(
-                (now - started_at).total_seconds() * 1000
+            started_at = (
+                step_execution.started_at.replace(tzinfo=None)
+                if step_execution.started_at.tzinfo
+                else step_execution.started_at
             )
+            step_execution.duration_ms = int((now - started_at).total_seconds() * 1000)
         step_execution.response_status_code = response_status_code
         step_execution.response_headers = response_headers
         step_execution.response_body = response_body

@@ -23,9 +23,7 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(user_id: UUID, email: str) -> str:
     """Create an access token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode = {
         "sub": str(user_id),
         "email": email,
@@ -37,9 +35,7 @@ def create_access_token(user_id: UUID, email: str) -> str:
 
 def create_refresh_token(user_id: UUID) -> str:
     """Create a refresh token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.refresh_token_expire_days
-    )
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
     to_encode = {
         "sub": str(user_id),
         "exp": expire,
@@ -51,9 +47,7 @@ def create_refresh_token(user_id: UUID) -> str:
 def decode_token(token: str) -> dict | None:
     """Decode and validate a JWT token."""
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return payload
     except JWTError:
         return None

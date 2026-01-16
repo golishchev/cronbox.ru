@@ -1,4 +1,5 @@
 """Tests for workspaces API."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -128,9 +129,7 @@ class TestWorkspaces:
 
     async def test_get_nonexistent_workspace(self, authenticated_client: AsyncClient):
         """Test getting a non-existent workspace."""
-        response = await authenticated_client.get(
-            "/v1/workspaces/00000000-0000-0000-0000-000000000000"
-        )
+        response = await authenticated_client.get("/v1/workspaces/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     async def test_update_nonexistent_workspace(self, authenticated_client: AsyncClient):
@@ -143,9 +142,7 @@ class TestWorkspaces:
 
     async def test_delete_nonexistent_workspace(self, authenticated_client: AsyncClient):
         """Test deleting a non-existent workspace."""
-        response = await authenticated_client.delete(
-            "/v1/workspaces/00000000-0000-0000-0000-000000000000"
-        )
+        response = await authenticated_client.delete("/v1/workspaces/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     async def test_create_workspace_with_description(self, authenticated_client: AsyncClient):

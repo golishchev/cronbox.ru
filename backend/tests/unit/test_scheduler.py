@@ -1,4 +1,5 @@
 """Tests for task scheduler module."""
+
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4

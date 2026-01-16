@@ -1,4 +1,5 @@
 """Test configuration and fixtures."""
+
 # Test database URL (use separate test database)
 # Only replace the database name at the end of the URL, not user/password
 import re
@@ -51,9 +52,7 @@ async def engine():
 @pytest_asyncio.fixture
 async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
     """Create test database session."""
-    async_session = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     # Clean all tables before each test
     async with engine.begin() as conn:
@@ -181,9 +180,7 @@ async def auth_headers(test_user: User) -> dict:
 
 
 @pytest_asyncio.fixture
-async def authenticated_client(
-    client: AsyncClient, auth_headers: dict
-) -> AsyncClient:
+async def authenticated_client(client: AsyncClient, auth_headers: dict) -> AsyncClient:
     """Create an authenticated test client."""
     client.headers.update(auth_headers)
     return client

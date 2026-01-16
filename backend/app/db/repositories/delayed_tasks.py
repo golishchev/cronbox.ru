@@ -25,9 +25,7 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
     ) -> list[DelayedTask]:
         """Get all delayed tasks for a workspace."""
         stmt = (
-            select(DelayedTask)
-            .where(DelayedTask.workspace_id == workspace_id)
-            .order_by(DelayedTask.execute_at.desc())
+            select(DelayedTask).where(DelayedTask.workspace_id == workspace_id).order_by(DelayedTask.execute_at.desc())
         )
         if status is not None:
             stmt = stmt.where(DelayedTask.status == status)
@@ -41,11 +39,7 @@ class DelayedTaskRepository(BaseRepository[DelayedTask]):
         status: TaskStatus | None = None,
     ) -> int:
         """Count delayed tasks for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(DelayedTask)
-            .where(DelayedTask.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(DelayedTask).where(DelayedTask.workspace_id == workspace_id)
         if status is not None:
             stmt = stmt.where(DelayedTask.status == status)
         result = await self.db.execute(stmt)

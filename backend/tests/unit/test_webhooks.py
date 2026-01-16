@@ -1,4 +1,5 @@
 """Tests for webhook API endpoints."""
+
 import ipaddress
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -127,7 +128,7 @@ class TestVerifyPaymentWithYookassa:
         mock_response.json.return_value = {
             "id": "payment-123",
             "status": "succeeded",
-            "amount": {"value": "299.00", "currency": "RUB"}
+            "amount": {"value": "299.00", "currency": "RUB"},
         }
 
         mock_client = AsyncMock()
@@ -249,10 +250,7 @@ class TestYookassaWebhook:
         mock_request.headers.get.return_value = None
         mock_request.client = MagicMock()
         mock_request.client.host = "185.71.76.1"
-        mock_request.json = AsyncMock(return_value={
-            "event": "payment.succeeded",
-            "object": {}
-        })
+        mock_request.json = AsyncMock(return_value={"event": "payment.succeeded", "object": {}})
 
         mock_db = AsyncMock()
 
@@ -295,10 +293,9 @@ class TestYookassaWebhook:
         mock_request.headers.get.return_value = None
         mock_request.client = MagicMock()
         mock_request.client.host = "185.71.76.1"
-        mock_request.json = AsyncMock(return_value={
-            "event": "payment.succeeded",
-            "object": {"id": "payment-123", "status": "succeeded"}
-        })
+        mock_request.json = AsyncMock(
+            return_value={"event": "payment.succeeded", "object": {"id": "payment-123", "status": "succeeded"}}
+        )
 
         mock_db = AsyncMock()
 
@@ -324,10 +321,9 @@ class TestYookassaWebhook:
         mock_request.headers.get.return_value = None
         mock_request.client = MagicMock()
         mock_request.client.host = "185.71.76.1"
-        mock_request.json = AsyncMock(return_value={
-            "event": "payment.succeeded",
-            "object": {"id": "payment-123", "status": "succeeded"}
-        })
+        mock_request.json = AsyncMock(
+            return_value={"event": "payment.succeeded", "object": {"id": "payment-123", "status": "succeeded"}}
+        )
 
         mock_db = AsyncMock()
 
@@ -418,7 +414,7 @@ class TestPostalWebhook:
         from app.api.v1.webhooks import postal_webhook
 
         mock_request = MagicMock()
-        mock_request.body = AsyncMock(return_value=b'{}')
+        mock_request.body = AsyncMock(return_value=b"{}")
         mock_request.json = AsyncMock(return_value={})
 
         mock_db = AsyncMock()

@@ -1,4 +1,5 @@
 """Tests for PostalService."""
+
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -20,6 +21,7 @@ class TestPostalServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             assert service.api_url == "https://postal.example.com"
@@ -36,6 +38,7 @@ class TestPostalServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             assert service.is_configured is True
@@ -50,6 +53,7 @@ class TestPostalServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             assert service.is_configured is False
@@ -64,6 +68,7 @@ class TestPostalServiceInit:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             assert service.is_configured is False
@@ -107,12 +112,7 @@ class TestPostalServiceSendEmail:
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
             "status": "success",
-            "data": {
-                "server": "postal-server",
-                "messages": {
-                    "test@example.com": {"id": 12345}
-                }
-            }
+            "data": {"server": "postal-server", "messages": {"test@example.com": {"id": 12345}}},
         }
 
         mock_client = AsyncMock()
@@ -153,10 +153,7 @@ class TestPostalServiceSendEmail:
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "status": "error",
-            "data": {"message": "Invalid API key"}
-        }
+        mock_response.json.return_value = {"status": "error", "data": {"message": "Invalid API key"}}
 
         mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
@@ -232,6 +229,7 @@ class TestPostalServiceWebhookSignature:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             result = service.verify_webhook_signature(b"payload", "signature")
@@ -255,6 +253,7 @@ class TestPostalServiceWebhookSignature:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             result = service.verify_webhook_signature(payload, expected_sig)
@@ -271,6 +270,7 @@ class TestPostalServiceWebhookSignature:
             mock_settings.email_from = "noreply@example.com"
 
             from app.services.postal import PostalService
+
             service = PostalService()
 
             result = service.verify_webhook_signature(b"payload", "invalid-signature")
@@ -318,11 +318,7 @@ class TestPostalServiceProcessWebhook:
             mock_result.scalar_one_or_none.return_value = None
             mock_db.execute.return_value = mock_result
 
-            result = await service.process_webhook(
-                mock_db,
-                "MessageSent",
-                {"message": {"id": 12345}}
-            )
+            result = await service.process_webhook(mock_db, "MessageSent", {"message": {"id": 12345}})
 
             assert result is False
 
@@ -350,11 +346,7 @@ class TestPostalServiceProcessWebhook:
             mock_result.scalar_one_or_none.return_value = mock_email_log
             mock_db.execute.return_value = mock_result
 
-            result = await service.process_webhook(
-                mock_db,
-                "MessageSent",
-                {"message": {"id": 12345}}
-            )
+            result = await service.process_webhook(mock_db, "MessageSent", {"message": {"id": 12345}})
 
             assert result is True
             assert mock_email_log.status == EmailStatus.SENT
@@ -385,11 +377,7 @@ class TestPostalServiceProcessWebhook:
             mock_result.scalar_one_or_none.return_value = mock_email_log
             mock_db.execute.return_value = mock_result
 
-            result = await service.process_webhook(
-                mock_db,
-                "MessageDelivered",
-                {"message": {"id": 12345}}
-            )
+            result = await service.process_webhook(mock_db, "MessageDelivered", {"message": {"id": 12345}})
 
             assert result is True
             mock_email_log.mark_delivered.assert_called_once()
@@ -422,10 +410,7 @@ class TestPostalServiceProcessWebhook:
             result = await service.process_webhook(
                 mock_db,
                 "MessageBounced",
-                {
-                    "message": {"id": 12345},
-                    "bounce": {"type": "hard", "code": "550", "message": "User not found"}
-                }
+                {"message": {"id": 12345}, "bounce": {"type": "hard", "code": "550", "message": "User not found"}},
             )
 
             assert result is True
@@ -456,11 +441,7 @@ class TestPostalServiceProcessWebhook:
             mock_result.scalar_one_or_none.return_value = mock_email_log
             mock_db.execute.return_value = mock_result
 
-            result = await service.process_webhook(
-                mock_db,
-                "MessageLoaded",
-                {"message": {"id": 12345}}
-            )
+            result = await service.process_webhook(mock_db, "MessageLoaded", {"message": {"id": 12345}})
 
             assert result is True
             mock_email_log.mark_opened.assert_called_once()
@@ -491,9 +472,7 @@ class TestPostalServiceProcessWebhook:
             mock_db.execute.return_value = mock_result
 
             result = await service.process_webhook(
-                mock_db,
-                "MessageLinkClicked",
-                {"message": {"id": 12345}, "url": "https://example.com"}
+                mock_db, "MessageLinkClicked", {"message": {"id": 12345}, "url": "https://example.com"}
             )
 
             assert result is True
@@ -524,9 +503,7 @@ class TestPostalServiceProcessWebhook:
             mock_db.execute.return_value = mock_result
 
             result = await service.process_webhook(
-                mock_db,
-                "MessageHeld",
-                {"message": {"id": 12345, "hold_reason": "Spam detected"}}
+                mock_db, "MessageHeld", {"message": {"id": 12345, "hold_reason": "Spam detected"}}
             )
 
             assert result is True

@@ -1,4 +1,5 @@
 """Billing service for YooKassa integration."""
+
 import json
 import uuid as uuid_module
 from datetime import datetime, timedelta, timezone
@@ -21,9 +22,7 @@ from app.services.i18n import t
 logger = structlog.get_logger()
 
 
-def _get_billing_description(
-    plan_name: str, billing_period: str, lang: str, is_auto_renewal: bool = False
-) -> str:
+def _get_billing_description(plan_name: str, billing_period: str, lang: str, is_auto_renewal: bool = False) -> str:
     """Get localized billing description."""
     period_key = f"billing.period.{billing_period}"
     period_localized = t(period_key, lang)
@@ -38,6 +37,7 @@ def _get_receipt_description(plan_name: str, billing_period: str, lang: str) -> 
     period_key = f"billing.period.{billing_period}"
     period_localized = t(period_key, lang)
     return t("billing.receipt_item", lang, plan_name=plan_name, period=period_localized)
+
 
 # Cache key for public plans
 PLANS_CACHE_KEY = "cache:plans:public"
@@ -142,13 +142,9 @@ class BillingService:
         result = await db.execute(select(Plan).where(Plan.id == plan_id))
         return result.scalar_one_or_none()
 
-    async def get_user_subscription(
-        self, db: AsyncSession, user_id: uuid_module.UUID
-    ) -> Subscription | None:
+    async def get_user_subscription(self, db: AsyncSession, user_id: uuid_module.UUID) -> Subscription | None:
         """Get user's subscription."""
-        result = await db.execute(
-            select(Subscription).where(Subscription.user_id == user_id)
-        )
+        result = await db.execute(select(Subscription).where(Subscription.user_id == user_id))
         return result.scalar_one_or_none()
 
     async def get_user_subscription_for_update(
@@ -159,11 +155,7 @@ class BillingService:
         Use this method when modifying subscription to prevent race conditions.
         The lock is held until the transaction commits or rolls back.
         """
-        result = await db.execute(
-            select(Subscription)
-            .where(Subscription.user_id == user_id)
-            .with_for_update()
-        )
+        result = await db.execute(select(Subscription).where(Subscription.user_id == user_id).with_for_update())
         return result.scalar_one_or_none()
 
     async def get_user_plan(self, db: AsyncSession, user_id: uuid_module.UUID) -> Plan:
@@ -214,9 +206,7 @@ class BillingService:
         if current_subscription and current_subscription.status == SubscriptionStatus.ACTIVE:
             # Re-validate plan change inside lock to prevent TOCTOU race condition
             # (subscription could have changed between API validation and this point)
-            analysis = await self._analyze_plan_change(
-                db, current_subscription, plan_id, billing_period
-            )
+            analysis = await self._analyze_plan_change(db, current_subscription, plan_id, billing_period)
             if analysis["is_same_plan"]:
                 logger.warning(
                     "Plan change rejected: already on this plan",
@@ -253,10 +243,7 @@ class BillingService:
 
         # Get user's first workspace for payment association
         workspace_result = await db.execute(
-            select(Workspace)
-            .where(Workspace.owner_id == user_id)
-            .order_by(Workspace.created_at.asc())
-            .limit(1)
+            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
         )
         workspace = workspace_result.scalar_one_or_none()
         if not workspace:
@@ -320,7 +307,9 @@ class BillingService:
                             },
                             "items": [
                                 {
-                                    "description": _get_receipt_description(plan.display_name, billing_period, user_lang),
+                                    "description": _get_receipt_description(
+                                        plan.display_name, billing_period, user_lang
+                                    ),
                                     "quantity": "1",
                                     "amount": {
                                         "value": amount_value,
@@ -340,9 +329,7 @@ class BillingService:
 
                 # Update payment with YooKassa data
                 payment.yookassa_payment_id = yookassa_data["id"]
-                payment.yookassa_confirmation_url = yookassa_data.get(
-                    "confirmation", {}
-                ).get("confirmation_url")
+                payment.yookassa_confirmation_url = yookassa_data.get("confirmation", {}).get("confirmation_url")
 
                 await db.commit()
                 logger.info(
@@ -379,9 +366,7 @@ class BillingService:
             return False
 
         # Find payment
-        result = await db.execute(
-            select(Payment).where(Payment.yookassa_payment_id == yookassa_payment_id)
-        )
+        result = await db.execute(select(Payment).where(Payment.yookassa_payment_id == yookassa_payment_id))
         payment = result.scalar_one_or_none()
 
         if not payment:
@@ -589,9 +574,7 @@ class BillingService:
                 # Pause excess tasks in the first (active) workspace
                 first_workspace = await self._get_oldest_workspace(db, user_id)
                 if first_workspace:
-                    await self.auto_pause_excess_tasks(
-                        db, first_workspace.id, free_plan.max_cron_tasks
-                    )
+                    await self.auto_pause_excess_tasks(db, first_workspace.id, free_plan.max_cron_tasks)
         else:
             subscription.cancel_at_period_end = True
             subscription.cancelled_at = datetime.now(timezone.utc)
@@ -636,9 +619,7 @@ class BillingService:
             return None
 
         # Re-validate plan change inside lock to prevent TOCTOU race condition
-        analysis = await self._analyze_plan_change(
-            db, subscription, new_plan_id, new_billing_period
-        )
+        analysis = await self._analyze_plan_change(db, subscription, new_plan_id, new_billing_period)
         if analysis["is_same_plan"]:
             logger.warning(
                 "Schedule rejected: already on this plan",
@@ -685,9 +666,7 @@ class BillingService:
 
         return True
 
-    async def _calculate_proration_credit(
-        self, db: AsyncSession, subscription: Subscription
-    ) -> int:
+    async def _calculate_proration_credit(self, db: AsyncSession, subscription: Subscription) -> int:
         """
         Calculate proration credit for unused days of current subscription.
 
@@ -780,9 +759,7 @@ class BillingService:
             result["effective_date"] = current_subscription.current_period_end
 
         # Determine current billing period
-        period_days = (
-            current_subscription.current_period_end - current_subscription.current_period_start
-        ).days
+        period_days = (current_subscription.current_period_end - current_subscription.current_period_start).days
         current_is_yearly = period_days > 60
         result["current_is_yearly"] = current_is_yearly
 
@@ -817,21 +794,14 @@ class BillingService:
             return result
 
         # Upgrade or same price - calculate proration credit
-        result["proration_credit"] = await self._calculate_proration_credit(
-            db, current_subscription
-        )
+        result["proration_credit"] = await self._calculate_proration_credit(db, current_subscription)
 
         return result
 
-    async def _get_oldest_workspace(
-        self, db: AsyncSession, user_id: uuid_module.UUID
-    ) -> Workspace | None:
+    async def _get_oldest_workspace(self, db: AsyncSession, user_id: uuid_module.UUID) -> Workspace | None:
         """Get user's oldest workspace by created_at."""
         result = await db.execute(
-            select(Workspace)
-            .where(Workspace.owner_id == user_id)
-            .order_by(Workspace.created_at.asc())
-            .limit(1)
+            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -840,9 +810,7 @@ class BillingService:
     ) -> list[uuid_module.UUID]:
         """Block workspaces exceeding the limit. Returns list of blocked workspace IDs."""
         result = await db.execute(
-            select(Workspace)
-            .where(Workspace.owner_id == user_id)
-            .order_by(Workspace.created_at.asc())
+            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc())
         )
         workspaces = list(result.scalars().all())
 
@@ -873,9 +841,7 @@ class BillingService:
 
         return blocked_ids
 
-    async def _unblock_user_workspaces(
-        self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int
-    ) -> int:
+    async def _unblock_user_workspaces(self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int) -> int:
         """Unblock workspaces up to the plan limit. Returns count of unblocked."""
         # Count currently active workspaces
         active_count_result = await db.execute(
@@ -918,9 +884,7 @@ class BillingService:
 
         return unblocked
 
-    async def _pause_workspace_tasks(
-        self, db: AsyncSession, workspace_id: uuid_module.UUID
-    ) -> int:
+    async def _pause_workspace_tasks(self, db: AsyncSession, workspace_id: uuid_module.UUID) -> int:
         """Pause all active cron tasks in a workspace."""
         from app.db.repositories.cron_tasks import CronTaskRepository
 
@@ -944,9 +908,7 @@ class BillingService:
 
         return count
 
-    async def _resume_workspace_tasks(
-        self, db: AsyncSession, workspace_id: uuid_module.UUID
-    ) -> int:
+    async def _resume_workspace_tasks(self, db: AsyncSession, workspace_id: uuid_module.UUID) -> int:
         """Resume paused tasks in a workspace."""
         from app.db.repositories.cron_tasks import CronTaskRepository
         from app.workers.utils import calculate_next_run
@@ -989,9 +951,7 @@ class BillingService:
         )
         return list(result.scalars().all())
 
-    async def get_expiring_subscriptions(
-        self, db: AsyncSession, days_before: int
-    ) -> list[Subscription]:
+    async def get_expiring_subscriptions(self, db: AsyncSession, days_before: int) -> list[Subscription]:
         """Get subscriptions expiring in exactly N days (within that day)."""
         now = datetime.now(timezone.utc)
         target_date = now + timedelta(days=days_before)
@@ -1007,9 +967,7 @@ class BillingService:
         )
         return list(result.scalars().all())
 
-    async def get_subscriptions_for_renewal(
-        self, db: AsyncSession
-    ) -> list[Subscription]:
+    async def get_subscriptions_for_renewal(self, db: AsyncSession) -> list[Subscription]:
         """
         Get subscriptions that need auto-renewal.
 
@@ -1031,9 +989,7 @@ class BillingService:
         )
         return list(result.scalars().all())
 
-    async def auto_pause_excess_tasks(
-        self, db: AsyncSession, workspace_id: uuid_module.UUID, max_tasks: int
-    ) -> int:
+    async def auto_pause_excess_tasks(self, db: AsyncSession, workspace_id: uuid_module.UUID, max_tasks: int) -> int:
         """Pause cron tasks exceeding the limit. Returns count of paused tasks."""
         from app.db.repositories.cron_tasks import CronTaskRepository
 
@@ -1066,9 +1022,7 @@ class BillingService:
 
         return count
 
-    async def check_expired_subscriptions(
-        self, db: AsyncSession
-    ) -> list[tuple[uuid_module.UUID, int, int]]:
+    async def check_expired_subscriptions(self, db: AsyncSession) -> list[tuple[uuid_module.UUID, int, int]]:
         """Check and mark expired subscriptions.
 
         Returns list of (user_id, paused_tasks_count, blocked_workspaces_count).
@@ -1098,17 +1052,13 @@ class BillingService:
 
             if free_plan:
                 # Block excess workspaces
-                blocked_ids = await self._block_excess_workspaces(
-                    db, subscription.user_id, free_plan.max_workspaces
-                )
+                blocked_ids = await self._block_excess_workspaces(db, subscription.user_id, free_plan.max_workspaces)
                 blocked_count = len(blocked_ids)
 
                 # Pause excess tasks in first (active) workspace
                 first_workspace = await self._get_oldest_workspace(db, subscription.user_id)
                 if first_workspace:
-                    paused_count = await self.auto_pause_excess_tasks(
-                        db, first_workspace.id, free_plan.max_cron_tasks
-                    )
+                    paused_count = await self.auto_pause_excess_tasks(db, first_workspace.id, free_plan.max_cron_tasks)
 
             affected_users.append((subscription.user_id, paused_count, blocked_count))
 
@@ -1121,9 +1071,7 @@ class BillingService:
 
         return affected_users
 
-    async def get_subscriptions_with_scheduled_changes(
-        self, db: AsyncSession
-    ) -> list[Subscription]:
+    async def get_subscriptions_with_scheduled_changes(self, db: AsyncSession) -> list[Subscription]:
         """
         Get subscriptions with scheduled plan changes that should be applied.
 
@@ -1191,9 +1139,7 @@ class BillingService:
         await self._block_excess_workspaces(db, subscription.user_id, new_plan.max_workspaces)
         first_workspace = await self._get_oldest_workspace(db, subscription.user_id)
         if first_workspace:
-            await self.auto_pause_excess_tasks(
-                db, first_workspace.id, new_plan.max_cron_tasks
-            )
+            await self.auto_pause_excess_tasks(db, first_workspace.id, new_plan.max_cron_tasks)
 
         await db.commit()
 
@@ -1313,7 +1259,9 @@ class BillingService:
                             },
                             "items": [
                                 {
-                                    "description": _get_receipt_description(plan.display_name, billing_period, user_lang),
+                                    "description": _get_receipt_description(
+                                        plan.display_name, billing_period, user_lang
+                                    ),
                                     "quantity": "1",
                                     "amount": {
                                         "value": amount_value,
