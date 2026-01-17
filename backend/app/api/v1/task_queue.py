@@ -3,11 +3,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, CurrentWorkspace, DB
+from app.api.deps import DB, CurrentWorkspace
 from app.models.task_queue import TaskQueue
-from app.models.workspace import Workspace
 from app.schemas.task_queue import (
     OverlapStatsResponse,
     TaskQueueListResponse,
@@ -139,7 +138,7 @@ async def clear_cron_task_queue(
     db: DB,
 ) -> None:
     """Clear queue for a specific cron task."""
-    cleared = await overlap_service.clear_task_queue(db, "cron", task_id)
+    await overlap_service.clear_task_queue(db, "cron", task_id)
     await db.commit()
 
 
@@ -155,7 +154,7 @@ async def clear_chain_queue(
     db: DB,
 ) -> None:
     """Clear queue for a specific task chain."""
-    cleared = await overlap_service.clear_task_queue(db, "chain", chain_id)
+    await overlap_service.clear_task_queue(db, "chain", chain_id)
     await db.commit()
 
 

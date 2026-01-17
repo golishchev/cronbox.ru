@@ -600,12 +600,11 @@ class TaskScheduler:
 
     async def _check_and_execute_queued_tasks(self):
         """Check for queued tasks that can now be executed."""
-        from app.models.task_queue import TaskQueue
 
         async with async_session_factory() as db:
             # Get cron tasks with queue policy and available slots
-            cron_repo = CronTaskRepository(db)
-            chain_repo = TaskChainRepository(db)
+            CronTaskRepository(db)
+            TaskChainRepository(db)
 
             # Find cron tasks with available slots
             from sqlalchemy import select

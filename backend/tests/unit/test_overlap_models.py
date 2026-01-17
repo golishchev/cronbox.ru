@@ -5,10 +5,10 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.cron_task import CronTask, OverlapPolicy, HttpMethod
+from app.models.cron_task import CronTask, HttpMethod, OverlapPolicy
+from app.models.execution import Execution
 from app.models.task_chain import TaskChain, TriggerType
 from app.models.task_queue import TaskQueue
-from app.models.execution import Execution
 
 
 class TestOverlapPolicyEnum:

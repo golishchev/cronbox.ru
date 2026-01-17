@@ -6,11 +6,9 @@ This endpoint is designed to be as simple as possible:
 """
 
 from fastapi import APIRouter, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import async_session_factory
 from app.db.repositories.heartbeats import HeartbeatRepository
-from app.models.heartbeat import HeartbeatStatus
 from app.schemas.heartbeat import HeartbeatPingCreate, PingSuccessResponse
 from app.services.heartbeat import heartbeat_service
 
