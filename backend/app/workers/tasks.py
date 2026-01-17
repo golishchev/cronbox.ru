@@ -31,7 +31,7 @@ async def send_task_notification(
     workspace_id: str,
     task_name: str,
     task_type: str,
-    event: str,  # "success", "failure", "recovery"
+    notification_event: str,  # "success", "failure", "recovery"
     duration_ms: int | None = None,
     error_message: str | None = None,
     task_url: str | None = None,
@@ -44,7 +44,7 @@ async def send_task_notification(
 
     async with db_factory() as db:
         try:
-            if event == "success":
+            if notification_event == "success":
                 await notification_service.send_task_success(
                     db=db,
                     workspace_id=UUID(workspace_id),
@@ -52,7 +52,7 @@ async def send_task_notification(
                     task_type=task_type,
                     duration_ms=duration_ms,
                 )
-            elif event == "failure":
+            elif notification_event == "failure":
                 await notification_service.send_task_failure(
                     db=db,
                     workspace_id=UUID(workspace_id),
@@ -61,7 +61,7 @@ async def send_task_notification(
                     error_message=error_message,
                     task_url=task_url,
                 )
-            elif event == "recovery":
+            elif notification_event == "recovery":
                 await notification_service.send_task_recovery(
                     db=db,
                     workspace_id=UUID(workspace_id),
@@ -71,7 +71,7 @@ async def send_task_notification(
 
             logger.info(
                 "Notification sent",
-                event=event,
+                notification_event=notification_event,
                 task_name=task_name,
                 task_type=task_type,
             )
@@ -81,7 +81,7 @@ async def send_task_notification(
             logger.error(
                 "Failed to send notification",
                 error=str(e),
-                event=event,
+                notification_event=notification_event,
                 task_name=task_name,
             )
             return {"success": False, "error": str(e)}
@@ -304,7 +304,7 @@ async def execute_cron_task(
                         workspace_id=str(task.workspace_id),
                         task_name=task.name,
                         task_type="cron",
-                        event="recovery",
+                        notification_event="recovery",
                     )
                 # Send success notification
                 await redis.enqueue_job(
@@ -312,7 +312,7 @@ async def execute_cron_task(
                     workspace_id=str(task.workspace_id),
                     task_name=task.name,
                     task_type="cron",
-                    event="success",
+                    notification_event="success",
                     duration_ms=result.get("duration_ms"),
                 )
             else:
@@ -323,7 +323,7 @@ async def execute_cron_task(
                         workspace_id=str(task.workspace_id),
                         task_name=task.name,
                         task_type="cron",
-                        event="failure",
+                        notification_event="failure",
                         error_message=result.get("error"),
                         task_url=sanitize_url_for_logging(task.url),
                     )
@@ -461,7 +461,7 @@ async def execute_delayed_task(
                     workspace_id=str(task.workspace_id),
                     task_name=task.name,
                     task_type="delayed",
-                    event="success",
+                    notification_event="success",
                     duration_ms=result.get("duration_ms"),
                 )
             else:
@@ -472,7 +472,7 @@ async def execute_delayed_task(
                         workspace_id=str(task.workspace_id),
                         task_name=task.name,
                         task_type="delayed",
-                        event="failure",
+                        notification_event="failure",
                         error_message=result.get("error"),
                         task_url=sanitize_url_for_logging(task.url),
                     )

@@ -92,6 +92,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
 
   useEffect(() => {
     loadTasks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace, statusFilter])
 
   const handleCancel = async () => {

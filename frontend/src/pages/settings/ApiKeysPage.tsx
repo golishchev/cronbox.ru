@@ -84,6 +84,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
 
   useEffect(() => {
     loadWorkers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 
   const handleCreate = async (e: React.FormEvent) => {

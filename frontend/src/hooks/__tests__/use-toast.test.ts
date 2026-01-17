@@ -162,7 +162,7 @@ describe('use-toast', () => {
 
     it('should add toast when toast function is called', () => {
       const { result } = renderHook(() => useToast())
-      const initialLength = result.current.toasts.length
+      const _initialLength = result.current.toasts.length
 
       act(() => {
         result.current.toast({ title: 'New Toast' })

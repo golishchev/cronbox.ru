@@ -40,6 +40,7 @@ import {
   Shield,
   Mail,
   Loader2,
+  Edit,
 } from 'lucide-react'
 
 interface AdminUsersPageProps {
@@ -88,6 +89,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
 
   useEffect(() => {
     loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search])
 
   useEffect(() => {
@@ -188,7 +190,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
 
       {/* Users Table */}
       {isLoading ? (
-        <TableSkeleton rows={10} columns={6} />
+        <TableSkeleton rows={10} columns={13} />
       ) : users.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Users className="h-16 w-16 text-muted-foreground" />
@@ -206,9 +208,15 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                   <TableHead>{t('admin.user')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead>{t('admin.role')}</TableHead>
+                  <TableHead>{t('admin.plan')}</TableHead>
                   <TableHead>{t('admin.workspaces')}</TableHead>
-                  <TableHead>{t('admin.tasks')}</TableHead>
+                  <TableHead>{t('admin.cronTasks')}</TableHead>
+                  <TableHead>{t('admin.delayedTasks')}</TableHead>
+                  <TableHead>{t('admin.taskChains')}</TableHead>
+                  <TableHead>{t('admin.heartbeats')}</TableHead>
+                  <TableHead>{t('nav.executions')}</TableHead>
                   <TableHead>{t('admin.created')}</TableHead>
+                  <TableHead>{t('admin.lastLogin')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -251,18 +259,39 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                         <Badge variant="outline">{t('admin.user')}</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={user.plan_name === 'free' ? 'outline' : 'success'}>
+                          {user.plan_name}
+                        </Badge>
+                        {user.subscription_ends_at && (
+                          <span className="text-xs text-muted-foreground">
+                            {t('admin.until')} {new Date(user.subscription_ends_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{user.workspaces_count}</TableCell>
-                    <TableCell>{user.tasks_count}</TableCell>
+                    <TableCell>{user.cron_tasks_count}</TableCell>
+                    <TableCell>{user.delayed_tasks_count}</TableCell>
+                    <TableCell>{user.task_chains_count}</TableCell>
+                    <TableCell>{user.heartbeats_count}</TableCell>
+                    <TableCell>{user.executions_count}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {user.last_login_at
+                        ? new Date(user.last_login_at).toLocaleDateString()
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => handleEdit(user)}
                       >
-                        {t('common.edit')}
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

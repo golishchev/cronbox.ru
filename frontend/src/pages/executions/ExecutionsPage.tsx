@@ -84,6 +84,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
 
   useEffect(() => {
     loadExecutions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace, statusFilter, typeFilter, page])
 
   const handleViewDetails = async (execution: Execution) => {

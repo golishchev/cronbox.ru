@@ -58,6 +58,7 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
 
   useEffect(() => {
     loadWorkspaces()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search])
 
   const getPlanBadge = (plan: string) => {
@@ -131,6 +132,8 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
                   <TableHead>{t('admin.plan')}</TableHead>
                   <TableHead>{t('admin.cronTasks')}</TableHead>
                   <TableHead>{t('admin.delayedTasks')}</TableHead>
+                  <TableHead>{t('admin.taskChains')}</TableHead>
+                  <TableHead>{t('admin.heartbeats')}</TableHead>
                   <TableHead>{t('nav.executions')}</TableHead>
                   <TableHead>{t('admin.created')}</TableHead>
                 </TableRow>
@@ -153,6 +156,8 @@ export function AdminWorkspacesPage({ onNavigate }: AdminWorkspacesPageProps) {
                     <TableCell>{getPlanBadge(ws.plan_name)}</TableCell>
                     <TableCell>{ws.cron_tasks_count}</TableCell>
                     <TableCell>{ws.delayed_tasks_count}</TableCell>
+                    <TableCell>{ws.task_chains_count}</TableCell>
+                    <TableCell>{ws.heartbeats_count}</TableCell>
                     <TableCell>{ws.executions_count}</TableCell>
                     <TableCell>
                       {new Date(ws.created_at).toLocaleDateString()}

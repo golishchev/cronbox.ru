@@ -113,6 +113,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
 
   useEffect(() => {
     loadPlans()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleOpenCreate = () => {

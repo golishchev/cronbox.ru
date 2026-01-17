@@ -92,6 +92,7 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
 
   useEffect(() => {
     loadSettings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 
   const saveSettings = useCallback(async () => {

@@ -94,9 +94,12 @@ class AuthService:
         if not user.is_active:
             raise UnauthorizedError("Account is disabled")
 
-        # Successful login - reset failed attempts
+        # Successful login - reset failed attempts and update last login
         if user.failed_login_attempts > 0:
             await self._reset_failed_attempts(user)
+
+        # Update last login timestamp
+        await self._update_last_login(user)
 
         # Generate tokens
         tokens = self._create_tokens(user)
@@ -132,6 +135,12 @@ class AuthService:
         user.failed_login_attempts = 0
         user.locked_until = None
         await self.db.commit()
+
+    async def _update_last_login(self, user: User) -> None:
+        """Update user's last login timestamp."""
+        user.last_login_at = datetime.now(timezone.utc)
+        await self.db.commit()
+        await self.db.refresh(user)
 
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         """Refresh access token using refresh token."""
@@ -414,6 +423,9 @@ class AuthService:
         # Auto-verify email since they received the OTP
         if not user.email_verified:
             user = await self.user_repo.verify_email(user)
+
+        # Update last login timestamp
+        await self._update_last_login(user)
 
         # Generate tokens
         tokens = self._create_tokens(user)

@@ -9,6 +9,10 @@ export interface AdminStats {
   active_cron_tasks: number
   total_delayed_tasks: number
   pending_delayed_tasks: number
+  total_task_chains: number
+  active_task_chains: number
+  total_heartbeats: number
+  active_heartbeats: number
   total_executions: number
   executions_today: number
   executions_this_week: number
@@ -26,8 +30,15 @@ export interface AdminUser {
   email_verified: boolean
   telegram_username: string | null
   created_at: string
+  last_login_at: string | null
   workspaces_count: number
-  tasks_count: number
+  cron_tasks_count: number
+  delayed_tasks_count: number
+  task_chains_count: number
+  heartbeats_count: number
+  plan_name: string
+  subscription_ends_at: string | null
+  executions_count: number
 }
 
 export interface AdminUsersResponse {
@@ -46,6 +57,8 @@ export interface AdminWorkspace {
   plan_name: string
   cron_tasks_count: number
   delayed_tasks_count: number
+  task_chains_count: number
+  heartbeats_count: number
   executions_count: number
   created_at: string
 }

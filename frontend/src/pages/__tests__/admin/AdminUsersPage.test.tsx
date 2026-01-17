@@ -154,7 +154,7 @@ describe('AdminUsersPage', () => {
   })
 
   it('should update user when save clicked in edit dialog', async () => {
-    vi.mocked(adminApi.updateAdminUser).mockResolvedValue({} as any)
+    vi.mocked(adminApi.updateAdminUser).mockResolvedValue({} as unknown as Awaited<ReturnType<typeof adminApi.updateAdminUser>>)
 
     const { user } = render(<AdminUsersPage onNavigate={mockOnNavigate} />)
 

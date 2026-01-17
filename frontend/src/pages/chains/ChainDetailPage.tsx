@@ -134,6 +134,7 @@ export function ChainDetailPage({ chainId, onNavigate }: ChainDetailPageProps) {
   useEffect(() => {
     loadChain()
     loadExecutions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace, chainId])
 
   const handleRun = async () => {

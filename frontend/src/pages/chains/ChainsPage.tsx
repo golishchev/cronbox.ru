@@ -96,6 +96,7 @@ export function ChainsPage({ onNavigate }: ChainsPageProps) {
 
   useEffect(() => {
     loadChains()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 
   const handlePauseResume = async (chain: TaskChain) => {

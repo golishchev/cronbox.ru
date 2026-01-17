@@ -10,3 +10,8 @@ dependencies = []
 members = [
     "backend",
 ]
+
+[dependency-groups]
+dev = [
+    "locust>=2.43.1",
+]

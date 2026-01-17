@@ -153,6 +153,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
 
   useEffect(() => {
     loadTemplates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCode, filterLanguage, filterChannel])
 
   const handleOpenEdit = (template: NotificationTemplate) => {

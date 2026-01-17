@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { getHeartbeats, deleteHeartbeat, pauseHeartbeat, resumeHeartbeat } from '@/api/heartbeats'
+import { getSubscription, getPlans, Plan } from '@/api/billing'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
@@ -31,6 +32,8 @@ import {
   Loader2,
   Copy,
   ExternalLink,
+  Lock,
+  CreditCard,
 } from 'lucide-react'
 import { HeartbeatForm } from '@/components/heartbeats/HeartbeatForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -60,7 +63,7 @@ function formatInterval(seconds: number): string {
   return `${seconds}s`
 }
 
-export function HeartbeatsPage({ onNavigate: _ }: HeartbeatsPageProps) {
+export function HeartbeatsPage({ onNavigate }: HeartbeatsPageProps) {
   const { t } = useTranslation()
   const { currentWorkspace, workspaces } = useWorkspaceStore()
   const [heartbeats, setHeartbeats] = useState<Heartbeat[]>([])
@@ -69,6 +72,7 @@ export function HeartbeatsPage({ onNavigate: _ }: HeartbeatsPageProps) {
   const [editingHeartbeat, setEditingHeartbeat] = useState<Heartbeat | null>(null)
   const [deletingHeartbeat, setDeletingHeartbeat] = useState<Heartbeat | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
 
   const loadHeartbeats = async () => {
     if (!currentWorkspace) return
@@ -87,8 +91,27 @@ export function HeartbeatsPage({ onNavigate: _ }: HeartbeatsPageProps) {
     }
   }
 
+  const loadPlan = async () => {
+    try {
+      const [subscription, plans] = await Promise.all([
+        getSubscription(),
+        getPlans(),
+      ])
+      const planId = subscription?.plan_id
+      const plan = plans.find(p => p.id === planId) || plans.find(p => p.name === 'free')
+      setCurrentPlan(plan || null)
+    } catch (err) {
+      console.error('Failed to load plan:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadPlan()
+  }, [])
+
   useEffect(() => {
     loadHeartbeats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 
   const handlePauseResume = async (heartbeat: Heartbeat) => {
@@ -194,6 +217,34 @@ export function HeartbeatsPage({ onNavigate: _ }: HeartbeatsPageProps) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <p className="text-muted-foreground">{t('common.selectWorkspace')}</p>
+      </div>
+    )
+  }
+
+  // Check if heartbeats are available for the current plan
+  const isHeartbeatsAvailable = currentPlan ? currentPlan.max_heartbeats > 0 : true
+
+  // Show upgrade prompt if heartbeats are not available
+  if (!isHeartbeatsAvailable && !isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('heartbeats.title')}</h1>
+          <p className="text-muted-foreground">
+            {t('heartbeats.subtitle')}
+          </p>
+        </div>
+        <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
+          <Lock className="h-16 w-16 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">{t('heartbeats.notAvailableOnPlan')}</h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            {t('heartbeats.upgradeToUnlock')}
+          </p>
+          <Button onClick={() => onNavigate('billing')}>
+            <CreditCard className="mr-2 h-4 w-4" />
+            {t('heartbeats.viewPlans')}
+          </Button>
+        </div>
       </div>
     )
   }

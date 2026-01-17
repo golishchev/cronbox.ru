@@ -409,17 +409,376 @@ export function NotificationsSection() {
   )
 }
 
+export function TaskChainsSection() {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Цепочки задач</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        Цепочки задач позволяют выполнять несколько HTTP-запросов последовательно,
+        передавая данные между шагами. Идеально для сложных workflow, где результат
+        одного запроса используется в следующем.
+      </p>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Эндпоинты</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/chains" description="Список цепочек задач" />
+        <Endpoint method="POST" path="/chains" description="Создание цепочки" />
+        <Endpoint method="GET" path="/chains/{id}" description="Получение цепочки с шагами" />
+        <Endpoint method="PATCH" path="/chains/{id}" description="Обновление цепочки" />
+        <Endpoint method="DELETE" path="/chains/{id}" description="Удаление цепочки" />
+        <Endpoint method="POST" path="/chains/{id}/run" description="Ручной запуск цепочки" />
+        <Endpoint method="POST" path="/chains/{id}/pause" description="Приостановка цепочки" />
+        <Endpoint method="POST" path="/chains/{id}/resume" description="Возобновление цепочки" />
+        <Endpoint method="POST" path="/chains/{id}/copy" description="Копирование цепочки" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Типы триггеров</h3>
+
+      <div className="mt-4 space-y-4">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">manual</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Запуск только вручную через API или панель управления.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">cron</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Регулярный запуск по cron-расписанию. Требует параметр <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">schedule</code>.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">delayed</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Однократный запуск в заданное время. Требует параметр <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">execute_at</code>.
+          </p>
+        </div>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Создание цепочки</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/workspaces/{workspace_id}/chains \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Обработка заказа",
+    "trigger_type": "manual",
+    "stop_on_failure": true,
+    "steps": [
+      {
+        "name": "Получить заказ",
+        "url": "https://api.example.com/orders/123",
+        "method": "GET",
+        "extract_variables": {
+          "order_total": "$.total",
+          "customer_id": "$.customer.id"
+        }
+      },
+      {
+        "name": "Списать средства",
+        "url": "https://api.example.com/payments",
+        "method": "POST",
+        "body": "{\\"amount\\": \\"{{order_total}}\\", \\"customer_id\\": \\"{{customer_id}}\\"}"
+      },
+      {
+        "name": "Отправить уведомление",
+        "url": "https://api.example.com/notify",
+        "method": "POST",
+        "continue_on_failure": true
+      }
+    ]
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Шаги цепочки</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/chains/{id}/steps" description="Список шагов" />
+        <Endpoint method="POST" path="/chains/{id}/steps" description="Добавление шага" />
+        <Endpoint method="PATCH" path="/chains/{id}/steps/{step_id}" description="Обновление шага" />
+        <Endpoint method="DELETE" path="/chains/{id}/steps/{step_id}" description="Удаление шага" />
+        <Endpoint method="PUT" path="/chains/{id}/steps/reorder" description="Изменение порядка шагов" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Параметры шага</h3>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Параметр</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Тип</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Описание</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">extract_variables</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">object</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">JSONPath для извлечения переменных из ответа</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">condition</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">object</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Условие для выполнения шага</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">continue_on_failure</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">boolean</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Продолжить цепочку при ошибке шага</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">retry_count</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Количество повторных попыток (0-5)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Переменные</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        Используйте синтаксис <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{'{{variable}}'}</code> для
+        подстановки переменных в URL и тело запроса. Переменные извлекаются из предыдущих
+        шагов через JSONPath.
+      </p>
+
+      <CodeBlock
+        language="json"
+        code={`{
+  "extract_variables": {
+    "user_id": "$.data.id",
+    "user_email": "$.data.email",
+    "order_items": "$.items[*].id"
+  }
+}`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Условия выполнения</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        Шаги могут выполняться условно на основе результатов предыдущих шагов:
+      </p>
+
+      <CodeBlock
+        language="json"
+        code={`{
+  "condition": {
+    "operator": "status_code_in",
+    "value": [200, 201]
+  }
+}
+
+// Или проверка значения из ответа:
+{
+  "condition": {
+    "operator": "equals",
+    "field": "$.status",
+    "value": "approved"
+  }
+}`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Выполнения цепочки</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/chains/{id}/executions" description="История выполнений" />
+        <Endpoint method="GET" path="/chains/{id}/executions/{exec_id}" description="Детали выполнения с результатами шагов" />
+      </div>
+
+      <div className="mt-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          <strong>Примечание:</strong> Цепочки поддерживают политику запуска (overlap prevention).
+          Используйте параметры <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">overlap_policy</code>,{' '}
+          <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">max_instances</code> для контроля
+          параллельных выполнений.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export function HeartbeatsSection() {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Heartbeat-мониторы</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        Heartbeat-мониторы позволяют отслеживать работу ваших cron-задач и сервисов.
+        Создайте монитор, получите уникальный URL для пинга, и CronBox уведомит вас,
+        если пинг не получен вовремя.
+      </p>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Как это работает</h3>
+
+      <ol className="mt-4 space-y-4 text-gray-600 dark:text-gray-300">
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            1
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Создайте монитор</p>
+            <p className="text-sm">
+              Укажите ожидаемый интервал между пингами и grace period
+            </p>
+          </div>
+        </li>
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            2
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Получите URL для пинга</p>
+            <p className="text-sm">
+              Каждый монитор имеет уникальный URL вида{' '}
+              <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">https://api.cronbox.ru/ping/abc123</code>
+            </p>
+          </div>
+        </li>
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            3
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Добавьте пинг в ваш cron</p>
+            <p className="text-sm">
+              В конце вашего скрипта отправьте GET-запрос на URL монитора
+            </p>
+          </div>
+        </li>
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            4
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Получайте уведомления</p>
+            <p className="text-sm">
+              CronBox уведомит вас, если пинг не получен в ожидаемое время
+            </p>
+          </div>
+        </li>
+      </ol>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Эндпоинты</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/heartbeats" description="Список мониторов" />
+        <Endpoint method="POST" path="/heartbeats" description="Создание монитора" />
+        <Endpoint method="GET" path="/heartbeats/{id}" description="Получение монитора" />
+        <Endpoint method="PATCH" path="/heartbeats/{id}" description="Обновление монитора" />
+        <Endpoint method="DELETE" path="/heartbeats/{id}" description="Удаление монитора" />
+        <Endpoint method="POST" path="/heartbeats/{id}/pause" description="Приостановка монитора" />
+        <Endpoint method="POST" path="/heartbeats/{id}/resume" description="Возобновление монитора" />
+        <Endpoint method="GET" path="/heartbeats/{id}/pings" description="История пингов" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Создание монитора</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/workspaces/{workspace_id}/heartbeats \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Бэкап базы данных",
+    "description": "Ежедневный бэкап в 3:00",
+    "expected_interval": "24h",
+    "grace_period": "30m",
+    "notify_on_late": true,
+    "notify_on_recovery": true
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Формат интервалов</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        Интервалы указываются в удобном формате:
+      </p>
+      <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+        <li>
+          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">5m</code> - 5 минут
+        </li>
+        <li>
+          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">1h</code> - 1 час
+        </li>
+        <li>
+          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">24h</code> - 24 часа
+        </li>
+        <li>
+          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">7d</code> - 7 дней
+        </li>
+        <li>
+          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">1h30m</code> - 1 час 30 минут
+        </li>
+      </ul>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Пинг монитора</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        Публичный эндпоинт для отправки пинга (не требует авторизации):
+      </p>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/ping/{token}" description="Отправка пинга (публичный)" />
+        <Endpoint method="POST" path="/ping/{token}" description="Отправка пинга с данными" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Пример использования в cron</h3>
+
+      <CodeBlock
+        code={`# Crontab: бэкап каждый день в 3:00
+0 3 * * * /opt/scripts/backup.sh && curl -fsS https://api.cronbox.ru/ping/abc123
+
+# Или с проверкой exit code
+0 3 * * * /opt/scripts/backup.sh; curl https://api.cronbox.ru/ping/abc123?exit_code=$?`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Статусы монитора</h3>
+
+      <div className="mt-4 space-y-4">
+        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+          <h4 className="font-semibold text-green-800 dark:text-green-200">healthy</h4>
+          <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+            Пинг получен вовремя, всё работает нормально
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4">
+          <h4 className="font-semibold text-yellow-800 dark:text-yellow-200">waiting</h4>
+          <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+            Ожидание первого пинга или находится в grace period
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+          <h4 className="font-semibold text-red-800 dark:text-red-200">late</h4>
+          <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+            Пинг не получен в ожидаемое время — возможна проблема
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          <strong>Совет:</strong> Используйте grace period для учёта возможных задержек
+          выполнения. Например, если скрипт обычно выполняется 10 минут, установите
+          grace period в 15-20 минут.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function OverlapPreventionSection() {
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Предотвращение перекрытия</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Политика запуска</h2>
       <p className="mt-4 text-gray-600 dark:text-gray-300">
-        Overlap Prevention позволяет контролировать поведение задач, когда новое выполнение
+        Политика запуска позволяет контролировать поведение задач, когда новое выполнение
         запускается до завершения предыдущего. Это критически важно для задач, которые
         не должны выполняться параллельно.
       </p>
 
-      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Политики перекрытия</h3>
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Режимы запуска</h3>
 
       <div className="mt-4 space-y-4">
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -586,6 +945,8 @@ export const sectionComponents: Record<string, () => ReactNode> = {
   authentication: AuthenticationSection,
   'cron-tasks': CronTasksSection,
   'delayed-tasks': DelayedTasksSection,
+  'task-chains': TaskChainsSection,
+  heartbeats: HeartbeatsSection,
   'overlap-prevention': OverlapPreventionSection,
   executions: ExecutionsSection,
   notifications: NotificationsSection,

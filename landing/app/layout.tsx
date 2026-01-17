@@ -169,6 +169,7 @@ export default function RootLayout({
         </Script>
         <noscript>
           <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`https://mc.yandex.ru/watch/${YANDEX_METRIKA_ID}`}
               style={{ position: 'absolute', left: '-9999px' }}
@@ -193,6 +194,7 @@ export default function RootLayout({
         </Script>
         <noscript>
           <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`https://top-fwz1.mail.ru/counter?id=${VK_PIXEL_ID};js=na`}
               style={{ position: 'absolute', left: '-9999px' }}

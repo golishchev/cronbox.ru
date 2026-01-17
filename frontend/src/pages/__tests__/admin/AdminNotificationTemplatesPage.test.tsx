@@ -165,7 +165,7 @@ describe('AdminNotificationTemplatesPage', () => {
   })
 
   it('should update template when save clicked', async () => {
-    vi.mocked(adminApi.updateNotificationTemplate).mockResolvedValue({} as any)
+    vi.mocked(adminApi.updateNotificationTemplate).mockResolvedValue({} as unknown as Awaited<ReturnType<typeof adminApi.updateNotificationTemplate>>)
 
     const { user } = render(<AdminNotificationTemplatesPage onNavigate={mockOnNavigate} />)
 

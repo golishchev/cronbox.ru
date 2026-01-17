@@ -112,6 +112,12 @@ class BillingService:
                         "max_chain_steps": p.max_chain_steps,
                         "chain_variable_substitution": p.chain_variable_substitution,
                         "min_chain_interval_minutes": p.min_chain_interval_minutes,
+                        # Heartbeat monitor limits
+                        "max_heartbeats": p.max_heartbeats,
+                        "min_heartbeat_interval_minutes": p.min_heartbeat_interval_minutes,
+                        # Overlap prevention settings
+                        "overlap_prevention_enabled": p.overlap_prevention_enabled,
+                        "max_queue_size": p.max_queue_size,
                         "is_active": p.is_active,
                         "is_public": p.is_public,
                         "sort_order": p.sort_order,

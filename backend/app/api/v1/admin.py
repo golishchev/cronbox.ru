@@ -13,9 +13,11 @@ from app.models import (
     CronTask,
     DelayedTask,
     Execution,
+    Heartbeat,
     Payment,
     Plan,
     Subscription,
+    TaskChain,
     User,
     Workspace,
 )
@@ -54,6 +56,10 @@ class AdminStatsResponse(BaseModel):
     active_cron_tasks: int
     total_delayed_tasks: int
     pending_delayed_tasks: int
+    total_task_chains: int
+    active_task_chains: int
+    total_heartbeats: int
+    active_heartbeats: int
     total_executions: int
     executions_today: int
     executions_this_week: int
@@ -73,8 +79,15 @@ class UserListItem(BaseModel):
     email_verified: bool
     telegram_username: str | None
     created_at: datetime
+    last_login_at: datetime | None
     workspaces_count: int
-    tasks_count: int
+    cron_tasks_count: int
+    delayed_tasks_count: int
+    task_chains_count: int
+    heartbeats_count: int
+    executions_count: int
+    plan_name: str
+    subscription_ends_at: datetime | None
 
     class Config:
         from_attributes = True
@@ -100,6 +113,8 @@ class WorkspaceListItem(BaseModel):
     plan_name: str
     cron_tasks_count: int
     delayed_tasks_count: int
+    task_chains_count: int
+    heartbeats_count: int
     executions_count: int
     created_at: datetime
 
@@ -153,6 +168,16 @@ async def get_admin_stats(admin: AdminUser, db: DB):
     total_delayed = await db.scalar(select(func.count(DelayedTask.id)))
     pending_delayed = await db.scalar(select(func.count(DelayedTask.id)).where(DelayedTask.status == "pending"))
 
+    # Task chains stats
+    total_chains = await db.scalar(select(func.count(TaskChain.id)))
+    active_chains = await db.scalar(select(func.count(TaskChain.id)).where(TaskChain.is_active.is_(True)))
+
+    # Heartbeat stats (active = not paused)
+    total_heartbeats = await db.scalar(select(func.count(Heartbeat.id)))
+    active_heartbeats = await db.scalar(
+        select(func.count(Heartbeat.id)).where(Heartbeat.status != "paused")
+    )
+
     # Execution stats
     total_executions = await db.scalar(select(func.count(Execution.id)))
     executions_today = await db.scalar(select(func.count(Execution.id)).where(Execution.started_at >= today))
@@ -201,6 +226,10 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         active_cron_tasks=active_cron or 0,
         total_delayed_tasks=total_delayed or 0,
         pending_delayed_tasks=pending_delayed or 0,
+        total_task_chains=total_chains or 0,
+        active_task_chains=active_chains or 0,
+        total_heartbeats=total_heartbeats or 0,
+        active_heartbeats=active_heartbeats or 0,
         total_executions=total_executions or 0,
         executions_today=executions_today or 0,
         executions_this_week=executions_this_week or 0,
@@ -241,9 +270,34 @@ async def list_users(
     user_items = []
     for user in users:
         workspace_count = await db.scalar(select(func.count(Workspace.id)).where(Workspace.owner_id == user.id))
-        tasks_count = await db.scalar(
+        cron_tasks_count = await db.scalar(
             select(func.count(CronTask.id)).join(Workspace).where(Workspace.owner_id == user.id)
         )
+        delayed_tasks_count = await db.scalar(
+            select(func.count(DelayedTask.id)).join(Workspace).where(Workspace.owner_id == user.id)
+        )
+        task_chains_count = await db.scalar(
+            select(func.count(TaskChain.id)).join(Workspace).where(Workspace.owner_id == user.id)
+        )
+        heartbeats_count = await db.scalar(
+            select(func.count(Heartbeat.id)).join(Workspace).where(Workspace.owner_id == user.id)
+        )
+        executions_count = await db.scalar(
+            select(func.count(Execution.id)).join(Workspace).where(Workspace.owner_id == user.id)
+        )
+
+        # Get active subscription
+        sub = await db.scalar(
+            select(Subscription)
+            .options(selectinload(Subscription.plan))
+            .where(
+                Subscription.user_id == user.id,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+            .order_by(Subscription.created_at.desc())
+        )
+        plan_name = sub.plan.name if sub and sub.plan else "free"
+        subscription_ends_at = sub.current_period_end if sub else None
 
         user_items.append(
             UserListItem(
@@ -255,8 +309,15 @@ async def list_users(
                 email_verified=user.email_verified,
                 telegram_username=user.telegram_username,
                 created_at=user.created_at,
+                last_login_at=user.last_login_at,
                 workspaces_count=workspace_count or 0,
-                tasks_count=tasks_count or 0,
+                cron_tasks_count=cron_tasks_count or 0,
+                delayed_tasks_count=delayed_tasks_count or 0,
+                task_chains_count=task_chains_count or 0,
+                heartbeats_count=heartbeats_count or 0,
+                executions_count=executions_count or 0,
+                plan_name=plan_name,
+                subscription_ends_at=subscription_ends_at,
             )
         )
 
@@ -276,7 +337,34 @@ async def get_user(admin: AdminUser, db: DB, user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
 
     workspace_count = await db.scalar(select(func.count(Workspace.id)).where(Workspace.owner_id == user.id))
-    tasks_count = await db.scalar(select(func.count(CronTask.id)).join(Workspace).where(Workspace.owner_id == user.id))
+    cron_tasks_count = await db.scalar(
+        select(func.count(CronTask.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
+    delayed_tasks_count = await db.scalar(
+        select(func.count(DelayedTask.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
+    task_chains_count = await db.scalar(
+        select(func.count(TaskChain.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
+    heartbeats_count = await db.scalar(
+        select(func.count(Heartbeat.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
+    executions_count = await db.scalar(
+        select(func.count(Execution.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
+
+    # Get active subscription
+    sub = await db.scalar(
+        select(Subscription)
+        .options(selectinload(Subscription.plan))
+        .where(
+            Subscription.user_id == user.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+        .order_by(Subscription.created_at.desc())
+    )
+    plan_name = sub.plan.name if sub and sub.plan else "free"
+    subscription_ends_at = sub.current_period_end if sub else None
 
     return UserListItem(
         id=str(user.id),
@@ -287,8 +375,15 @@ async def get_user(admin: AdminUser, db: DB, user_id: str):
         email_verified=user.email_verified,
         telegram_username=user.telegram_username,
         created_at=user.created_at,
+        last_login_at=user.last_login_at,
         workspaces_count=workspace_count or 0,
-        tasks_count=tasks_count or 0,
+        cron_tasks_count=cron_tasks_count or 0,
+        delayed_tasks_count=delayed_tasks_count or 0,
+        task_chains_count=task_chains_count or 0,
+        heartbeats_count=heartbeats_count or 0,
+        executions_count=executions_count or 0,
+        plan_name=plan_name,
+        subscription_ends_at=subscription_ends_at,
     )
 
 
@@ -427,6 +522,8 @@ async def list_workspaces(
     for ws in workspaces:
         cron_count = await db.scalar(select(func.count(CronTask.id)).where(CronTask.workspace_id == ws.id))
         delayed_count = await db.scalar(select(func.count(DelayedTask.id)).where(DelayedTask.workspace_id == ws.id))
+        chains_count = await db.scalar(select(func.count(TaskChain.id)).where(TaskChain.workspace_id == ws.id))
+        heartbeats_count = await db.scalar(select(func.count(Heartbeat.id)).where(Heartbeat.workspace_id == ws.id))
         exec_count = await db.scalar(select(func.count(Execution.id)).where(Execution.workspace_id == ws.id))
 
         # Get subscription plan
@@ -451,6 +548,8 @@ async def list_workspaces(
                 plan_name=plan_name,
                 cron_tasks_count=cron_count or 0,
                 delayed_tasks_count=delayed_count or 0,
+                task_chains_count=chains_count or 0,
+                heartbeats_count=heartbeats_count or 0,
                 executions_count=exec_count or 0,
                 created_at=ws.created_at,
             )
@@ -647,7 +746,7 @@ class CreatePlanRequest(BaseModel):
     min_heartbeat_interval_minutes: int = Field(default=5, ge=1)
     # Overlap prevention settings
     overlap_prevention_enabled: bool = False
-    max_queue_size: int = Field(default=10, ge=1)
+    max_queue_size: int = Field(default=10, ge=0)
     is_active: bool = True
     is_public: bool = True
     sort_order: int = 0
@@ -680,7 +779,7 @@ class UpdatePlanRequest(BaseModel):
     min_heartbeat_interval_minutes: int | None = Field(default=None, ge=1)
     # Overlap prevention settings
     overlap_prevention_enabled: bool | None = None
-    max_queue_size: int | None = Field(default=None, ge=1)
+    max_queue_size: int | None = Field(default=None, ge=0)
     is_active: bool | None = None
     is_public: bool | None = None
     sort_order: int | None = None

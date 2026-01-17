@@ -20,8 +20,8 @@ from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.task_chains import TaskChainRepository
-from app.models.cron_task import OverlapPolicy, TaskStatus
-from app.models.task_chain import TriggerType
+from app.models.cron_task import CronTask, OverlapPolicy, TaskStatus
+from app.models.task_chain import TaskChain, TriggerType
 from app.schemas.worker import WorkerTaskInfo
 from app.services.overlap import OverlapAction, overlap_service
 from app.services.worker import worker_service

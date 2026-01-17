@@ -531,6 +531,7 @@ testI18n.use(initReactI18next).init({
 
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>
 
+// eslint-disable-next-line react-refresh/only-export-components
 function AllProviders({ children }: { children: React.ReactNode }) {
   return <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
 }
@@ -543,6 +544,7 @@ function customRender(ui: ReactElement, options?: CustomRenderOptions) {
 }
 
 // Re-export everything
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'
 export { customRender as render }
 export { userEvent }

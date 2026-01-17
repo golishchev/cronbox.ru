@@ -105,8 +105,9 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       } else {
         setError(t('apiErrors.failedToGetPaymentUrl'))
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('apiErrors.failedToCreatePayment'))
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setError(error.response?.data?.detail || t('apiErrors.failedToCreatePayment'))
     } finally {
       setProcessing(false)
       setShowUpgradeDialog(false)
@@ -120,8 +121,9 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     try {
       await cancelScheduledChange()
       await loadBillingData()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to cancel scheduled change')
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setError(error.response?.data?.detail || 'Failed to cancel scheduled change')
     } finally {
       setProcessing(false)
     }
@@ -135,8 +137,9 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
       await cancelSubscription()
       await loadBillingData()
       setShowCancelDialog(false)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to cancel subscription')
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setError(error.response?.data?.detail || 'Failed to cancel subscription')
     } finally {
       setProcessing(false)
     }

@@ -35,6 +35,12 @@ PLANS = [
         "max_chain_steps": 5,
         "chain_variable_substitution": False,
         "min_chain_interval_minutes": 15,
+        # Heartbeat monitors
+        "max_heartbeats": 1,
+        "min_heartbeat_interval_minutes": 60,
+        # Launch policy (overlap prevention)
+        "overlap_prevention_enabled": False,
+        "max_queue_size": 0,
         "is_active": True,
         "is_public": True,
         "sort_order": 0,
@@ -60,6 +66,12 @@ PLANS = [
         "max_chain_steps": 5,
         "chain_variable_substitution": True,
         "min_chain_interval_minutes": 15,
+        # Heartbeat monitors
+        "max_heartbeats": 10,
+        "min_heartbeat_interval_minutes": 5,
+        # Launch policy (overlap prevention)
+        "overlap_prevention_enabled": True,
+        "max_queue_size": 10,
         "is_active": True,
         "is_public": True,
         "sort_order": 1,
@@ -85,6 +97,12 @@ PLANS = [
         "max_chain_steps": 15,
         "chain_variable_substitution": True,
         "min_chain_interval_minutes": 1,
+        # Heartbeat monitors
+        "max_heartbeats": 50,
+        "min_heartbeat_interval_minutes": 1,
+        # Launch policy (overlap prevention)
+        "overlap_prevention_enabled": True,
+        "max_queue_size": 100,
         "is_active": True,
         "is_public": True,
         "sort_order": 2,

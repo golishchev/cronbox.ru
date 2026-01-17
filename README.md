@@ -237,3 +237,19 @@ docker-compose -f docker-compose.prod.yml up -d
 ## Лицензия
 
 Proprietary. Все права защищены.
+
+
+  # Создать пользователей
+  cd backend && uv run python scripts/seed_loadtest_users.py
+
+  # Удалить пользователей после тестирования
+  cd backend && uv run python scripts/seed_loadtest_users.py --cleanup
+
+  Скрипт создаст 5 пользователей:
+  - loadtest1@example.com — loadtest5@example.com
+  - Пароль: LoadTest123!
+  - Email уже верифицирован
+  - У каждого создан workspace
+
+
+  uv run locust -f /Users/golishchev/Developer/cronbox.ru/backend/tests/load/locustfile.py --users 10 --spawn-rate 1 --run-time 5m --headless --html=baseline.html

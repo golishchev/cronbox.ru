@@ -73,6 +73,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
 
   useEffect(() => {
     loadTasks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 
   const handlePauseResume = async (task: CronTask) => {
