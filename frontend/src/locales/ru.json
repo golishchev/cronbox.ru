@@ -535,6 +535,7 @@
     "emailNotifications": "Email уведомления",
     "webhookCallbacks": "Webhook callback",
     "autoRetry": "Авто-повтор при ошибке",
+    "taskChains": "цепочек задач",
     "paymentHistory": "История платежей",
     "amount": "Сумма",
     "upgradeTo": "Выбрать {{plan}}",

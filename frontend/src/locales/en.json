@@ -528,6 +528,7 @@
     "emailNotifications": "Email notifications",
     "webhookCallbacks": "Webhook callbacks",
     "autoRetry": "Auto retry on failure",
+    "taskChains": "task chains",
     "paymentHistory": "Payment History",
     "amount": "Amount",
     "upgradeTo": "Select {{plan}}",
