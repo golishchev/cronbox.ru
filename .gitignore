@@ -3,30 +3,51 @@
 .env.*
 !.env.example
 
-# TypeScript build info
-*.tsbuildinfo
+# OS files
+.DS_Store
+Thumbs.db
 
-# Load test reports
-baseline.html
-*_report.html
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
+*.egg-info/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Python build
 build/
 dist/
 wheels/
-*.egg-info
-
-# Virtual environments
-.venv
 
 # Node.js
 node_modules/
 .next/
 
-# Test coverage artifacts
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
 .coverage
 htmlcov/
+coverage/
 coverage.xml
 *.cover
+
+# Logs
+*.log
+logs/
+
+# Load test reports
+baseline.html
+*_report.html
+
+# Runtime uploads
+uploads/
