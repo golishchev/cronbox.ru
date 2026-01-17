@@ -50,7 +50,10 @@ class Heartbeat(Base, UUIDMixin, TimestampMixin):
 
     # State
     status: Mapped[HeartbeatStatus] = mapped_column(
-        SQLEnum(HeartbeatStatus),
+        SQLEnum(
+            HeartbeatStatus,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
         default=HeartbeatStatus.WAITING,
     )
     is_paused: Mapped[bool] = mapped_column(Boolean, default=False)

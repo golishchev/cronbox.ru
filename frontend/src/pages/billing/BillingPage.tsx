@@ -358,12 +358,24 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_cron_tasks} {t('billing.cronTasks')}</span>
+                    <span>{plan.max_cron_tasks} {t('billing.cronTasks', { count: plan.max_cron_tasks })}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
-                    <span>{plan.max_delayed_tasks_per_month} {t('billing.delayedTasksMonth')}</span>
+                    <span>{plan.max_delayed_tasks_per_month} {t('billing.delayedTasksMonth', { count: plan.max_delayed_tasks_per_month })}</span>
                   </li>
+                  {plan.max_task_chains > 0 && (
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{plan.max_task_chains} {t('billing.taskChains', { count: plan.max_task_chains })}</span>
+                    </li>
+                  )}
+                  {plan.max_heartbeats > 0 && (
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{plan.max_heartbeats} {t('billing.heartbeats', { count: plan.max_heartbeats })}</span>
+                    </li>
+                  )}
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
                     <span>{plan.max_workspaces} {t('billing.workspaces', { count: plan.max_workspaces })}</span>
@@ -398,12 +410,6 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />
                       <span>{t('billing.autoRetry')}</span>
-                    </li>
-                  )}
-                  {plan.max_task_chains > 0 && (
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>{plan.max_task_chains} {t('billing.taskChains')}</span>
                     </li>
                   )}
                 </ul>

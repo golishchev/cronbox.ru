@@ -128,6 +128,9 @@ export interface AdminPlan {
   max_chain_steps: number
   chain_variable_substitution: boolean
   min_chain_interval_minutes: number
+  // Heartbeats limits
+  max_heartbeats: number
+  min_heartbeat_interval_minutes: number
   is_active: boolean
   is_public: boolean
   sort_order: number
@@ -161,6 +164,9 @@ export interface CreatePlanRequest {
   max_chain_steps?: number
   chain_variable_substitution?: boolean
   min_chain_interval_minutes?: number
+  // Heartbeats limits
+  max_heartbeats?: number
+  min_heartbeat_interval_minutes?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number
@@ -186,6 +192,9 @@ export interface UpdatePlanRequest {
   max_chain_steps?: number
   chain_variable_substitution?: boolean
   min_chain_interval_minutes?: number
+  // Heartbeats limits
+  max_heartbeats?: number
+  min_heartbeat_interval_minutes?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number

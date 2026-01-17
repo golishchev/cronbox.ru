@@ -69,6 +69,9 @@ const defaultPlanData: CreatePlanRequest = {
   max_chain_steps: 5,
   chain_variable_substitution: false,
   min_chain_interval_minutes: 15,
+  // Heartbeats
+  max_heartbeats: 0,
+  min_heartbeat_interval_minutes: 5,
   is_active: true,
   is_public: true,
   sort_order: 0,
@@ -138,6 +141,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       max_chain_steps: plan.max_chain_steps,
       chain_variable_substitution: plan.chain_variable_substitution,
       min_chain_interval_minutes: plan.min_chain_interval_minutes,
+      // Heartbeats
+      max_heartbeats: plan.max_heartbeats,
+      min_heartbeat_interval_minutes: plan.min_heartbeat_interval_minutes,
       is_active: plan.is_active,
       is_public: plan.is_public,
       sort_order: plan.sort_order,
@@ -282,6 +288,8 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     <div className="text-sm space-y-0.5">
                       <p>{plan.max_cron_tasks} cron</p>
                       <p>{plan.max_delayed_tasks_per_month} {t('admin.plans.delayedPerMonth')}</p>
+                      {plan.max_task_chains > 0 && <p>{plan.max_task_chains} {t('admin.plans.chains')}</p>}
+                      {plan.max_heartbeats > 0 && <p>{plan.max_heartbeats} {t('admin.plans.monitors')}</p>}
                       <p>{plan.min_cron_interval_minutes} {t('admin.plans.minInterval')}</p>
                     </div>
                   </TableCell>
@@ -571,6 +579,33 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   checked={formData.chain_variable_substitution}
                   onCheckedChange={(checked) => setFormData({ ...formData, chain_variable_substitution: checked })}
                 />
+              </div>
+            </div>
+
+            {/* Heartbeats */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">{t('admin.plans.heartbeats')}</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_heartbeats" className="text-sm">{t('admin.plans.maxHeartbeats')}</Label>
+                  <Input
+                    id="max_heartbeats"
+                    type="number"
+                    min={0}
+                    value={formData.max_heartbeats}
+                    onChange={(e) => setFormData({ ...formData, max_heartbeats: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="min_heartbeat_interval" className="text-sm">{t('admin.plans.minHeartbeatInterval')}</Label>
+                  <Input
+                    id="min_heartbeat_interval"
+                    type="number"
+                    min={1}
+                    value={formData.min_heartbeat_interval_minutes}
+                    onChange={(e) => setFormData({ ...formData, min_heartbeat_interval_minutes: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
               </div>
             </div>
 
