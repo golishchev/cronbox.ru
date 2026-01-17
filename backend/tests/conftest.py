@@ -112,6 +112,8 @@ async def free_plan(db_session: AsyncSession) -> Plan:
         max_chain_steps=5,
         chain_variable_substitution=True,
         min_chain_interval_minutes=5,
+        # Heartbeat limits
+        max_heartbeats=3,
         is_active=True,
         is_public=True,
         sort_order=0,
@@ -146,6 +148,8 @@ async def pro_plan(db_session: AsyncSession) -> Plan:
         max_chain_steps=20,
         chain_variable_substitution=True,
         min_chain_interval_minutes=1,
+        # Heartbeat limits
+        max_heartbeats=50,
         is_active=True,
         is_public=True,
         sort_order=1,

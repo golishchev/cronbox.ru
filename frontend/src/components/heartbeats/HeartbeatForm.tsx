@@ -133,7 +133,6 @@ export function HeartbeatForm({ workspaceId, heartbeat, onSuccess, onCancel }: H
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t('heartbeats.namePlaceholder')}
-          required
         />
       </div>
 
