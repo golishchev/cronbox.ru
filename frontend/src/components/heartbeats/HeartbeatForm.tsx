@@ -39,25 +39,8 @@ function secondsToInterval(seconds: number): string {
   return `${seconds}s`
 }
 
-const INTERVAL_PRESETS = [
-  { value: '5m', label: '5 minutes' },
-  { value: '10m', label: '10 minutes' },
-  { value: '15m', label: '15 minutes' },
-  { value: '30m', label: '30 minutes' },
-  { value: '1h', label: '1 hour' },
-  { value: '2h', label: '2 hours' },
-  { value: '6h', label: '6 hours' },
-  { value: '12h', label: '12 hours' },
-  { value: '1d', label: '1 day' },
-]
-
-const GRACE_PRESETS = [
-  { value: '5m', label: '5 minutes' },
-  { value: '10m', label: '10 minutes' },
-  { value: '15m', label: '15 minutes' },
-  { value: '30m', label: '30 minutes' },
-  { value: '1h', label: '1 hour' },
-]
+const INTERVAL_VALUES = ['5m', '10m', '15m', '30m', '1h', '2h', '6h', '12h', '1d'] as const
+const GRACE_VALUES = ['5m', '10m', '15m', '30m', '1h'] as const
 
 export function HeartbeatForm({ workspaceId, heartbeat, onSuccess, onCancel }: HeartbeatFormProps) {
   const { t } = useTranslation()
@@ -172,9 +155,9 @@ export function HeartbeatForm({ workspaceId, heartbeat, onSuccess, onCancel }: H
               <SelectValue placeholder={t('heartbeats.selectInterval')} />
             </SelectTrigger>
             <SelectContent>
-              {INTERVAL_PRESETS.map((preset) => (
-                <SelectItem key={preset.value} value={preset.value}>
-                  {preset.label}
+              {INTERVAL_VALUES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`heartbeats.intervals.${value}`)}
                 </SelectItem>
               ))}
               <SelectItem value="custom">{t('common.custom')}</SelectItem>
@@ -200,9 +183,9 @@ export function HeartbeatForm({ workspaceId, heartbeat, onSuccess, onCancel }: H
               <SelectValue placeholder={t('heartbeats.selectGracePeriod')} />
             </SelectTrigger>
             <SelectContent>
-              {GRACE_PRESETS.map((preset) => (
-                <SelectItem key={preset.value} value={preset.value}>
-                  {preset.label}
+              {GRACE_VALUES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`heartbeats.intervals.${value}`)}
                 </SelectItem>
               ))}
               <SelectItem value="custom">{t('common.custom')}</SelectItem>

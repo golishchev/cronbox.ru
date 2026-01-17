@@ -399,6 +399,17 @@
   "heartbeats": {
     "title": "Heartbeats",
     "subtitle": "Monitor your scheduled jobs with Dead Man's Switch",
+    "intervals": {
+      "5m": "5 minutes",
+      "10m": "10 minutes",
+      "15m": "15 minutes",
+      "30m": "30 minutes",
+      "1h": "1 hour",
+      "2h": "2 hours",
+      "6h": "6 hours",
+      "12h": "12 hours",
+      "1d": "1 day"
+    },
     "create": "Create Heartbeat",
     "createHeartbeat": "Create Heartbeat Monitor",
     "createDescription": "Create a monitor that alerts you when expected pings are not received",
