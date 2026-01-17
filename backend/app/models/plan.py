@@ -38,6 +38,10 @@ class Plan(Base, UUIDMixin, TimestampMixin):
     chain_variable_substitution: Mapped[bool] = mapped_column(Boolean, default=False)
     min_chain_interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
 
+    # Heartbeat monitor limits
+    max_heartbeats: Mapped[int] = mapped_column(Integer, default=0)
+    min_heartbeat_interval_minutes: Mapped[int] = mapped_column(Integer, default=5)
+
     # Overlap prevention settings
     overlap_prevention_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     max_queue_size: Mapped[int] = mapped_column(Integer, default=10)

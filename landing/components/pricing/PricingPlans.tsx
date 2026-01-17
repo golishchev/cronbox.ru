@@ -54,13 +54,26 @@ function generateFeatures(plan: Plan): string[] {
 
   features.push(`До ${plan.max_cron_tasks} cron-задач`)
   features.push(`До ${plan.max_delayed_tasks_per_month} отложенных задач в месяц`)
-  features.push(`Минимальный интервал: ${formatInterval(plan.min_cron_interval_minutes)}`)
+
+  if (plan.max_task_chains > 0) {
+    features.push(
+      `До ${plan.max_task_chains} ${pluralize(plan.max_task_chains, 'цепочки задач', 'цепочек задач', 'цепочек задач')}`
+    )
+  }
+
+  if (plan.max_heartbeats > 0) {
+    features.push(
+      `До ${plan.max_heartbeats} ${pluralize(plan.max_heartbeats, 'монитора', 'мониторов', 'мониторов')}`
+    )
+  }
+
   features.push(
     `${plan.max_workspaces} ${pluralize(plan.max_workspaces, 'рабочее пространство', 'рабочих пространства', 'рабочих пространств')}`
   )
   features.push(
     `История за ${plan.max_execution_history_days} ${pluralize(plan.max_execution_history_days, 'день', 'дня', 'дней')}`
   )
+  features.push(`Минимальный интервал: ${formatInterval(plan.min_cron_interval_minutes)}`)
 
   if (plan.email_notifications && plan.telegram_notifications) {
     features.push('Email + Telegram уведомления')

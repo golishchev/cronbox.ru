@@ -5,6 +5,7 @@ from app.models.cron_task import CronTask, HttpMethod, OverlapPolicy, TaskStatus
 from app.models.delayed_task import DelayedTask
 from app.models.email_log import EmailLog, EmailStatus, EmailType
 from app.models.execution import Execution
+from app.models.heartbeat import Heartbeat, HeartbeatPing, HeartbeatStatus
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationChannel, NotificationTemplate
 from app.models.payment import Payment, PaymentStatus
@@ -25,6 +26,9 @@ __all__ = [
     "CronTask",
     "DelayedTask",
     "Execution",
+    "Heartbeat",
+    "HeartbeatPing",
+    "HeartbeatStatus",
     "Subscription",
     "Payment",
     "NotificationSettings",

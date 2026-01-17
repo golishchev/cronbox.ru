@@ -18,6 +18,7 @@ export interface Plan {
   custom_headers: boolean
   retry_on_failure: boolean
   max_task_chains: number
+  max_heartbeats: number
 }
 
 export interface Subscription {

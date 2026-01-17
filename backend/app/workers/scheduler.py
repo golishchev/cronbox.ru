@@ -49,6 +49,7 @@ class TaskScheduler:
             self._poll_cron_tasks(),
             self._poll_delayed_tasks(),
             self._poll_task_chains(),
+            self._poll_heartbeats(),
             self._update_next_run_times(),
             self._check_subscriptions(),
             self._check_pending_payments(),
@@ -92,6 +93,31 @@ class TaskScheduler:
                 logger.error("Error processing task chains", error=str(e))
 
             await asyncio.sleep(5)
+
+    async def _poll_heartbeats(self):
+        """Poll for overdue heartbeat monitors every 30 seconds."""
+        while self.running:
+            try:
+                await self._process_heartbeat_checks()
+            except Exception as e:
+                logger.error("Error processing heartbeat checks", error=str(e))
+
+            await asyncio.sleep(30)
+
+    async def _process_heartbeat_checks(self):
+        """Check for overdue heartbeat monitors and send alerts."""
+        from app.services.heartbeat import heartbeat_service
+
+        async with async_session_factory() as db:
+            # Check for late heartbeats (grace period expired)
+            late_count = await heartbeat_service.check_overdue_heartbeats(db)
+            if late_count > 0:
+                logger.info(f"Marked {late_count} heartbeat(s) as late")
+
+            # Check for dead heartbeats (3+ consecutive misses)
+            dead_count = await heartbeat_service.check_dead_heartbeats(db)
+            if dead_count > 0:
+                logger.info(f"Marked {dead_count} heartbeat(s) as dead")
 
     async def _update_next_run_times(self):
         """Update next_run_at for tasks that need it, every minute."""
