@@ -7,6 +7,7 @@ describe('uiStore', () => {
     // Reset store state before each test
     useUIStore.setState({
       sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       theme: 'system',
     })
   })
@@ -16,6 +17,12 @@ describe('uiStore', () => {
       const state = useUIStore.getState()
 
       expect(state.sidebarCollapsed).toBe(false)
+    })
+
+    it('should have mobile sidebar closed by default', () => {
+      const state = useUIStore.getState()
+
+      expect(state.mobileSidebarOpen).toBe(false)
     })
 
     it('should have system theme by default', () => {
@@ -83,6 +90,48 @@ describe('uiStore', () => {
         useUIStore.getState().toggleSidebar()
       })
       expect(useUIStore.getState().sidebarCollapsed).toBe(true)
+    })
+  })
+
+  describe('setMobileSidebarOpen', () => {
+    it('should open mobile sidebar', () => {
+      act(() => {
+        useUIStore.getState().setMobileSidebarOpen(true)
+      })
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true)
+    })
+
+    it('should close mobile sidebar', () => {
+      useUIStore.setState({ mobileSidebarOpen: true })
+
+      act(() => {
+        useUIStore.getState().setMobileSidebarOpen(false)
+      })
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false)
+    })
+  })
+
+  describe('toggleMobileSidebar', () => {
+    it('should toggle mobile sidebar from closed to open', () => {
+      useUIStore.setState({ mobileSidebarOpen: false })
+
+      act(() => {
+        useUIStore.getState().toggleMobileSidebar()
+      })
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true)
+    })
+
+    it('should toggle mobile sidebar from open to closed', () => {
+      useUIStore.setState({ mobileSidebarOpen: true })
+
+      act(() => {
+        useUIStore.getState().toggleMobileSidebar()
+      })
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false)
     })
   })
 

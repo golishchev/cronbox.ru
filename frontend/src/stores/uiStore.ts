@@ -7,6 +7,9 @@ interface UIState {
   sidebarCollapsed: boolean
   setSidebarCollapsed: (collapsed: boolean) => void
   toggleSidebar: () => void
+  mobileSidebarOpen: boolean
+  setMobileSidebarOpen: (open: boolean) => void
+  toggleMobileSidebar: () => void
   theme: Theme
   setTheme: (theme: Theme) => void
 }
@@ -31,6 +34,9 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed: false,
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      mobileSidebarOpen: false,
+      setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
+      toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
       theme: 'system',
       setTheme: (theme) => {
         applyTheme(theme)
@@ -39,6 +45,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'cronbox-ui',
+      partialize: (state) => ({ sidebarCollapsed: state.sidebarCollapsed, theme: state.theme }),
       onRehydrateStorage: () => (state) => {
         if (state?.theme) {
           applyTheme(state.theme)
