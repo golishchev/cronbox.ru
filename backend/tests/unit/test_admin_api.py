@@ -22,6 +22,7 @@ def create_mock_user(**kwargs):
     mock.preferred_language = kwargs.get("preferred_language", "ru")
     mock.created_at = kwargs.get("created_at", datetime.now(timezone.utc))
     mock.updated_at = kwargs.get("updated_at", datetime.now(timezone.utc))
+    mock.last_login_at = kwargs.get("last_login_at", None)
     return mock
 
 
@@ -95,11 +96,19 @@ class TestGetUser:
         mock_db = MagicMock()
         user_id = str(uuid4())
         mock_user = create_mock_user(id=user_id)
+        mock_sub = create_mock_subscription()
 
         async def mock_get(model, id):
             return mock_user
 
+        call_count = 0
+
         async def mock_scalar(query):
+            nonlocal call_count
+            call_count += 1
+            # Calls: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-executions, 7-subscription
+            if call_count == 7:
+                return mock_sub
             return 5
 
         mock_db.get = mock_get
@@ -219,9 +228,20 @@ class TestListUsers:
         mock_admin = create_mock_admin()
         mock_db = MagicMock()
         mock_users = [create_mock_user(), create_mock_user()]
+        mock_sub = create_mock_subscription()
+
+        call_count = 0
 
         async def mock_scalar(query):
-            return 2
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return 2  # total count
+            # For each user: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-executions, 7-subscription
+            # Subscription calls are at 8, 15 (for 2 users: 1 + 7*1 + 1 = 8, 1 + 7*2 = 15)
+            if (call_count - 1) % 7 == 0 and call_count > 1:
+                return mock_sub
+            return 5
 
         async def mock_execute(query):
             result = MagicMock()
@@ -244,9 +264,19 @@ class TestListUsers:
         mock_admin = create_mock_admin()
         mock_db = MagicMock()
         mock_users = [create_mock_user(email="search@example.com")]
+        mock_sub = create_mock_subscription()
+
+        call_count = 0
 
         async def mock_scalar(query):
-            return 1
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return 1  # total count
+            # For 1 user: subscription is at call 8 (1 + 7)
+            if call_count == 8:
+                return mock_sub
+            return 3
 
         async def mock_execute(query):
             result = MagicMock()
@@ -307,11 +337,11 @@ class TestListWorkspaces:
             call_count += 1
             if call_count == 1:
                 return 2  # total count
-            # For each workspace: cron, delayed, exec, subscription
-            # So subscription is at 5, 9 (for 2 workspaces)
-            if call_count in [5, 9]:
+            # For each workspace: cron, delayed, chains, heartbeats, exec, subscription (6 calls)
+            # So subscription is at 7, 13 (for 2 workspaces: 1 + 6 = 7, 1 + 12 = 13)
+            if call_count in [7, 13]:
                 return mock_sub
-            return 5  # counts for cron/delayed/executions
+            return 5  # counts for cron/delayed/chains/heartbeats/executions
 
         async def mock_execute(query):
             result = MagicMock()
@@ -342,9 +372,10 @@ class TestListWorkspaces:
             call_count += 1
             if call_count == 1:
                 return 1  # total count
-            if call_count == 5:  # subscription query for 1 workspace
+            # For 1 workspace: subscription is at call 7 (1 + 6)
+            if call_count == 7:
                 return mock_sub
-            return 3  # counts for cron/delayed/executions
+            return 3  # counts for cron/delayed/chains/heartbeats/executions
 
         async def mock_execute(query):
             result = MagicMock()

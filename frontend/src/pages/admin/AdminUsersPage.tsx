@@ -290,6 +290,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(user)}
+                        aria-label={t('common.edit')}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
