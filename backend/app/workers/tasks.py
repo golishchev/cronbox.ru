@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -650,7 +651,7 @@ async def execute_chain(
                 )
 
                 # Execute HTTP request with retry
-                result = None
+                result: dict[str, Any] | None = None
                 for attempt in range(step.retry_count + 1):
                     result = await execute_http_task(
                         ctx,
@@ -664,6 +665,9 @@ async def execute_chain(
                         break
                     if attempt < step.retry_count:
                         await asyncio.sleep(step.retry_delay_seconds)
+
+                # result is always set because retry_count >= 0, so loop runs at least once
+                assert result is not None
 
                 status_code = result.get("status_code")
                 response_body = result.get("body")

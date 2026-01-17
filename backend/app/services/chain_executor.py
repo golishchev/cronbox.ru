@@ -214,6 +214,9 @@ def evaluate_condition(
                 except re.error as e:
                     return False, f"Invalid regex pattern: {e}"
 
+            # Should not reach here, but satisfy mypy
+            return False, f"Unknown field operator: {operator}"
+
         # Existence conditions
         elif operator == "exists":
             if not field:
