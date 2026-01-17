@@ -38,6 +38,14 @@ class PlanResponse(BaseModel):
     chain_variable_substitution: bool
     min_chain_interval_minutes: int
 
+    # Heartbeat monitor limits
+    max_heartbeats: int
+    min_heartbeat_interval_minutes: int
+
+    # Overlap prevention settings
+    overlap_prevention_enabled: bool
+    max_queue_size: int
+
     # Visibility
     is_active: bool
     is_public: bool

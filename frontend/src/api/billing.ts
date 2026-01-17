@@ -19,6 +19,8 @@ export interface Plan {
   retry_on_failure: boolean
   max_task_chains: number
   max_heartbeats: number
+  overlap_prevention_enabled: boolean
+  max_queue_size: number
 }
 
 export interface Subscription {

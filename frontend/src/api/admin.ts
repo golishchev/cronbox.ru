@@ -131,6 +131,9 @@ export interface AdminPlan {
   // Heartbeats limits
   max_heartbeats: number
   min_heartbeat_interval_minutes: number
+  // Overlap prevention settings
+  overlap_prevention_enabled: boolean
+  max_queue_size: number
   is_active: boolean
   is_public: boolean
   sort_order: number
@@ -167,6 +170,9 @@ export interface CreatePlanRequest {
   // Heartbeats limits
   max_heartbeats?: number
   min_heartbeat_interval_minutes?: number
+  // Overlap prevention settings
+  overlap_prevention_enabled?: boolean
+  max_queue_size?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number
@@ -195,6 +201,9 @@ export interface UpdatePlanRequest {
   // Heartbeats limits
   max_heartbeats?: number
   min_heartbeat_interval_minutes?: number
+  // Overlap prevention settings
+  overlap_prevention_enabled?: boolean
+  max_queue_size?: number
   is_active?: boolean
   is_public?: boolean
   sort_order?: number
