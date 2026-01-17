@@ -1,4 +1,4 @@
-import type { HttpMethod, PaginationMeta } from './index'
+import type { HttpMethod, OverlapPolicy, PaginationMeta } from './index'
 
 // Trigger type enum
 export type TriggerType = 'cron' | 'delayed' | 'manual'
@@ -88,6 +88,12 @@ export interface TaskChain {
   notify_on_failure: boolean
   notify_on_success: boolean
   notify_on_partial: boolean
+  // Overlap prevention
+  overlap_policy: OverlapPolicy
+  max_instances: number
+  max_queue_size: number
+  execution_timeout: number | null
+  running_instances: number
   created_at: string
   updated_at: string
 }
@@ -111,6 +117,11 @@ export interface CreateTaskChainRequest {
   notify_on_partial?: boolean
   worker_id?: string
   steps?: Omit<CreateChainStepRequest, 'step_order'>[]
+  // Overlap prevention
+  overlap_policy?: OverlapPolicy
+  max_instances?: number
+  max_queue_size?: number
+  execution_timeout?: number
 }
 
 export interface UpdateTaskChainRequest {
@@ -128,6 +139,11 @@ export interface UpdateTaskChainRequest {
   notify_on_success?: boolean
   notify_on_partial?: boolean
   worker_id?: string | null
+  // Overlap prevention
+  overlap_policy?: OverlapPolicy
+  max_instances?: number
+  max_queue_size?: number
+  execution_timeout?: number
 }
 
 // Chain Execution types

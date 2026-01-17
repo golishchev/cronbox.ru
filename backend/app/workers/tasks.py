@@ -17,8 +17,9 @@ from app.core.url_validator import (
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.executions import ExecutionRepository
-from app.models.cron_task import TaskStatus
+from app.models.cron_task import OverlapPolicy, TaskStatus
 from app.services.notifications import notification_service
+from app.services.overlap import overlap_service
 
 logger = structlog.get_logger()
 
@@ -275,6 +276,10 @@ async def execute_cron_task(
             run_at=datetime.utcnow(),
             next_run_at=next_run_utc,
         )
+
+        # Release running instance slot for overlap prevention
+        if task.overlap_policy != OverlapPolicy.ALLOW:
+            await overlap_service.release_cron_task(db, task)
 
         await db.commit()
 
@@ -755,6 +760,12 @@ async def execute_chain(
             run_at=exec_context.started_at,
             next_run_at=next_run_at,
         )
+
+        # Release running instance slot for overlap prevention
+        from app.models.cron_task import OverlapPolicy
+
+        if chain.overlap_policy != OverlapPolicy.ALLOW:
+            await overlap_service.release_chain(db, chain)
 
         await db.commit()
 

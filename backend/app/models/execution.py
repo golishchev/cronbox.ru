@@ -54,6 +54,9 @@ class Execution(Base, UUIDMixin):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    # Overlap prevention
+    skipped_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 

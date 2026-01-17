@@ -6,6 +6,7 @@ import {
   Activity,
   Bell,
   CreditCard,
+  Layers,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -20,6 +21,7 @@ export const sections: DocSection[] = [
   { id: 'authentication', name: 'Аутентификация', icon: Key },
   { id: 'cron-tasks', name: 'Cron-задачи', icon: Clock },
   { id: 'delayed-tasks', name: 'Отложенные задачи', icon: Timer },
+  { id: 'overlap-prevention', name: 'Предотвращение перекрытия', icon: Layers },
   { id: 'executions', name: 'Выполнения', icon: Activity },
   { id: 'notifications', name: 'Уведомления', icon: Bell },
   { id: 'billing', name: 'Биллинг', icon: CreditCard },

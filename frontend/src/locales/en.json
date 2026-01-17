@@ -609,7 +609,17 @@
     "in30minutes": "In 30 minutes",
     "in1hour": "In 1 hour",
     "in3hours": "In 3 hours",
-    "in24hours": "In 24 hours"
+    "in24hours": "In 24 hours",
+    "overlapPrevention": "Overlap Prevention",
+    "overlapPreventionDescription": "Control how to handle task executions when a previous execution is still running",
+    "overlapPolicy": "Overlap Policy",
+    "overlapPolicyAllow": "Allow (run in parallel)",
+    "overlapPolicySkip": "Skip (skip if running)",
+    "overlapPolicyQueue": "Queue (queue for later)",
+    "maxInstances": "Max Concurrent Instances",
+    "maxQueueSize": "Max Queue Size",
+    "executionTimeout": "Execution Timeout (seconds)",
+    "executionTimeoutDescription": "Auto-release running instances after this time (0 = no timeout)"
   },
   "admin": {
     "title": "Admin Dashboard",

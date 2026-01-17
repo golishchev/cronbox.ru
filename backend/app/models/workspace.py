@@ -32,6 +32,10 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
     delayed_tasks_this_month: Mapped[int] = mapped_column(Integer, default=0)
     task_chains_count: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Overlap prevention metrics
+    executions_skipped: Mapped[int] = mapped_column(Integer, default=0)
+    executions_queued: Mapped[int] = mapped_column(Integer, default=0)
+
     # Settings
     default_timezone: Mapped[str] = mapped_column(String(50), default="Europe/Moscow")
     webhook_secret: Mapped[str] = mapped_column(String(255))

@@ -8,7 +8,7 @@ from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer, field_validator
 
 from app.models.chain_execution import StepStatus
-from app.models.cron_task import HttpMethod
+from app.models.cron_task import HttpMethod, OverlapPolicy
 from app.models.task_chain import ChainStatus, TriggerType
 
 # ============================================================================
@@ -156,6 +156,16 @@ class TaskChainBase(BaseModel):
         None,
         description="ID of external worker. If None, cloud workers will be used.",
     )
+    # Overlap prevention settings
+    overlap_policy: OverlapPolicy = Field(
+        default=OverlapPolicy.ALLOW,
+        description="Policy for handling overlapping executions: allow, skip, or queue",
+    )
+    max_instances: int = Field(default=1, ge=1, le=10, description="Maximum concurrent instances")
+    max_queue_size: int = Field(default=10, ge=1, le=100, description="Maximum queue size for queue policy")
+    execution_timeout: int | None = Field(
+        None, ge=60, le=86400, description="Execution timeout in seconds (auto-release running instances)"
+    )
 
     @field_validator("schedule")
     @classmethod
@@ -202,6 +212,11 @@ class TaskChainUpdate(BaseModel):
     notify_on_success: bool | None = None
     notify_on_partial: bool | None = None
     worker_id: UUID | None = None
+    # Overlap prevention settings
+    overlap_policy: OverlapPolicy | None = None
+    max_instances: int | None = Field(None, ge=1, le=10)
+    max_queue_size: int | None = Field(None, ge=1, le=100)
+    execution_timeout: int | None = Field(None, ge=60, le=86400)
 
     @field_validator("schedule")
     @classmethod
@@ -250,6 +265,12 @@ class TaskChainResponse(BaseModel):
     notify_on_failure: bool
     notify_on_success: bool
     notify_on_partial: bool
+    # Overlap prevention
+    overlap_policy: OverlapPolicy
+    max_instances: int
+    max_queue_size: int
+    execution_timeout: int | None
+    running_instances: int
     created_at: datetime
     updated_at: datetime
 
@@ -342,6 +363,7 @@ class ChainExecutionResponse(BaseModel):
     skipped_steps: int
     variables: dict
     error_message: str | None
+    skipped_reason: str | None
     created_at: datetime
 
     @field_serializer("started_at", "finished_at", "created_at")

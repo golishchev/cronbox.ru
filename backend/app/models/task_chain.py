@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
-from app.models.cron_task import HttpMethod
+from app.models.cron_task import HttpMethod, OverlapPolicy
 
 
 class TriggerType(str, enum.Enum):
@@ -81,6 +81,16 @@ class TaskChain(Base, UUIDMixin, TimestampMixin):
     notify_on_failure: Mapped[bool] = mapped_column(Boolean, default=True)
     notify_on_success: Mapped[bool] = mapped_column(Boolean, default=False)
     notify_on_partial: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Overlap prevention
+    overlap_policy: Mapped[OverlapPolicy] = mapped_column(
+        SQLEnum(OverlapPolicy, values_callable=lambda x: [e.value for e in x], create_type=False),
+        default=OverlapPolicy.ALLOW,
+    )
+    max_instances: Mapped[int] = mapped_column(Integer, default=1)
+    max_queue_size: Mapped[int] = mapped_column(Integer, default=10)
+    execution_timeout: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    running_instances: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship(back_populates="task_chains")
