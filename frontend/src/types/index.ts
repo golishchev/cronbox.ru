@@ -86,6 +86,9 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD'
 // Task status enum
 export type TaskStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
 
+// Overlap policy enum
+export type OverlapPolicy = 'allow' | 'skip' | 'queue'
+
 // Cron Task types
 export interface CronTask {
   id: string
@@ -109,6 +112,12 @@ export interface CronTask {
   consecutive_failures: number
   notify_on_failure: boolean
   notify_on_recovery: boolean
+  // Overlap prevention
+  overlap_policy: OverlapPolicy
+  max_instances: number
+  max_queue_size: number
+  execution_timeout: number | null
+  running_instances: number
   created_at: string
   updated_at: string
 }
@@ -127,6 +136,11 @@ export interface CreateCronTaskRequest {
   retry_delay_seconds?: number
   notify_on_failure?: boolean
   notify_on_recovery?: boolean
+  // Overlap prevention
+  overlap_policy?: OverlapPolicy
+  max_instances?: number
+  max_queue_size?: number
+  execution_timeout?: number
 }
 
 export interface UpdateCronTaskRequest {
@@ -143,6 +157,11 @@ export interface UpdateCronTaskRequest {
   is_active?: boolean
   notify_on_failure?: boolean
   notify_on_recovery?: boolean
+  // Overlap prevention
+  overlap_policy?: OverlapPolicy
+  max_instances?: number
+  max_queue_size?: number
+  execution_timeout?: number
 }
 
 // Delayed Task types

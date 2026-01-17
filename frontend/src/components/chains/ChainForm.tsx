@@ -18,6 +18,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { CronExpressionBuilder } from '@/components/cron/CronExpressionBuilder'
 import type { TaskChain, CreateTaskChainRequest, TriggerType } from '@/types/chains'
+import type { OverlapPolicy } from '@/types'
 
 interface ChainFormProps {
   workspaceId: string
@@ -43,6 +44,12 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
   const [notifyOnFailure, setNotifyOnFailure] = useState(chain?.notify_on_failure ?? true)
   const [notifyOnSuccess, setNotifyOnSuccess] = useState(chain?.notify_on_success ?? false)
   const [notifyOnPartial, setNotifyOnPartial] = useState(chain?.notify_on_partial ?? true)
+
+  // Overlap prevention settings
+  const [overlapPolicy, setOverlapPolicy] = useState<OverlapPolicy>(chain?.overlap_policy ?? 'allow')
+  const [maxInstances, setMaxInstances] = useState(chain?.max_instances ?? 1)
+  const [maxQueueSize, setMaxQueueSize] = useState(chain?.max_queue_size ?? 10)
+  const [executionTimeout, setExecutionTimeout] = useState(chain?.execution_timeout ?? 0)
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -80,6 +87,11 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
         notify_on_failure: notifyOnFailure,
         notify_on_success: notifyOnSuccess,
         notify_on_partial: notifyOnPartial,
+        // Overlap prevention
+        overlap_policy: overlapPolicy,
+        max_instances: maxInstances,
+        max_queue_size: maxQueueSize,
+        execution_timeout: executionTimeout > 0 ? executionTimeout : undefined,
       }
 
       if (triggerType === 'cron') {
@@ -285,6 +297,70 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Overlap Prevention Settings */}
+      <div className="space-y-4 border-t pt-4">
+        <p className="text-sm font-medium">{t('taskForm.overlapPrevention')}</p>
+        <p className="text-xs text-muted-foreground">{t('taskForm.overlapPreventionDescription')}</p>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="overlapPolicy">{t('taskForm.overlapPolicy')}</Label>
+            <Select value={overlapPolicy} onValueChange={(v) => setOverlapPolicy(v as OverlapPolicy)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="allow">{t('taskForm.overlapPolicyAllow')}</SelectItem>
+                <SelectItem value="skip">{t('taskForm.overlapPolicySkip')}</SelectItem>
+                <SelectItem value="queue">{t('taskForm.overlapPolicyQueue')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {overlapPolicy !== 'allow' && (
+            <div className="space-y-2">
+              <Label htmlFor="maxInstances">{t('taskForm.maxInstances')}</Label>
+              <Input
+                id="maxInstances"
+                type="number"
+                min={1}
+                max={10}
+                value={maxInstances}
+                onChange={(e) => setMaxInstances(parseInt(e.target.value) || 1)}
+              />
+            </div>
+          )}
+        </div>
+
+        {overlapPolicy === 'queue' && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="maxQueueSize">{t('taskForm.maxQueueSize')}</Label>
+              <Input
+                id="maxQueueSize"
+                type="number"
+                min={1}
+                max={100}
+                value={maxQueueSize}
+                onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 10)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="executionTimeout">{t('taskForm.executionTimeout')}</Label>
+              <Input
+                id="executionTimeout"
+                type="number"
+                min={0}
+                max={86400}
+                value={executionTimeout}
+                onChange={(e) => setExecutionTimeout(parseInt(e.target.value) || 0)}
+              />
+              <p className="text-xs text-muted-foreground">{t('taskForm.executionTimeoutDescription')}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">

@@ -60,6 +60,9 @@ class ChainExecution(Base, UUIDMixin):
     # Error info
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Overlap prevention
+    skipped_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     # Timestamp
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 

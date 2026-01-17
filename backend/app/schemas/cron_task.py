@@ -5,7 +5,7 @@ import pytz
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer, field_validator
 
-from app.models.cron_task import HttpMethod, TaskStatus
+from app.models.cron_task import HttpMethod, OverlapPolicy, TaskStatus
 
 
 class CronTaskBase(BaseModel):
@@ -27,6 +27,16 @@ class CronTaskBase(BaseModel):
     worker_id: UUID | None = Field(
         None,
         description="ID of the external worker to execute this task. If None, cloud workers will be used.",
+    )
+    # Overlap prevention settings
+    overlap_policy: OverlapPolicy = Field(
+        default=OverlapPolicy.ALLOW,
+        description="Policy for handling overlapping executions: allow, skip, or queue",
+    )
+    max_instances: int = Field(default=1, ge=1, le=10, description="Maximum concurrent instances")
+    max_queue_size: int = Field(default=10, ge=1, le=100, description="Maximum queue size for queue policy")
+    execution_timeout: int | None = Field(
+        None, ge=60, le=86400, description="Execution timeout in seconds (auto-release running instances)"
     )
 
     @field_validator("schedule")
@@ -69,6 +79,11 @@ class CronTaskUpdate(BaseModel):
     notify_on_failure: bool | None = None
     notify_on_recovery: bool | None = None
     worker_id: UUID | None = None
+    # Overlap prevention settings
+    overlap_policy: OverlapPolicy | None = None
+    max_instances: int | None = Field(None, ge=1, le=10)
+    max_queue_size: int | None = Field(None, ge=1, le=100)
+    execution_timeout: int | None = Field(None, ge=60, le=86400)
 
     @field_validator("schedule")
     @classmethod
@@ -109,6 +124,12 @@ class CronTaskResponse(BaseModel):
     consecutive_failures: int
     notify_on_failure: bool
     notify_on_recovery: bool
+    # Overlap prevention
+    overlap_policy: OverlapPolicy
+    max_instances: int
+    max_queue_size: int
+    execution_timeout: int | None
+    running_instances: int
     created_at: datetime
     updated_at: datetime
 

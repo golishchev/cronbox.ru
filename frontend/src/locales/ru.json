@@ -699,7 +699,17 @@
     "in30minutes": "Через 30 минут",
     "in1hour": "Через 1 час",
     "in3hours": "Через 3 часа",
-    "in24hours": "Через 24 часа"
+    "in24hours": "Через 24 часа",
+    "overlapPrevention": "Предотвращение перекрытия",
+    "overlapPreventionDescription": "Управление запуском задач, когда предыдущее выполнение еще не завершено",
+    "overlapPolicy": "Политика перекрытия",
+    "overlapPolicyAllow": "Разрешить (параллельный запуск)",
+    "overlapPolicySkip": "Пропустить (если выполняется)",
+    "overlapPolicyQueue": "В очередь (выполнить позже)",
+    "maxInstances": "Макс. параллельных экземпляров",
+    "maxQueueSize": "Макс. размер очереди",
+    "executionTimeout": "Таймаут выполнения (секунды)",
+    "executionTimeoutDescription": "Автоосвобождение экземпляров после этого времени (0 = без таймаута)"
   },
   "validation": {
     "required": "Обязательное поле",

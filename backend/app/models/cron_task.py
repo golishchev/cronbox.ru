@@ -31,6 +31,14 @@ class TaskStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class OverlapPolicy(str, enum.Enum):
+    """Overlap prevention policy for tasks."""
+
+    ALLOW = "allow"  # Allow multiple instances to run in parallel (default)
+    SKIP = "skip"  # Skip new execution if task is already running
+    QUEUE = "queue"  # Queue new executions if task is already running
+
+
 class CronTask(Base, UUIDMixin, TimestampMixin):
     """Cron task model - recurring HTTP requests."""
 
@@ -80,6 +88,16 @@ class CronTask(Base, UUIDMixin, TimestampMixin):
     # Notifications
     notify_on_failure: Mapped[bool] = mapped_column(Boolean, default=True)
     notify_on_recovery: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Overlap prevention
+    overlap_policy: Mapped[OverlapPolicy] = mapped_column(
+        SQLEnum(OverlapPolicy, values_callable=lambda x: [e.value for e in x], create_type=False),
+        default=OverlapPolicy.ALLOW,
+    )
+    max_instances: Mapped[int] = mapped_column(Integer, default=1)
+    max_queue_size: Mapped[int] = mapped_column(Integer, default=10)
+    execution_timeout: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    running_instances: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship(back_populates="cron_tasks")

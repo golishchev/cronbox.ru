@@ -11,6 +11,7 @@ from app.api.v1 import (
     notifications,
     ping,
     task_chains,
+    task_queue,
     webhooks,
     workers,
     workspaces,
@@ -30,6 +31,7 @@ api_router.include_router(notifications.router)
 api_router.include_router(billing.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(workers.router, tags=["workers"])
+api_router.include_router(task_queue.router, tags=["task-queue"])
 api_router.include_router(admin.router)
 
 # Public endpoints (no auth required)

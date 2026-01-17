@@ -20,9 +20,10 @@ from app.db.database import async_session_factory
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.task_chains import TaskChainRepository
-from app.models.cron_task import TaskStatus
+from app.models.cron_task import OverlapPolicy, TaskStatus
 from app.models.task_chain import TriggerType
 from app.schemas.worker import WorkerTaskInfo
+from app.services.overlap import OverlapAction, overlap_service
 from app.services.worker import worker_service
 from app.workers.settings import get_redis_settings
 
@@ -52,6 +53,8 @@ class TaskScheduler:
             self._update_next_run_times(),
             self._check_subscriptions(),
             self._check_pending_payments(),
+            self._cleanup_stale_instances(),
+            self._process_task_queue(),
         )
 
     async def stop(self):
@@ -266,6 +269,28 @@ class TaskScheduler:
 
                     # Update next_run_at in memory (row is still locked by FOR UPDATE)
                     task.next_run_at = next_run_utc
+
+                    # Check overlap prevention policy
+                    if task.overlap_policy != OverlapPolicy.ALLOW:
+                        overlap_result = await overlap_service.check_cron_task_overlap(db, task)
+                        if not overlap_result.should_execute:
+                            if overlap_result.action == OverlapAction.QUEUE:
+                                logger.info(
+                                    "Cron task queued due to overlap",
+                                    task_id=str(task.id),
+                                    task_name=task.name,
+                                    queue_position=overlap_result.queue_position,
+                                )
+                            else:
+                                logger.info(
+                                    "Cron task skipped due to overlap",
+                                    task_id=str(task.id),
+                                    task_name=task.name,
+                                    reason=overlap_result.message,
+                                )
+                            await db.commit()
+                            processed += 1
+                            continue
 
                     # Enqueue BEFORE commit to ensure task is queued while row is locked
                     # This prevents race conditions with other scheduler instances
@@ -494,6 +519,28 @@ class TaskScheduler:
                         # Delayed chains run once and deactivate
                         chain.next_run_at = None
 
+                    # Check overlap prevention policy
+                    if chain.overlap_policy != OverlapPolicy.ALLOW:
+                        overlap_result = await overlap_service.check_chain_overlap(db, chain)
+                        if not overlap_result.should_execute:
+                            if overlap_result.action == OverlapAction.QUEUE:
+                                logger.info(
+                                    "Chain queued due to overlap",
+                                    chain_id=str(chain.id),
+                                    chain_name=chain.name,
+                                    queue_position=overlap_result.queue_position,
+                                )
+                            else:
+                                logger.info(
+                                    "Chain skipped due to overlap",
+                                    chain_id=str(chain.id),
+                                    chain_name=chain.name,
+                                    reason=overlap_result.message,
+                                )
+                            await db.commit()
+                            processed += 1
+                            continue
+
                     # Enqueue chain for execution
                     # Note: External workers for chains are not supported yet
                     await self.redis_pool.enqueue_job(
@@ -525,6 +572,121 @@ class TaskScheduler:
 
         if processed > 0:
             logger.info(f"Processed {processed} task chains")
+
+
+    async def _cleanup_stale_instances(self):
+        """Cleanup stale running instances every 5 minutes."""
+        while self.running:
+            try:
+                async with async_session_factory() as db:
+                    cleaned = await overlap_service.cleanup_stale_instances(db)
+                    if cleaned:
+                        await db.commit()
+                        logger.info("Cleaned up stale running instances", count=cleaned)
+            except Exception as e:
+                logger.error("Error cleaning up stale instances", error=str(e))
+
+            await asyncio.sleep(300)  # Every 5 minutes
+
+    async def _process_task_queue(self):
+        """Process queued tasks when slots become available every 10 seconds."""
+        while self.running:
+            try:
+                await self._check_and_execute_queued_tasks()
+            except Exception as e:
+                logger.error("Error processing task queue", error=str(e))
+
+            await asyncio.sleep(10)
+
+    async def _check_and_execute_queued_tasks(self):
+        """Check for queued tasks that can now be executed."""
+        from app.models.task_queue import TaskQueue
+
+        async with async_session_factory() as db:
+            # Get cron tasks with queue policy and available slots
+            cron_repo = CronTaskRepository(db)
+            chain_repo = TaskChainRepository(db)
+
+            # Find cron tasks with available slots
+            from sqlalchemy import select
+
+            result = await db.execute(
+                select(CronTask).where(
+                    CronTask.overlap_policy == OverlapPolicy.QUEUE,
+                    CronTask.is_active == True,  # noqa: E712
+                    CronTask.is_paused == False,  # noqa: E712
+                    CronTask.running_instances < CronTask.max_instances,
+                )
+            )
+            available_cron_tasks = result.scalars().all()
+
+            for task in available_cron_tasks:
+                # Check if there are queued executions
+                queued = await overlap_service._pop_from_queue(db, "cron", task.id)
+                if queued:
+                    # Increment running instances
+                    await overlap_service._increment_running_instances(db, "cron", task.id)
+
+                    # Enqueue the task
+                    if task.worker_id:
+                        task_info = WorkerTaskInfo(
+                            task_id=task.id,
+                            task_type="cron",
+                            url=task.url,
+                            method=task.method.value,
+                            headers=task.headers or {},
+                            body=task.body,
+                            timeout_seconds=task.timeout_seconds,
+                            retry_count=task.retry_count,
+                            retry_delay_seconds=task.retry_delay_seconds,
+                            workspace_id=task.workspace_id,
+                            task_name=task.name,
+                        )
+                        await worker_service.enqueue_task_for_worker(task.worker_id, task_info)
+                    else:
+                        await self.redis_pool.enqueue_job(
+                            "execute_cron_task",
+                            task_id=str(task.id),
+                            retry_attempt=queued.retry_attempt,
+                        )
+
+                    logger.info(
+                        "Executed queued cron task",
+                        task_id=str(task.id),
+                        task_name=task.name,
+                    )
+
+            # Find chains with available slots
+            chain_result = await db.execute(
+                select(TaskChain).where(
+                    TaskChain.overlap_policy == OverlapPolicy.QUEUE,
+                    TaskChain.is_active == True,  # noqa: E712
+                    TaskChain.is_paused == False,  # noqa: E712
+                    TaskChain.running_instances < TaskChain.max_instances,
+                )
+            )
+            available_chains = chain_result.scalars().all()
+
+            for chain in available_chains:
+                queued = await overlap_service._pop_from_queue(db, "chain", chain.id)
+                if queued:
+                    # Increment running instances
+                    await overlap_service._increment_running_instances(db, "chain", chain.id)
+
+                    # Enqueue the chain
+                    await self.redis_pool.enqueue_job(
+                        "execute_chain",
+                        chain_id=str(chain.id),
+                        initial_variables=queued.initial_variables or {},
+                    )
+
+                    logger.info(
+                        "Executed queued chain",
+                        chain_id=str(chain.id),
+                        chain_name=chain.name,
+                    )
+
+            await db.commit()
 
 
 async def run_scheduler():

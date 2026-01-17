@@ -409,6 +409,127 @@ export function NotificationsSection() {
   )
 }
 
+export function OverlapPreventionSection() {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Предотвращение перекрытия</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        Overlap Prevention позволяет контролировать поведение задач, когда новое выполнение
+        запускается до завершения предыдущего. Это критически важно для задач, которые
+        не должны выполняться параллельно.
+      </p>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Политики перекрытия</h3>
+
+      <div className="mt-4 space-y-4">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">allow (по умолчанию)</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Разрешает параллельное выполнение. Новые экземпляры запускаются независимо от
+            состояния предыдущих.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">skip</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Пропускает новое выполнение, если задача уже выполняется. Используется когда
+            важно не допустить дублирования работы.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h4 className="font-semibold text-gray-900 dark:text-white">queue</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Добавляет новое выполнение в очередь. После завершения текущего экземпляра,
+            следующий из очереди запускается автоматически.
+          </p>
+        </div>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Параметры</h3>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Параметр</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Тип</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Описание</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">overlap_policy</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">string</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Политика: allow, skip, queue</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">max_instances</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Макс. параллельных экземпляров (1-10)</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">max_queue_size</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Макс. размер очереди (1-100)</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">execution_timeout</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Таймаут в секундах для авто-освобождения</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Пример использования</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Синхронизация базы данных",
+    "url": "https://your-api.com/sync",
+    "method": "POST",
+    "cron_expression": "*/5 * * * *",
+    "overlap_policy": "skip",
+    "max_instances": 1,
+    "execution_timeout": 300
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">API очереди</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/queue" description="Список задач в очереди" />
+        <Endpoint method="DELETE" path="/queue/{id}" description="Удаление из очереди" />
+        <Endpoint method="GET" path="/overlap-stats" description="Статистика перекрытий" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Метрики</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        CronBox отслеживает следующие метрики для overlap prevention:
+      </p>
+      <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">executions_skipped</code> - количество пропущенных выполнений</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">executions_queued</code> - количество выполнений добавленных в очередь</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">overlap_rate</code> - процент перекрытий</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">running_instances</code> - текущее количество запущенных экземпляров</li>
+      </ul>
+
+      <div className="mt-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          <strong>Важно:</strong> При использовании политики queue, убедитесь что ваша задача
+          завершается в разумное время. Используйте execution_timeout для автоматического
+          освобождения зависших экземпляров.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function BillingSection() {
   return (
     <div>
@@ -465,6 +586,7 @@ export const sectionComponents: Record<string, () => ReactNode> = {
   authentication: AuthenticationSection,
   'cron-tasks': CronTasksSection,
   'delayed-tasks': DelayedTasksSection,
+  'overlap-prevention': OverlapPreventionSection,
   executions: ExecutionsSection,
   notifications: NotificationsSection,
   billing: BillingSection,
