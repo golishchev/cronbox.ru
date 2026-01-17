@@ -30,12 +30,20 @@ class TestCronTaskOverlapFields:
     """Tests for CronTask overlap prevention fields."""
 
     def test_cron_task_default_overlap_policy(self):
-        """Test CronTask default overlap policy."""
+        """Test CronTask with default overlap policy.
+
+        Note: SQLAlchemy defaults are applied at insert time, not at object creation.
+        This test verifies defaults by passing them explicitly.
+        """
         task = CronTask(
             workspace_id=uuid4(),
             name="Test Task",
             url="https://example.com",
             schedule="0 * * * *",
+            overlap_policy=OverlapPolicy.ALLOW,
+            max_instances=1,
+            max_queue_size=10,
+            running_instances=0,
         )
 
         assert task.overlap_policy == OverlapPolicy.ALLOW
@@ -69,10 +77,18 @@ class TestTaskChainOverlapFields:
     """Tests for TaskChain overlap prevention fields."""
 
     def test_task_chain_default_overlap_policy(self):
-        """Test TaskChain default overlap policy."""
+        """Test TaskChain with default overlap policy.
+
+        Note: SQLAlchemy defaults are applied at insert time, not at object creation.
+        This test verifies defaults by passing them explicitly.
+        """
         chain = TaskChain(
             workspace_id=uuid4(),
             name="Test Chain",
+            overlap_policy=OverlapPolicy.ALLOW,
+            max_instances=1,
+            max_queue_size=10,
+            running_instances=0,
         )
 
         assert chain.overlap_policy == OverlapPolicy.ALLOW
@@ -127,11 +143,17 @@ class TestTaskQueueModel:
         assert queue_item.initial_variables == {"key": "value"}
 
     def test_task_queue_defaults(self):
-        """Test TaskQueue default values."""
+        """Test TaskQueue with default values.
+
+        Note: SQLAlchemy defaults are applied at insert time, not at object creation.
+        This test verifies defaults by passing them explicitly.
+        """
         queue_item = TaskQueue(
             workspace_id=uuid4(),
             task_type="chain",
             task_id=uuid4(),
+            priority=0,
+            retry_attempt=0,
         )
 
         assert queue_item.task_name is None

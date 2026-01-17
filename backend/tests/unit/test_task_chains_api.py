@@ -97,6 +97,12 @@ class TestListTaskChains:
         mock_chain.consecutive_failures = 0
         mock_chain.created_at = datetime.now(timezone.utc)
         mock_chain.updated_at = datetime.now(timezone.utc)
+        # Overlap prevention fields
+        mock_chain.overlap_policy = "allow"
+        mock_chain.max_instances = 1
+        mock_chain.max_queue_size = 10
+        mock_chain.execution_timeout = None
+        mock_chain.running_instances = 0
 
         with patch("app.api.v1.task_chains.TaskChainRepository") as MockRepo:
             mock_repo = MagicMock()

@@ -171,6 +171,10 @@ class TestProcessDueCronTasks:
         mock_task.timeout_seconds = 30
         mock_task.retry_count = 0
         mock_task.retry_delay_seconds = 60
+        # Overlap prevention fields
+        mock_task.overlap_policy = "allow"
+        mock_task.running_instances = 0
+        mock_task.max_instances = 1
 
         mock_cron_repo = AsyncMock()
         mock_cron_repo.get_due_tasks.side_effect = [[mock_task], []]
@@ -210,6 +214,10 @@ class TestProcessDueCronTasks:
         mock_task.timeout_seconds = 30
         mock_task.retry_count = 0
         mock_task.retry_delay_seconds = 60
+        # Overlap prevention fields
+        mock_task.overlap_policy = "allow"
+        mock_task.running_instances = 0
+        mock_task.max_instances = 1
 
         mock_cron_repo = AsyncMock()
         mock_cron_repo.get_due_tasks.side_effect = [[mock_task], []]
