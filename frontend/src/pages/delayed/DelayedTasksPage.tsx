@@ -275,8 +275,8 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('delayedTasks.scheduleTask')}
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">{t('delayedTasks.scheduleTask')}</span>
         </Button>
       </div>
 
