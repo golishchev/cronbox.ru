@@ -226,8 +226,8 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('cronTasks.createTask')}
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">{t('cronTasks.createTask')}</span>
         </Button>
       </div>
 
