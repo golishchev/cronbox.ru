@@ -3,7 +3,12 @@
 .env.*
 !.env.example
 
-./frontend/tsconfig.app.tsbuildinfo
+# TypeScript build info
+*.tsbuildinfo
+
+# Load test reports
+baseline.html
+*_report.html
 
 # Python-generated files
 __pycache__/
