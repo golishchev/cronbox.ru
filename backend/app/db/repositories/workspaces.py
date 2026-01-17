@@ -89,6 +89,13 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         await self.db.refresh(workspace)
         return workspace
 
+    async def update_heartbeats_count(self, workspace: Workspace, delta: int) -> Workspace:
+        """Update heartbeats count by delta."""
+        workspace.heartbeats_count = max(0, workspace.heartbeats_count + delta)
+        await self.db.flush()
+        await self.db.refresh(workspace)
+        return workspace
+
     async def get_best_plan_for_owner(self, owner_id: UUID) -> Plan | None:
         """Get the best plan among all owner's workspaces (by max_workspaces limit)."""
         stmt = (

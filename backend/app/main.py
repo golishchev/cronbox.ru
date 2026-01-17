@@ -33,6 +33,14 @@ tags_metadata = [
         "description": "One-time HTTP tasks scheduled to run at a specific time. Create tasks that execute once.",
     },
     {
+        "name": "Heartbeats",
+        "description": "Dead Man's Switch monitoring. Create heartbeat monitors that alert when expected pings are not received.",
+    },
+    {
+        "name": "Ping",
+        "description": "Public ping endpoint for heartbeat monitors. Simple GET/POST to register a heartbeat.",
+    },
+    {
         "name": "Executions",
         "description": "Task execution history. View logs, status, and results of task executions.",
     },
@@ -165,9 +173,11 @@ async def root():
 
 
 # Import and include routers
-from app.api.router import api_router
+from app.api.router import api_router, ping_router
 
 app.include_router(api_router, prefix=settings.api_prefix)
+# Public ping endpoint at root level (no /v1 prefix for simplicity)
+app.include_router(ping_router)
 
 # Mount static files for uploads (avatars, etc.)
 UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
