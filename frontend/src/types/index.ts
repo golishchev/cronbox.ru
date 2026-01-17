@@ -302,6 +302,58 @@ export interface TelegramConnectResponse {
   bot_username: string
 }
 
+// Heartbeat types
+export type HeartbeatStatus = 'waiting' | 'healthy' | 'late' | 'dead' | 'paused'
+
+export interface Heartbeat {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  ping_token: string
+  ping_url: string
+  expected_interval: number  // seconds
+  grace_period: number  // seconds
+  status: HeartbeatStatus
+  is_paused: boolean
+  last_ping_at: string | null
+  next_expected_at: string | null
+  consecutive_misses: number
+  alert_sent: boolean
+  notify_on_late: boolean
+  notify_on_recovery: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateHeartbeatRequest {
+  name: string
+  description?: string
+  expected_interval: string  // e.g., '1h', '30m'
+  grace_period?: string  // e.g., '10m'
+  notify_on_late?: boolean
+  notify_on_recovery?: boolean
+}
+
+export interface UpdateHeartbeatRequest {
+  name?: string
+  description?: string
+  expected_interval?: string
+  grace_period?: string
+  notify_on_late?: boolean
+  notify_on_recovery?: boolean
+}
+
+export interface HeartbeatPing {
+  id: string
+  heartbeat_id: string
+  duration_ms: number | null
+  status_message: string | null
+  payload: Record<string, unknown> | null
+  source_ip: string | null
+  created_at: string
+}
+
 // API Error
 export interface ApiError {
   detail: string

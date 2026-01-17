@@ -31,6 +31,7 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
     cron_tasks_count: Mapped[int] = mapped_column(Integer, default=0)
     delayed_tasks_this_month: Mapped[int] = mapped_column(Integer, default=0)
     task_chains_count: Mapped[int] = mapped_column(Integer, default=0)
+    heartbeats_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # Settings
     default_timezone: Mapped[str] = mapped_column(String(50), default="Europe/Moscow")
@@ -56,6 +57,10 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
     )
     task_chains: Mapped[list["TaskChain"]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
+    heartbeats: Mapped[list["Heartbeat"]] = relationship(
         back_populates="workspace",
         cascade="all, delete-orphan",
     )
