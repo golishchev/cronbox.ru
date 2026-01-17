@@ -33,32 +33,42 @@ describe('BillingPage', () => {
     {
       id: 'plan-1',
       code: 'free',
-      name: 'Free',
+      name: 'free',
+      display_name: 'Free',
       description: 'Free plan',
       price_monthly: 0,
       price_yearly: 0,
       max_cron_tasks: 5,
-      max_delayed_tasks: 10,
-      max_executions_per_month: 1000,
-      is_active: true,
-      features: ['5 cron tasks', '10 delayed tasks'],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
+      max_delayed_tasks_per_month: 10,
+      max_workspaces: 1,
+      max_execution_history_days: 7,
+      min_cron_interval_minutes: 5,
+      telegram_notifications: false,
+      email_notifications: false,
+      webhook_callbacks: false,
+      custom_headers: false,
+      retry_on_failure: false,
+      max_task_chains: 0,
     },
     {
       id: 'plan-2',
       code: 'pro',
-      name: 'Pro',
+      name: 'pro',
+      display_name: 'Pro',
       description: 'Pro plan',
-      price_monthly: 990,
-      price_yearly: 9900,
+      price_monthly: 99000,
+      price_yearly: 990000,
       max_cron_tasks: 50,
-      max_delayed_tasks: 100,
-      max_executions_per_month: 10000,
-      is_active: true,
-      features: ['50 cron tasks', '100 delayed tasks'],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
+      max_delayed_tasks_per_month: 100,
+      max_workspaces: 5,
+      max_execution_history_days: 30,
+      min_cron_interval_minutes: 1,
+      telegram_notifications: true,
+      email_notifications: true,
+      webhook_callbacks: true,
+      custom_headers: true,
+      retry_on_failure: true,
+      max_task_chains: 10,
     },
   ]
 
@@ -144,6 +154,42 @@ describe('BillingPage', () => {
 
     await waitFor(() => {
       expect(billingApi.getPaymentHistory).toHaveBeenCalled()
+    })
+  })
+
+  it('should display task chains for plans that have them', async () => {
+    render(<BillingPage onNavigate={mockOnNavigate} />)
+
+    await waitFor(() => {
+      expect(billingApi.getPlans).toHaveBeenCalled()
+    })
+
+    // Pro plan has max_task_chains = 10, so it should display "10 task chains"
+    await waitFor(() => {
+      // Search for text containing "10" and "task chains" (the translation key)
+      const elements = screen.getAllByText((content, element) => {
+        const text = element?.textContent || ''
+        return text.includes('10') && (text.includes('task chains') || text.includes('цепочек'))
+      })
+      expect(elements.length).toBeGreaterThan(0)
+    })
+  })
+
+  it('should not display task chains for plans without them', async () => {
+    render(<BillingPage onNavigate={mockOnNavigate} />)
+
+    await waitFor(() => {
+      expect(billingApi.getPlans).toHaveBeenCalled()
+    })
+
+    // Free plan has max_task_chains = 0, so no task chains line should appear for it
+    // We verify there's no "0 task chains" text (since it's hidden when max_task_chains === 0)
+    await waitFor(() => {
+      const elements = screen.queryAllByText((content, element) => {
+        const text = element?.textContent || ''
+        return text.startsWith('0 ') && (text.includes('task chains') || text.includes('цепочек'))
+      })
+      expect(elements.length).toBe(0)
     })
   })
 })

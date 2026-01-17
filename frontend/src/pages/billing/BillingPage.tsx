@@ -400,6 +400,12 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                       <span>{t('billing.autoRetry')}</span>
                     </li>
                   )}
+                  {plan.max_task_chains > 0 && (
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{plan.max_task_chains} {t('billing.taskChains')}</span>
+                    </li>
+                  )}
                 </ul>
               </CardContent>
               <CardFooter>
