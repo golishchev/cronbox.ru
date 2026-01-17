@@ -72,6 +72,9 @@ const defaultPlanData: CreatePlanRequest = {
   // Heartbeats
   max_heartbeats: 0,
   min_heartbeat_interval_minutes: 5,
+  // Overlap prevention
+  overlap_prevention_enabled: false,
+  max_queue_size: 10,
   is_active: true,
   is_public: true,
   sort_order: 0,
@@ -144,6 +147,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       // Heartbeats
       max_heartbeats: plan.max_heartbeats,
       min_heartbeat_interval_minutes: plan.min_heartbeat_interval_minutes,
+      // Overlap prevention
+      overlap_prevention_enabled: plan.overlap_prevention_enabled,
+      max_queue_size: plan.max_queue_size,
       is_active: plan.is_active,
       is_public: plan.is_public,
       sort_order: plan.sort_order,
@@ -606,6 +612,29 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     onChange={(e) => setFormData({ ...formData, min_heartbeat_interval_minutes: parseInt(e.target.value) || 1 })}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Overlap Prevention */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">{t('admin.plans.overlapPrevention')}</Label>
+              <div className="flex items-center justify-between py-2 px-3 rounded-md border">
+                <Label htmlFor="overlap_enabled" className="text-sm font-normal">{t('admin.plans.overlapEnabled')}</Label>
+                <Switch
+                  id="overlap_enabled"
+                  checked={formData.overlap_prevention_enabled}
+                  onCheckedChange={(checked) => setFormData({ ...formData, overlap_prevention_enabled: checked })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max_queue_size" className="text-sm">{t('admin.plans.maxQueueSize')}</Label>
+                <Input
+                  id="max_queue_size"
+                  type="number"
+                  min={1}
+                  value={formData.max_queue_size}
+                  onChange={(e) => setFormData({ ...formData, max_queue_size: parseInt(e.target.value) || 10 })}
+                />
               </div>
             </div>
 

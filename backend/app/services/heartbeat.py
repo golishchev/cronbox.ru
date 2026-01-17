@@ -1,7 +1,6 @@
 """Heartbeat monitor service - Dead Man's Switch logic."""
 
 from datetime import datetime
-from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession

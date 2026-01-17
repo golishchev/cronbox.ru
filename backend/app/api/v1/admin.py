@@ -596,6 +596,12 @@ class PlanListItem(BaseModel):
     max_chain_steps: int
     chain_variable_substitution: bool
     min_chain_interval_minutes: int
+    # Heartbeat monitor limits
+    max_heartbeats: int
+    min_heartbeat_interval_minutes: int
+    # Overlap prevention settings
+    overlap_prevention_enabled: bool
+    max_queue_size: int
     is_active: bool
     is_public: bool
     sort_order: int
@@ -636,6 +642,12 @@ class CreatePlanRequest(BaseModel):
     max_chain_steps: int = Field(default=5, ge=1)
     chain_variable_substitution: bool = False
     min_chain_interval_minutes: int = Field(default=15, ge=1)
+    # Heartbeat monitor limits
+    max_heartbeats: int = Field(default=0, ge=0)
+    min_heartbeat_interval_minutes: int = Field(default=5, ge=1)
+    # Overlap prevention settings
+    overlap_prevention_enabled: bool = False
+    max_queue_size: int = Field(default=10, ge=1)
     is_active: bool = True
     is_public: bool = True
     sort_order: int = 0
@@ -663,6 +675,12 @@ class UpdatePlanRequest(BaseModel):
     max_chain_steps: int | None = Field(default=None, ge=1)
     chain_variable_substitution: bool | None = None
     min_chain_interval_minutes: int | None = Field(default=None, ge=1)
+    # Heartbeat monitor limits
+    max_heartbeats: int | None = Field(default=None, ge=0)
+    min_heartbeat_interval_minutes: int | None = Field(default=None, ge=1)
+    # Overlap prevention settings
+    overlap_prevention_enabled: bool | None = None
+    max_queue_size: int | None = Field(default=None, ge=1)
     is_active: bool | None = None
     is_public: bool | None = None
     sort_order: int | None = None
