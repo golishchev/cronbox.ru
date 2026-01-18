@@ -239,9 +239,6 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
             </Button>
           </div>
           <h1 className="text-3xl font-bold tracking-tight mt-2">{t('admin.plans.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('admin.plans.subtitle')}
-          </p>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="h-4 w-4 mr-2" />
@@ -256,7 +253,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <CreditCard className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('admin.plans.noPlans')}</h2>
-          <p className="text-muted-foreground">{t('admin.plans.noPlansDescription')}</p>
+          <p className="text-muted-foreground text-center max-w-md">{t('admin.plans.noPlansDescription')}</p>
           <Button onClick={handleOpenCreate}>
             <Plus className="h-4 w-4 mr-2" />
             {t('admin.plans.createFirst')}

@@ -216,9 +216,6 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t('billing.title')}</h1>
-        <p className="text-muted-foreground">
-          {t('billing.subtitle')}
-        </p>
       </div>
 
       {error && (

@@ -195,9 +195,6 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('executions.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('executions.subtitle')}
-          </p>
         </div>
         <Button variant="outline" onClick={loadExecutions} disabled={isLoading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -249,7 +246,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <History className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('executions.noExecutionsYet')}</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-center max-w-md">
             {t('executions.executionsWillAppear')}
           </p>
         </div>

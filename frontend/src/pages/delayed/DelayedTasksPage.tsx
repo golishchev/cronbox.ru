@@ -270,9 +270,6 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('delayedTasks.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('delayedTasks.subtitle')}
-          </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 sm:mr-2" />
@@ -305,9 +302,9 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Calendar className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('delayedTasks.noTasksYet')}</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-center max-w-md">
             {statusFilter !== 'all'
-              ? t('delayedTasks.noTasksFound', { status: statusFilter })
+              ? t('delayedTasks.noTasksFound', { status: t(`common.${statusFilter}`) })
               : t('delayedTasks.scheduleFirstTask')}
           </p>
           <Button onClick={() => setShowCreateDialog(true)}>
