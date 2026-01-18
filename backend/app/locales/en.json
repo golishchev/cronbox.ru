@@ -83,6 +83,12 @@
       "success": "✅ <b>Account unlinked</b>\n\nYou will no longer receive Telegram notifications.\nTo link again, use /link."
     }
   },
+  "heartbeat": {
+    "late": "Heartbeat monitor '{name}' has not received a ping within the expected interval. Last ping: {last_ping}",
+    "dead": "Heartbeat monitor '{name}' is DEAD - no pings received for {missed_count} consecutive intervals. Last ping: {last_ping}",
+    "recovery": "Heartbeat monitor '{name}' has recovered and is now healthy",
+    "never": "never"
+  },
   "errors": {
     "cron_task_limit": "Cron task limit reached. Your plan allows {max_tasks} cron task(s)",
     "cron_interval_too_frequent": "Cron interval too frequent. Your plan requires minimum {min_interval} minute(s) between runs",

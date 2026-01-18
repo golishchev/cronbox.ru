@@ -1,12 +1,17 @@
 """Heartbeat monitor service - Dead Man's Switch logic."""
 
 from datetime import datetime
+from uuid import UUID
 
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db.repositories.heartbeats import HeartbeatPingRepository, HeartbeatRepository
 from app.models.heartbeat import Heartbeat, HeartbeatPing, HeartbeatStatus
+from app.models.workspace import Workspace
+from app.services.i18n import t
 from app.services.notifications import notification_service
 
 logger = structlog.get_logger()
@@ -14,6 +19,17 @@ logger = structlog.get_logger()
 
 class HeartbeatService:
     """Service for heartbeat monitoring operations."""
+
+    async def _get_workspace_language(self, db: AsyncSession, workspace_id: UUID) -> str:
+        """Get the preferred language of the workspace owner."""
+        result = await db.execute(
+            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
+        )
+        workspace = result.scalar_one_or_none()
+
+        if workspace and workspace.owner:
+            return workspace.owner.preferred_language or "en"
+        return "en"
 
     async def process_ping(
         self,
@@ -173,13 +189,20 @@ class HeartbeatService:
         heartbeat: Heartbeat,
     ) -> None:
         """Send notification when heartbeat becomes late."""
+        lang = await self._get_workspace_language(db, heartbeat.workspace_id)
+        last_ping = (
+            heartbeat.last_ping_at.isoformat()
+            if heartbeat.last_ping_at
+            else t("heartbeat.never", lang)
+        )
+        error_message = t("heartbeat.late", lang, name=heartbeat.name, last_ping=last_ping)
+
         await notification_service.send_task_failure(
             db=db,
             workspace_id=heartbeat.workspace_id,
             task_name=heartbeat.name,
             task_type="heartbeat",
-            error_message=f"Heartbeat monitor '{heartbeat.name}' has not received a ping within the expected interval. "
-            f"Last ping: {heartbeat.last_ping_at.isoformat() if heartbeat.last_ping_at else 'never'}",
+            error_message=error_message,
         )
 
     async def _send_dead_notification(
@@ -188,13 +211,26 @@ class HeartbeatService:
         heartbeat: Heartbeat,
     ) -> None:
         """Send notification when heartbeat becomes dead."""
+        lang = await self._get_workspace_language(db, heartbeat.workspace_id)
+        last_ping = (
+            heartbeat.last_ping_at.isoformat()
+            if heartbeat.last_ping_at
+            else t("heartbeat.never", lang)
+        )
+        error_message = t(
+            "heartbeat.dead",
+            lang,
+            name=heartbeat.name,
+            missed_count=heartbeat.consecutive_misses,
+            last_ping=last_ping,
+        )
+
         await notification_service.send_task_failure(
             db=db,
             workspace_id=heartbeat.workspace_id,
             task_name=heartbeat.name,
             task_type="heartbeat",
-            error_message=f"Heartbeat monitor '{heartbeat.name}' is DEAD - no pings received for {heartbeat.consecutive_misses} consecutive intervals. "
-            f"Last ping: {heartbeat.last_ping_at.isoformat() if heartbeat.last_ping_at else 'never'}",
+            error_message=error_message,
         )
 
     async def _send_recovery_notification(
