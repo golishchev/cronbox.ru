@@ -217,7 +217,7 @@ export interface UpdateDelayedTaskRequest {
 }
 
 // Execution types
-export type ExecutionTaskType = 'cron' | 'delayed' | 'chain'
+export type ExecutionTaskType = 'cron' | 'delayed' | 'chain' | 'heartbeat'
 export type ExecutionStatus = TaskStatus | 'partial' | 'cancelled'
 
 export interface Execution {

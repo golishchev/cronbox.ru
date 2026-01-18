@@ -507,7 +507,9 @@
     "completedSteps": "Выполнено",
     "failedStepsLabel": "Ошибки",
     "skippedSteps": "Пропущено",
-    "chainVariables": "Переменные"
+    "chainVariables": "Переменные",
+    "heartbeat": "Монитор",
+    "pingReceived": "Пинг получен"
   },
   "notifications": {
     "title": "Уведомления",

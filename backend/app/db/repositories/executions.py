@@ -8,6 +8,7 @@ from app.db.repositories.base import BaseRepository
 from app.models.chain_execution import ChainExecution
 from app.models.cron_task import HttpMethod, TaskStatus
 from app.models.execution import Execution
+from app.models.heartbeat import Heartbeat, HeartbeatPing
 from app.models.task_chain import ChainStatus, TaskChain
 
 
@@ -386,6 +387,58 @@ class ExecutionRepository(BaseRepository[Execution]):
                     }
                 )
 
+        # Get heartbeat pings if not filtered to other types
+        if task_type is None or task_type == "heartbeat":
+            heartbeat_stmt = (
+                select(HeartbeatPing, Heartbeat.name)
+                .join(Heartbeat, HeartbeatPing.heartbeat_id == Heartbeat.id)
+                .where(Heartbeat.workspace_id == workspace_id)
+                .order_by(HeartbeatPing.created_at.desc())
+            )
+
+            # Heartbeat pings are always "success" - they represent received pings
+            if status is not None and status != TaskStatus.SUCCESS:
+                pass  # Skip heartbeat pings if filtering for non-success status
+            else:
+                if start_date is not None:
+                    heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.created_at >= start_date)
+                if end_date is not None:
+                    heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.created_at <= end_date)
+
+                heartbeat_result = await self.db.execute(heartbeat_stmt)
+                heartbeat_pings = heartbeat_result.all()
+
+                for row in heartbeat_pings:
+                    ping = row[0]
+                    heartbeat_name = row[1]
+                    results.append(
+                        {
+                            "id": ping.id,
+                            "workspace_id": workspace_id,
+                            "task_type": "heartbeat",
+                            "task_id": ping.heartbeat_id,
+                            "task_name": heartbeat_name,
+                            "status": "success",  # Pings are always successful
+                            "started_at": ping.created_at,
+                            "finished_at": ping.created_at,
+                            "duration_ms": ping.duration_ms,
+                            "retry_attempt": None,
+                            "request_url": None,
+                            "request_method": None,
+                            "response_status_code": None,
+                            "error_message": None,
+                            "error_type": None,
+                            "created_at": ping.created_at,
+                            "total_steps": None,
+                            "completed_steps": None,
+                            "failed_steps": None,
+                            "skipped_steps": None,
+                            # Heartbeat-specific fields
+                            "source_ip": ping.source_ip,
+                            "status_message": ping.status_message,
+                        }
+                    )
+
         # Sort by started_at descending
         # Normalize datetimes to naive (remove timezone info) for comparison
         def get_sort_key(x):
@@ -452,5 +505,24 @@ class ExecutionRepository(BaseRepository[Execution]):
 
             chain_result = await self.db.execute(chain_stmt)
             total += chain_result.scalar_one()
+
+        # Count heartbeat pings
+        if task_type is None or task_type == "heartbeat":
+            # Only count if not filtering for non-success status
+            if status is None or status == TaskStatus.SUCCESS:
+                heartbeat_stmt = (
+                    select(func.count())
+                    .select_from(HeartbeatPing)
+                    .join(Heartbeat, HeartbeatPing.heartbeat_id == Heartbeat.id)
+                    .where(Heartbeat.workspace_id == workspace_id)
+                )
+
+                if start_date is not None:
+                    heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.created_at >= start_date)
+                if end_date is not None:
+                    heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.created_at <= end_date)
+
+                heartbeat_result = await self.db.execute(heartbeat_stmt)
+                total += heartbeat_result.scalar_one()
 
         return total

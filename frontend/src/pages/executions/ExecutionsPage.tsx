@@ -37,6 +37,7 @@ import {
   RefreshCw,
   AlertCircle,
   Link2,
+  HeartPulse,
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -229,6 +230,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               <SelectItem value="cron">Cron</SelectItem>
               <SelectItem value="delayed">{t('executions.delayed')}</SelectItem>
               <SelectItem value="chain">{t('executions.chain')}</SelectItem>
+              <SelectItem value="heartbeat">{t('executions.heartbeat')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -279,6 +281,10 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                             total: execution.total_steps ?? 0,
                           })}
                         </p>
+                      ) : execution.task_type === 'heartbeat' ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t('executions.pingReceived')}
+                        </p>
                       ) : (
                         <p className="text-sm text-muted-foreground truncate max-w-[250px]">
                           {execution.request_url}
@@ -289,7 +295,12 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                   <TableCell>
                     <Badge variant="outline" className="gap-1">
                       {execution.task_type === 'chain' && <Link2 className="h-3 w-3" />}
-                      {execution.task_type === 'chain' ? t('executions.chain') : execution.task_type}
+                      {execution.task_type === 'heartbeat' && <HeartPulse className="h-3 w-3" />}
+                      {execution.task_type === 'chain'
+                        ? t('executions.chain')
+                        : execution.task_type === 'heartbeat'
+                          ? t('executions.heartbeat')
+                          : execution.task_type}
                     </Badge>
                   </TableCell>
                   <TableCell>

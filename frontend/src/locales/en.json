@@ -506,7 +506,9 @@
     "completedSteps": "Completed",
     "failedStepsLabel": "Failed",
     "skippedSteps": "Skipped",
-    "chainVariables": "Variables"
+    "chainVariables": "Variables",
+    "heartbeat": "Monitor",
+    "pingReceived": "Ping received"
   },
   "notifications": {
     "title": "Notifications",
