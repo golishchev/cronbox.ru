@@ -244,9 +244,6 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
             <Check className="h-4 w-4 text-green-600" />
           )}
         </div>
-        <p className="text-muted-foreground">
-          {t('notifications.subtitle')}
-        </p>
       </div>
 
       {error && (

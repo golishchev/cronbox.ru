@@ -239,9 +239,6 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
             </Button>
           </div>
           <h1 className="text-3xl font-bold tracking-tight mt-2">{t('admin.plans.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('admin.plans.subtitle')}
-          </p>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="h-4 w-4 mr-2" />

@@ -220,9 +220,6 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('profile.title')}</h1>
-        <p className="text-muted-foreground">
-          {t('profile.subtitle')}
-        </p>
       </div>
 
       {error && (

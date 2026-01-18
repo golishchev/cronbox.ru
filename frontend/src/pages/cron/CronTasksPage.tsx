@@ -221,9 +221,6 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('cronTasks.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('cronTasks.subtitle')}
-          </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 sm:mr-2" />

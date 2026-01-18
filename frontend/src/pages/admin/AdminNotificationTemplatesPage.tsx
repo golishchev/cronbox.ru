@@ -280,7 +280,6 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
           <h1 className="text-3xl font-bold tracking-tight mt-2">
             {t('admin.templates.title')}
           </h1>
-          <p className="text-muted-foreground">{t('admin.templates.subtitle')}</p>
         </div>
       </div>
 

@@ -270,9 +270,6 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('delayedTasks.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('delayedTasks.subtitle')}
-          </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 sm:mr-2" />

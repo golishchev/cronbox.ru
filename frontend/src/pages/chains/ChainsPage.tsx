@@ -263,9 +263,6 @@ export function ChainsPage({ onNavigate }: ChainsPageProps) {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('chains.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('chains.subtitle')}
-          </p>
         </div>
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Lock className="h-16 w-16 text-muted-foreground" />
@@ -287,9 +284,6 @@ export function ChainsPage({ onNavigate }: ChainsPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('chains.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('chains.subtitle')}
-          </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 sm:mr-2" />
