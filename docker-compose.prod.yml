@@ -172,6 +172,11 @@ services:
       - "traefik.http.routers.api-uploads.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api-uploads.middlewares=compress@file"
       - "traefik.http.routers.api-uploads.service=api"
+      # Heartbeat ping endpoint (public, no auth required)
+      - "traefik.http.routers.api-ping.rule=Host(`api.cronbox.ru`) && PathPrefix(`/ping`)"
+      - "traefik.http.routers.api-ping.entrypoints=websecure"
+      - "traefik.http.routers.api-ping.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-ping.service=api"
       # Health & Metrics
       - "traefik.http.routers.api-health.rule=Host(`api.cronbox.ru`) && Path(`/health`)"
       - "traefik.http.routers.api-health.entrypoints=websecure"
