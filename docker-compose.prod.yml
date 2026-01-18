@@ -204,6 +204,7 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
       EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
     command: uv run arq app.workers.settings.WorkerSettings
+    stop_grace_period: 30s
     # Disable healthcheck - worker has no HTTP server
     healthcheck:
       disable: true
@@ -216,6 +217,7 @@ services:
     container_name: cronbox-scheduler
     logging: *default-logging
     command: uv run python -m app.workers.scheduler
+    stop_grace_period: 30s
     # Disable healthcheck - scheduler has no HTTP server
     healthcheck:
       disable: true
@@ -229,6 +231,7 @@ services:
       <<: *backend-env
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     command: uv run cronbox-bot
+    stop_grace_period: 15s
     # Disable healthcheck - bot has no HTTP server
     healthcheck:
       disable: true

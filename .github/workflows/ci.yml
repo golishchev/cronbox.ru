@@ -350,11 +350,23 @@ jobs:
               fi
             done
 
+            # If infrastructure needs restart, stop dependent services first to avoid connection errors
             if [ "$NEED_INFRA" = true ] || [ "$INFRA_CHANGED" = "true" ]; then
+              echo "==> Stopping application services before infrastructure restart..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot api 2>/dev/null || true
+              echo "==> Waiting for services to stop gracefully..."
+              sleep 5
+
               echo "==> Starting infrastructure services..."
               docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
               echo "==> Waiting for infrastructure to be healthy..."
               sleep 30
+
+              # Restart application services after infrastructure is ready
+              echo "==> Restarting application services..."
+              docker compose -f docker-compose.prod.yml up -d api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d worker scheduler bot
             else
               echo "==> Infrastructure is running"
             fi
@@ -364,6 +376,10 @@ jobs:
               echo "==> Pulling backend image..."
               docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG}
               docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
+
+              echo "==> Stopping backend services gracefully..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot 2>/dev/null || true
+              sleep 3
 
               echo "==> Deploying backend services..."
               docker compose -f docker-compose.prod.yml up -d --no-deps api
