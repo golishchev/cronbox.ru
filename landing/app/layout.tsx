@@ -158,12 +158,10 @@ export default function RootLayout({
             })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
 
             ym(${YANDEX_METRIKA_ID}, 'init', {
-              ssr: true,
-              webvisor: true,
               clickmap: true,
-              ecommerce: 'dataLayer',
+              trackLinks: true,
               accurateTrackBounce: true,
-              trackLinks: true
+              webvisor: true
             });
           `}
         </Script>

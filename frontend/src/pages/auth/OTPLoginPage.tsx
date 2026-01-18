@@ -30,6 +30,17 @@ export function OTPLoginPage({ onNavigate }: OTPLoginPageProps) {
   const { setWorkspaces, setCurrentWorkspace, setLoading: setWorkspacesLoading } = useWorkspaceStore()
   const codeInputRef = useRef<HTMLInputElement>(null)
 
+  // Prevent search engine indexing of this page
+  useEffect(() => {
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
+
   // Countdown timer
   useEffect(() => {
     if (expiresIn > 0) {

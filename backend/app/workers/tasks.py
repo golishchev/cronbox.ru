@@ -584,6 +584,21 @@ async def execute_chain(
             error_type = None
 
             try:
+                # Skip disabled steps
+                if not step.is_enabled:
+                    await step_exec_repo.mark_as_skipped(
+                        chain_execution_id=chain_execution.id,
+                        step_id=step.id,
+                        step_order=step.step_order,
+                        step_name=step.name,
+                        request_url=step.url,
+                        request_method=step.method.value,
+                        condition_details="Step is disabled",
+                    )
+                    exec_context.update_from_step_result(StepStatus.SKIPPED)
+                    log_step_execution(chain, step, step.step_order, step.url, StepStatus.SKIPPED)
+                    continue
+
                 # Check condition if present
                 if step.condition:
                     condition_met, condition_details = evaluate_condition(

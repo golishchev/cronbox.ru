@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mail, Clock, LogOut, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -18,6 +18,17 @@ export function EmailVerificationRequired({ onLogout }: EmailVerificationRequire
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
+
+  // Prevent search engine indexing of this page
+  useEffect(() => {
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
 
   const handleResend = async () => {
     if (cooldown > 0) return

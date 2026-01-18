@@ -63,6 +63,7 @@ import {
 } from 'lucide-react'
 import { ChainStepForm } from '@/components/chains/ChainStepForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { getErrorMessage } from '@/api/client'
 import { translateApiError } from '@/lib/translateApiError'
 import type {
@@ -251,6 +252,22 @@ export function ChainDetailPage({ chainId, onNavigate }: ChainDetailPageProps) {
       })
     } finally {
       setActionLoading(null)
+    }
+  }
+
+  const handleToggleStepEnabled = async (step: ChainStep) => {
+    if (!currentWorkspace || !chain) return
+    try {
+      await updateChainStep(currentWorkspace.id, chain.id, step.id, {
+        is_enabled: !step.is_enabled,
+      })
+      await loadChain()
+    } catch (err) {
+      toast({
+        title: t('chains.failedToUpdateStep'),
+        description: translateApiError(getErrorMessage(err), t),
+        variant: 'destructive',
+      })
     }
   }
 
@@ -546,7 +563,7 @@ export function ChainDetailPage({ chainId, onNavigate }: ChainDetailPageProps) {
           ) : (
             <div className="space-y-2">
               {sortedSteps.map((step, index) => (
-                <Card key={step.id}>
+                <Card key={step.id} className={!step.is_enabled ? 'opacity-60' : ''}>
                   <CardHeader className="py-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -582,6 +599,11 @@ export function ChainDetailPage({ chainId, onNavigate }: ChainDetailPageProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Switch
+                          checked={step.is_enabled}
+                          onCheckedChange={() => handleToggleStepEnabled(step)}
+                          title={step.is_enabled ? t('chains.disableStep') : t('chains.enableStep')}
+                        />
                         <Button
                           variant="ghost"
                           size="icon"

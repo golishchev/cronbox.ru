@@ -18,6 +18,17 @@ export function VerifyEmailPage({ token, onNavigate }: VerifyEmailPageProps) {
   const [error, setError] = useState('')
   const { user, updateUser } = useAuthStore()
 
+  // Prevent search engine indexing of this page
+  useEffect(() => {
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
+
   useEffect(() => {
     const verify = async () => {
       // If user is already logged in and email is verified, show success immediately

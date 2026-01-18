@@ -394,7 +394,10 @@
     "stepExecutions": "Step Executions",
     "skipped": "Skipped",
     "extractedVariables": "Extracted Variables",
-    "conditionResult": "Condition"
+    "conditionResult": "Condition",
+    "enableStep": "Enable step",
+    "disableStep": "Disable step",
+    "stepDisabled": "Disabled"
   },
   "heartbeats": {
     "title": "Heartbeats",

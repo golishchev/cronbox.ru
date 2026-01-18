@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, LogOut, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -19,6 +19,17 @@ export function WorkspaceRequired({ onLogout }: WorkspaceRequiredProps) {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [newWorkspace, setNewWorkspace] = useState({ name: '', slug: '' })
+
+  // Prevent search engine indexing of this page
+  useEffect(() => {
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => {
+      document.head.removeChild(meta)
+    }
+  }, [])
 
   const generateSlug = (name: string) => {
     return name

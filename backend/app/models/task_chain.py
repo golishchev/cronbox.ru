@@ -144,6 +144,9 @@ class ChainStep(Base, UUIDMixin, TimestampMixin):
     # Continue even if this step fails
     continue_on_failure: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Enable/disable step (disabled steps are skipped during execution)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
     # Relationships
     chain: Mapped["TaskChain"] = relationship(back_populates="steps")
     step_executions: Mapped[list["StepExecution"]] = relationship(

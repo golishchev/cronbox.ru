@@ -32,6 +32,7 @@ export interface ChainStep {
   condition: StepCondition | null
   extract_variables: Record<string, string>
   continue_on_failure: boolean
+  is_enabled: boolean
   created_at: string
   updated_at: string
 }
@@ -49,6 +50,7 @@ export interface CreateChainStepRequest {
   condition?: StepCondition | null
   extract_variables?: Record<string, string>
   continue_on_failure?: boolean
+  is_enabled?: boolean
 }
 
 export interface UpdateChainStepRequest {
@@ -63,6 +65,7 @@ export interface UpdateChainStepRequest {
   condition?: StepCondition | null
   extract_variables?: Record<string, string>
   continue_on_failure?: boolean
+  is_enabled?: boolean
 }
 
 // Task Chain types

@@ -394,7 +394,10 @@
     "stepExecutions": "Выполнения шагов",
     "skipped": "Пропущен",
     "extractedVariables": "Извлечённые переменные",
-    "conditionResult": "Условие"
+    "conditionResult": "Условие",
+    "enableStep": "Включить шаг",
+    "disableStep": "Выключить шаг",
+    "stepDisabled": "Выключен"
   },
   "heartbeats": {
     "title": "Мониторы",

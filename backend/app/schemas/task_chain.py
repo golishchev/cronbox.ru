@@ -56,6 +56,10 @@ class ChainStepBase(BaseModel):
         default=False,
         description="Continue to next step even if this step fails",
     )
+    is_enabled: bool = Field(
+        default=True,
+        description="Whether this step is enabled (disabled steps are skipped during execution)",
+    )
 
 
 class ChainStepCreate(ChainStepBase):
@@ -78,6 +82,7 @@ class ChainStepUpdate(BaseModel):
     condition: StepCondition | None = None
     extract_variables: dict[str, str] | None = None
     continue_on_failure: bool | None = None
+    is_enabled: bool | None = None
 
 
 class ChainStepResponse(BaseModel):
@@ -99,6 +104,7 @@ class ChainStepResponse(BaseModel):
     condition: dict | None
     extract_variables: dict
     continue_on_failure: bool
+    is_enabled: bool
     created_at: datetime
     updated_at: datetime
 
