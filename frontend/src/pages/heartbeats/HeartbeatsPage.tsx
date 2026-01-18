@@ -71,6 +71,7 @@ export function HeartbeatsPage({ onNavigate }: HeartbeatsPageProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingHeartbeat, setEditingHeartbeat] = useState<Heartbeat | null>(null)
   const [deletingHeartbeat, setDeletingHeartbeat] = useState<Heartbeat | null>(null)
+  const [createdHeartbeat, setCreatedHeartbeat] = useState<Heartbeat | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
 
@@ -377,8 +378,11 @@ export function HeartbeatsPage({ onNavigate }: HeartbeatsPageProps) {
           </DialogHeader>
           <HeartbeatForm
             workspaceId={currentWorkspace.id}
-            onSuccess={() => {
+            onSuccess={(heartbeat) => {
               setShowCreateDialog(false)
+              if (heartbeat) {
+                setCreatedHeartbeat(heartbeat)
+              }
               loadHeartbeats()
             }}
             onCancel={() => setShowCreateDialog(false)}
@@ -431,6 +435,59 @@ export function HeartbeatsPage({ onNavigate }: HeartbeatsPageProps) {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Created Success Dialog */}
+      <Dialog open={!!createdHeartbeat} onOpenChange={() => setCreatedHeartbeat(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('heartbeats.createdSuccessTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('heartbeats.createdSuccessDescription', { name: createdHeartbeat?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('heartbeats.pingUrl')}</label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded bg-muted px-3 py-2 text-sm break-all">
+                  {createdHeartbeat?.ping_url}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => createdHeartbeat && handleCopyPingUrl(createdHeartbeat.ping_url)}
+                  title={t('heartbeats.clickToCopy')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  asChild
+                  title={t('heartbeats.openPingUrl')}
+                >
+                  <a href={createdHeartbeat?.ping_url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+            <div className="rounded-md bg-muted/50 p-3">
+              <p className="text-sm text-muted-foreground">
+                {t('heartbeats.usageHint')}
+              </p>
+              <code className="mt-2 block text-xs bg-background rounded p-2 break-all">
+                curl {createdHeartbeat?.ping_url}
+              </code>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setCreatedHeartbeat(null)}>
+              {t('common.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

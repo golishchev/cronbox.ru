@@ -21,7 +21,7 @@ import type { Heartbeat, CreateHeartbeatRequest } from '@/types'
 interface HeartbeatFormProps {
   workspaceId: string
   heartbeat?: Heartbeat
-  onSuccess: () => void
+  onSuccess: (heartbeat?: Heartbeat) => void
   onCancel: () => void
 }
 
@@ -98,15 +98,11 @@ export function HeartbeatForm({ workspaceId, heartbeat, onSuccess, onCancel }: H
           description: t('heartbeats.updatedDescription', { name: data.name }),
           variant: 'success',
         })
+        onSuccess()
       } else {
-        await createHeartbeat(workspaceId, data)
-        toast({
-          title: t('heartbeats.created'),
-          description: t('heartbeats.createdDescription', { name: data.name }),
-          variant: 'success',
-        })
+        const createdHeartbeat = await createHeartbeat(workspaceId, data)
+        onSuccess(createdHeartbeat)
       }
-      onSuccess()
     } catch (err) {
       toast({
         title: isEditing ? t('heartbeats.failedToUpdate') : t('heartbeats.failedToCreate'),
