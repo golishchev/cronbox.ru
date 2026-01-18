@@ -307,7 +307,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
           <h2 className="text-xl font-semibold">{t('delayedTasks.noTasksYet')}</h2>
           <p className="text-muted-foreground">
             {statusFilter !== 'all'
-              ? t('delayedTasks.noTasksFound', { status: statusFilter })
+              ? t('delayedTasks.noTasksFound', { status: t(`common.${statusFilter}`) })
               : t('delayedTasks.scheduleFirstTask')}
           </p>
           <Button onClick={() => setShowCreateDialog(true)}>
