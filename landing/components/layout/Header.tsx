@@ -10,6 +10,7 @@ import clsx from 'clsx'
 const navigation = [
   { name: 'Возможности', href: '/#features' },
   { name: 'Тарифы', href: '/pricing' },
+  { name: 'Инструменты', href: '/tools/cron-expression-builder' },
   { name: 'Блог', href: '/blog' },
   { name: 'Документация', href: '/docs' },
 ]
