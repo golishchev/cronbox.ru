@@ -9,6 +9,7 @@ Tasks can be executed by:
 """
 
 import asyncio
+import signal
 from datetime import datetime
 
 import pytz
@@ -691,12 +692,24 @@ class TaskScheduler:
 async def run_scheduler():
     """Run the scheduler until interrupted."""
     scheduler = TaskScheduler()
+    loop = asyncio.get_running_loop()
+
+    # Setup signal handlers for graceful shutdown
+    def handle_signal(sig: signal.Signals) -> None:
+        logger.info("Received signal, initiating graceful shutdown...", signal=sig.name)
+        scheduler.running = False
+
+    # Register signal handlers
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, handle_signal, sig)
 
     try:
         await scheduler.start()
     except asyncio.CancelledError:
-        await scheduler.stop()
-    except KeyboardInterrupt:
+        logger.info("Scheduler cancelled")
+    except Exception as e:
+        logger.error("Scheduler error", error=str(e))
+    finally:
         await scheduler.stop()
 
 
