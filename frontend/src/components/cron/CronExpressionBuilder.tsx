@@ -74,7 +74,7 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
 
   // Custom schedule state
   const [frequency, setFrequency] = useState<'minutes' | 'hours' | 'daily' | 'weekly' | 'monthly'>('daily')
-  const [interval, setInterval] = useState(1)
+  const [interval, setInterval] = useState<number | ''>(1)
   const [hour, setHour] = useState(9)
   const [minute, setMinute] = useState(0)
   const [selectedDays, setSelectedDays] = useState<string[]>(['1']) // Monday default
@@ -93,11 +93,12 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
   }
 
   const buildCustomExpression = (): string => {
+    const safeInterval = interval || 1
     switch (frequency) {
       case 'minutes':
-        return `*/${interval} * * * *`
+        return `*/${safeInterval} * * * *`
       case 'hours':
-        return `${minute} */${interval} * * *`
+        return `${minute} */${safeInterval} * * *`
       case 'daily':
         return `${minute} ${hour} * * *`
       case 'weekly':
@@ -272,11 +273,13 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                         type="number"
                         min={1}
                         max={frequency === 'minutes' ? 59 : 23}
-                        value={interval || ''}
-                        onChange={(e) => setInterval(parseInt(e.target.value) || 0)}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value)
-                          if (!val || val < 1) setInterval(1)
+                        value={interval}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setInterval(val === '' ? '' : parseInt(val))
+                        }}
+                        onBlur={() => {
+                          if (interval === '' || interval < 1) setInterval(1)
                         }}
                         className="w-20"
                       />
