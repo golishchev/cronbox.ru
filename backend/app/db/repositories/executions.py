@@ -387,7 +387,17 @@ class ExecutionRepository(BaseRepository[Execution]):
                 )
 
         # Sort by started_at descending
-        results.sort(key=lambda x: x["started_at"], reverse=True)
+        # Normalize datetimes to naive (remove timezone info) for comparison
+        def get_sort_key(x):
+            dt = x["started_at"]
+            if dt is None:
+                return datetime.min
+            # Remove timezone info if present to allow comparison
+            if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+                return dt.replace(tzinfo=None)
+            return dt
+
+        results.sort(key=get_sort_key, reverse=True)
 
         # Apply pagination
         return results[skip : skip + limit]
