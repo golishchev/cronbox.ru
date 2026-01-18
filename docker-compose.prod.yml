@@ -221,6 +221,16 @@ services:
     <<: *backend-base
     container_name: cronbox-scheduler
     logging: *default-logging
+    environment:
+      <<: *backend-env
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      # SMTP settings for sending notifications
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      EMAIL_FROM: ${EMAIL_FROM:-CronBox <noreply@cronbox.ru>}
     command: uv run python -m app.workers.scheduler
     stop_grace_period: 30s
     # Disable healthcheck - scheduler has no HTTP server
