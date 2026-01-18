@@ -1,5 +1,5 @@
 # GitHub Actions CI/CD Pipeline for CronBox
-# Tests and deploys on push to main
+# Tests, builds images, and deploys on push to main
 
 name: CI/CD
 
@@ -9,6 +9,8 @@ on:
 
 env:
   APP_DIR: /opt/cronbox
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
 
 jobs:
   # ===================
@@ -172,22 +174,136 @@ jobs:
         run: npm run build
 
   # ===================
+  # BUILD & PUSH IMAGES
+  # ===================
+
+  build-backend:
+    name: Build Backend Image
+    needs: [changes, test-backend]
+    if: |
+      always() &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.test-backend.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-api:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-frontend:
+    name: Build Frontend Image
+    needs: [changes, test-frontend]
+    if: |
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.test-frontend.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
+          build-args: |
+            VITE_API_URL=https://api.cronbox.ru/v1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-landing:
+    name: Build Landing Image
+    needs: [changes, test-landing]
+    if: |
+      always() &&
+      needs.changes.outputs.landing == 'true' &&
+      (needs.test-landing.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push landing
+        uses: docker/build-push-action@v6
+        with:
+          context: ./landing
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-landing:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-landing:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===================
   # DEPLOY JOB
   # ===================
 
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [changes, test-backend, test-frontend, test-landing]
-    # Run deploy if all required tests passed or were skipped (no changes)
+    needs: [changes, test-backend, test-frontend, test-landing, build-backend, build-frontend, build-landing]
+    # Run deploy if at least one build succeeded or infra changed
     if: |
       always() &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
-      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped') &&
-      (needs.test-frontend.result == 'success' || needs.test-frontend.result == 'skipped') &&
-      (needs.test-landing.result == 'success' || needs.test-landing.result == 'skipped') &&
-      !(needs.test-backend.result == 'skipped' && needs.test-frontend.result == 'skipped' && needs.test-landing.result == 'skipped' && needs.changes.outputs.infra != 'true')
+      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') &&
+      (needs.build-landing.result == 'success' || needs.build-landing.result == 'skipped') &&
+      (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.build-landing.result == 'success' || needs.changes.outputs.infra == 'true')
     environment:
       name: production
       url: https://cronbox.ru
@@ -195,11 +311,20 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          BACKEND_CHANGED: ${{ needs.build-backend.result == 'success' }}
+          FRONTEND_CHANGED: ${{ needs.build-frontend.result == 'success' }}
+          LANDING_CHANGED: ${{ needs.build-landing.result == 'success' }}
+          INFRA_CHANGED: ${{ needs.changes.outputs.infra }}
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: ghcr.io
+          IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: BACKEND_CHANGED,FRONTEND_CHANGED,LANDING_CHANGED,INFRA_CHANGED,IMAGE_TAG,REGISTRY,IMAGE_PREFIX
           script: |
             set -e
             cd /opt/cronbox
@@ -207,6 +332,12 @@ jobs:
             echo "==> Pulling latest code..."
             git fetch origin
             git checkout ${{ github.sha }}
+
+            echo "==> Changes detected:"
+            echo "    Backend: $BACKEND_CHANGED"
+            echo "    Frontend: $FRONTEND_CHANGED"
+            echo "    Landing: $LANDING_CHANGED"
+            echo "    Infra: $INFRA_CHANGED"
 
             echo "==> Checking infrastructure services..."
             RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
@@ -219,7 +350,7 @@ jobs:
               fi
             done
 
-            if [ "$NEED_INFRA" = true ]; then
+            if [ "$NEED_INFRA" = true ] || [ "$INFRA_CHANGED" = "true" ]; then
               echo "==> Starting infrastructure services..."
               docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
               echo "==> Waiting for infrastructure to be healthy..."
@@ -228,13 +359,35 @@ jobs:
               echo "==> Infrastructure is running"
             fi
 
-            echo "==> Building images..."
-            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --parallel
+            # Pull and deploy only changed images
+            if [ "$BACKEND_CHANGED" = "true" ]; then
+              echo "==> Pulling backend image..."
+              docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
 
-            echo "==> Zero-downtime deployment..."
-            docker compose -f docker-compose.prod.yml up -d --no-deps api
-            sleep 3
-            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot frontend landing
+              echo "==> Deploying backend services..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
+            fi
+
+            if [ "$FRONTEND_CHANGED" = "true" ]; then
+              echo "==> Pulling frontend image..."
+              docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
+
+              echo "==> Deploying frontend..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+            fi
+
+            if [ "$LANDING_CHANGED" = "true" ]; then
+              echo "==> Pulling landing image..."
+              docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
+
+              echo "==> Deploying landing..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps landing
+            fi
 
             echo "==> Cleaning up old images (older than 7 days)..."
             docker image prune -f --filter "until=168h"
