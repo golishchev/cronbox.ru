@@ -52,9 +52,9 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
   const [name, setName] = useState(step?.name ?? '')
   const [url, setUrl] = useState(step?.url ?? '')
   const [method, setMethod] = useState<HttpMethod>(step?.method ?? 'GET')
-  const [timeoutSeconds, setTimeoutSeconds] = useState(step?.timeout_seconds ?? 30)
-  const [retryCount, setRetryCount] = useState(step?.retry_count ?? 0)
-  const [retryDelaySeconds, setRetryDelaySeconds] = useState(step?.retry_delay_seconds ?? 60)
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number | ''>(step?.timeout_seconds ?? 30)
+  const [retryCount, setRetryCount] = useState<number | ''>(step?.retry_count ?? 0)
+  const [retryDelaySeconds, setRetryDelaySeconds] = useState<number | ''>(step?.retry_delay_seconds ?? 60)
   const [headers, setHeaders] = useState(JSON.stringify(step?.headers ?? {}, null, 2))
   const [body, setBody] = useState(step?.body ?? '')
   const [continueOnFailure, setContinueOnFailure] = useState(step?.continue_on_failure ?? false)
@@ -163,9 +163,9 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
         method,
         headers: parsedHeaders,
         body: body.trim() || undefined,
-        timeout_seconds: timeoutSeconds,
-        retry_count: retryCount,
-        retry_delay_seconds: retryDelaySeconds,
+        timeout_seconds: timeoutSeconds || 30,
+        retry_count: retryCount || 0,
+        retry_delay_seconds: retryDelaySeconds || 60,
         continue_on_failure: continueOnFailure,
         condition,
         // When editing, always send the value (even empty) to allow clearing
@@ -238,11 +238,10 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
             type="number"
             min={1}
             max={300}
-            value={timeoutSeconds || ''}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setTimeoutSeconds(30)
+            value={timeoutSeconds}
+            onChange={(e) => setTimeoutSeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (timeoutSeconds === '' || timeoutSeconds < 1) setTimeoutSeconds(30)
             }}
           />
         </div>
@@ -254,16 +253,15 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
             type="number"
             min={0}
             max={10}
-            value={retryCount === 0 ? '0' : (retryCount || '')}
-            onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (isNaN(val) || val < 0) setRetryCount(0)
+            value={retryCount}
+            onChange={(e) => setRetryCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (retryCount === '' || retryCount < 0) setRetryCount(0)
             }}
           />
         </div>
 
-        {retryCount > 0 && (
+        {typeof retryCount === 'number' && retryCount > 0 && (
           <div className="space-y-2">
             <Label htmlFor="retryDelay">{t('taskForm.retryDelaySeconds')}</Label>
             <Input
@@ -271,11 +269,10 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
               type="number"
               min={1}
               max={3600}
-              value={retryDelaySeconds || ''}
-              onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 0)}
-              onBlur={(e) => {
-                const val = parseInt(e.target.value)
-                if (!val || val < 1) setRetryDelaySeconds(60)
+              value={retryDelaySeconds}
+              onChange={(e) => setRetryDelaySeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+              onBlur={() => {
+                if (retryDelaySeconds === '' || retryDelaySeconds < 1) setRetryDelaySeconds(60)
               }}
             />
           </div>

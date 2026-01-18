@@ -39,7 +39,7 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
   const [schedule, setSchedule] = useState(chain?.schedule ?? '*/5 * * * *')
   const [timezone, setTimezone] = useState(chain?.timezone ?? 'Europe/Moscow')
   const [executeAt, setExecuteAt] = useState(chain?.execute_at ? chain.execute_at.slice(0, 16) : '')
-  const [timeoutSeconds, setTimeoutSeconds] = useState(chain?.timeout_seconds ?? 300)
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number | ''>(chain?.timeout_seconds ?? 300)
   const [stopOnFailure, setStopOnFailure] = useState(chain?.stop_on_failure ?? true)
   const [notifyOnFailure, setNotifyOnFailure] = useState(chain?.notify_on_failure ?? true)
   const [notifyOnSuccess, setNotifyOnSuccess] = useState(chain?.notify_on_success ?? false)
@@ -47,9 +47,9 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
 
   // Overlap prevention settings
   const [overlapPolicy, setOverlapPolicy] = useState<OverlapPolicy>(chain?.overlap_policy ?? 'allow')
-  const [maxInstances, setMaxInstances] = useState(chain?.max_instances ?? 1)
-  const [maxQueueSize, setMaxQueueSize] = useState(chain?.max_queue_size ?? 10)
-  const [executionTimeout, setExecutionTimeout] = useState(chain?.execution_timeout ?? 0)
+  const [maxInstances, setMaxInstances] = useState<number | ''>(chain?.max_instances ?? 1)
+  const [maxQueueSize, setMaxQueueSize] = useState<number | ''>(chain?.max_queue_size ?? 10)
+  const [executionTimeout, setExecutionTimeout] = useState<number | ''>(chain?.execution_timeout ?? 0)
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -82,16 +82,16 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
         description: description.trim() || undefined,
         trigger_type: triggerType,
         timezone,
-        timeout_seconds: timeoutSeconds,
+        timeout_seconds: timeoutSeconds || 300,
         stop_on_failure: stopOnFailure,
         notify_on_failure: notifyOnFailure,
         notify_on_success: notifyOnSuccess,
         notify_on_partial: notifyOnPartial,
         // Overlap prevention
         overlap_policy: overlapPolicy,
-        max_instances: maxInstances,
-        max_queue_size: maxQueueSize,
-        execution_timeout: executionTimeout > 0 ? executionTimeout : undefined,
+        max_instances: maxInstances || 1,
+        max_queue_size: maxQueueSize || 10,
+        execution_timeout: executionTimeout && executionTimeout > 0 ? executionTimeout : undefined,
       }
 
       if (triggerType === 'cron') {
@@ -221,11 +221,10 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
             type="number"
             min={1}
             max={3600}
-            value={timeoutSeconds || ''}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setTimeoutSeconds(300)
+            value={timeoutSeconds}
+            onChange={(e) => setTimeoutSeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (timeoutSeconds === '' || timeoutSeconds < 1) setTimeoutSeconds(300)
             }}
           />
           <p className="text-xs text-muted-foreground">{t('chains.chainTimeoutHelp')}</p>
@@ -331,11 +330,10 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={1}
                 max={10}
-                value={maxInstances || ''}
-                onChange={(e) => setMaxInstances(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (!val || val < 1) setMaxInstances(1)
+                value={maxInstances}
+                onChange={(e) => setMaxInstances(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (maxInstances === '' || maxInstances < 1) setMaxInstances(1)
                 }}
               />
             </div>
@@ -351,11 +349,10 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={1}
                 max={100}
-                value={maxQueueSize || ''}
-                onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (!val || val < 1) setMaxQueueSize(10)
+                value={maxQueueSize}
+                onChange={(e) => setMaxQueueSize(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (maxQueueSize === '' || maxQueueSize < 1) setMaxQueueSize(10)
                 }}
               />
             </div>
@@ -366,11 +363,10 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={0}
                 max={86400}
-                value={executionTimeout === 0 ? '0' : (executionTimeout || '')}
-                onChange={(e) => setExecutionTimeout(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (isNaN(val) || val < 0) setExecutionTimeout(0)
+                value={executionTimeout}
+                onChange={(e) => setExecutionTimeout(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (executionTimeout === '' || executionTimeout < 0) setExecutionTimeout(0)
                 }}
               />
               <p className="text-xs text-muted-foreground">{t('taskForm.executionTimeoutDescription')}</p>

@@ -38,9 +38,9 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
   const [method, setMethod] = useState<HttpMethod>(task?.method ?? 'GET')
   const [schedule, setSchedule] = useState(task?.schedule ?? '*/5 * * * *')
   const [timezone, setTimezone] = useState(task?.timezone ?? 'Europe/Moscow')
-  const [timeoutSeconds, setTimeoutSeconds] = useState(task?.timeout_seconds ?? 30)
-  const [retryCount, setRetryCount] = useState(task?.retry_count ?? 0)
-  const [retryDelaySeconds, setRetryDelaySeconds] = useState(task?.retry_delay_seconds ?? 60)
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number | ''>(task?.timeout_seconds ?? 30)
+  const [retryCount, setRetryCount] = useState<number | ''>(task?.retry_count ?? 0)
+  const [retryDelaySeconds, setRetryDelaySeconds] = useState<number | ''>(task?.retry_delay_seconds ?? 60)
   const [headers, setHeaders] = useState(JSON.stringify(task?.headers ?? {}, null, 2))
   const [body, setBody] = useState(task?.body ?? '')
   const [notifyOnFailure, setNotifyOnFailure] = useState(task?.notify_on_failure ?? true)
@@ -48,9 +48,9 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
 
   // Overlap prevention settings
   const [overlapPolicy, setOverlapPolicy] = useState<OverlapPolicy>(task?.overlap_policy ?? 'allow')
-  const [maxInstances, setMaxInstances] = useState(task?.max_instances ?? 1)
-  const [maxQueueSize, setMaxQueueSize] = useState(task?.max_queue_size ?? 10)
-  const [executionTimeout, setExecutionTimeout] = useState(task?.execution_timeout ?? 0)
+  const [maxInstances, setMaxInstances] = useState<number | ''>(task?.max_instances ?? 1)
+  const [maxQueueSize, setMaxQueueSize] = useState<number | ''>(task?.max_queue_size ?? 10)
+  const [executionTimeout, setExecutionTimeout] = useState<number | ''>(task?.execution_timeout ?? 0)
 
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -91,18 +91,18 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
         method,
         schedule: schedule.trim(),
         timezone,
-        timeout_seconds: timeoutSeconds,
-        retry_count: retryCount,
-        retry_delay_seconds: retryDelaySeconds,
+        timeout_seconds: timeoutSeconds || 30,
+        retry_count: retryCount || 0,
+        retry_delay_seconds: retryDelaySeconds || 60,
         headers: parsedHeaders,
         body: body.trim() || undefined,
         notify_on_failure: notifyOnFailure,
         notify_on_recovery: notifyOnRecovery,
         // Overlap prevention
         overlap_policy: overlapPolicy,
-        max_instances: maxInstances,
-        max_queue_size: maxQueueSize,
-        execution_timeout: executionTimeout > 0 ? executionTimeout : undefined,
+        max_instances: maxInstances || 1,
+        max_queue_size: maxQueueSize || 10,
+        execution_timeout: executionTimeout && executionTimeout > 0 ? executionTimeout : undefined,
       }
 
       if (isEditing) {
@@ -216,11 +216,10 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
             type="number"
             min={1}
             max={300}
-            value={timeoutSeconds || ''}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setTimeoutSeconds(30)
+            value={timeoutSeconds}
+            onChange={(e) => setTimeoutSeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (timeoutSeconds === '' || timeoutSeconds < 1) setTimeoutSeconds(30)
             }}
           />
         </div>
@@ -232,17 +231,16 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
             type="number"
             min={0}
             max={10}
-            value={retryCount === 0 ? '0' : (retryCount || '')}
-            onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (isNaN(val) || val < 0) setRetryCount(0)
+            value={retryCount}
+            onChange={(e) => setRetryCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (retryCount === '' || retryCount < 0) setRetryCount(0)
             }}
           />
         </div>
       </div>
 
-      {retryCount > 0 && (
+      {typeof retryCount === 'number' && retryCount > 0 && (
         <div className="space-y-2">
           <Label htmlFor="retryDelay">{t('taskForm.retryDelaySeconds')}</Label>
           <Input
@@ -250,11 +248,10 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
             type="number"
             min={1}
             max={3600}
-            value={retryDelaySeconds || ''}
-            onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setRetryDelaySeconds(60)
+            value={retryDelaySeconds}
+            onChange={(e) => setRetryDelaySeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (retryDelaySeconds === '' || retryDelaySeconds < 1) setRetryDelaySeconds(60)
             }}
           />
         </div>
@@ -324,11 +321,10 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
                 type="number"
                 min={1}
                 max={10}
-                value={maxInstances || ''}
-                onChange={(e) => setMaxInstances(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (!val || val < 1) setMaxInstances(1)
+                value={maxInstances}
+                onChange={(e) => setMaxInstances(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (maxInstances === '' || maxInstances < 1) setMaxInstances(1)
                 }}
               />
             </div>
@@ -344,11 +340,10 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
                 type="number"
                 min={1}
                 max={100}
-                value={maxQueueSize || ''}
-                onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (!val || val < 1) setMaxQueueSize(10)
+                value={maxQueueSize}
+                onChange={(e) => setMaxQueueSize(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (maxQueueSize === '' || maxQueueSize < 1) setMaxQueueSize(10)
                 }}
               />
             </div>
@@ -359,11 +354,10 @@ export function CronTaskForm({ workspaceId, task, onSuccess, onCancel }: CronTas
                 type="number"
                 min={0}
                 max={86400}
-                value={executionTimeout === 0 ? '0' : (executionTimeout || '')}
-                onChange={(e) => setExecutionTimeout(parseInt(e.target.value) || 0)}
-                onBlur={(e) => {
-                  const val = parseInt(e.target.value)
-                  if (isNaN(val) || val < 0) setExecutionTimeout(0)
+                value={executionTimeout}
+                onChange={(e) => setExecutionTimeout(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (executionTimeout === '' || executionTimeout < 0) setExecutionTimeout(0)
                 }}
               />
               <p className="text-xs text-muted-foreground">{t('taskForm.executionTimeoutDescription')}</p>

@@ -128,7 +128,7 @@ export function CronBuilder() {
 
   // Custom schedule state
   const [frequency, setFrequency] = useState<Frequency>('daily')
-  const [interval, setInterval] = useState(5)
+  const [interval, setInterval] = useState<number | ''>(5)
   const [hour, setHour] = useState(9)
   const [minute, setMinute] = useState(0)
   const [selectedDays, setSelectedDays] = useState<string[]>(['1'])
@@ -143,11 +143,12 @@ export function CronBuilder() {
   }, [])
 
   const buildCustomExpression = useCallback((): string => {
+    const safeInterval = interval || 1
     switch (frequency) {
       case 'minutes':
-        return `*/${interval} * * * *`
+        return `*/${safeInterval} * * * *`
       case 'hours':
-        return `${minute} */${interval} * * *`
+        return `${minute} */${safeInterval} * * *`
       case 'daily':
         return `${minute} ${hour} * * *`
       case 'weekly':
@@ -322,15 +323,10 @@ export function CronBuilder() {
                   value={interval}
                   onChange={(e) => {
                     const val = e.target.value
-                    if (val === '') {
-                      setInterval(0)
-                    } else {
-                      setInterval(parseInt(val) || 0)
-                    }
+                    setInterval(val === '' ? '' : parseInt(val))
                   }}
-                  onBlur={(e) => {
-                    const val = parseInt(e.target.value)
-                    if (!val || val < 1) setInterval(1)
+                  onBlur={() => {
+                    if (interval === '' || interval < 1) setInterval(1)
                   }}
                   className="w-20 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />

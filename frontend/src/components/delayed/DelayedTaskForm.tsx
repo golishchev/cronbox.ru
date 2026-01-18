@@ -62,9 +62,9 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
   const [url, setUrl] = useState('')
   const [method, setMethod] = useState<HttpMethod>('GET')
   const [executeAt, setExecuteAt] = useState(getDefaultDateTime())
-  const [timeoutSeconds, setTimeoutSeconds] = useState(30)
-  const [retryCount, setRetryCount] = useState(0)
-  const [retryDelaySeconds, setRetryDelaySeconds] = useState(60)
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number | ''>(30)
+  const [retryCount, setRetryCount] = useState<number | ''>(0)
+  const [retryDelaySeconds, setRetryDelaySeconds] = useState<number | ''>(60)
   const [headers, setHeaders] = useState('{}')
   const [body, setBody] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState('')
@@ -136,9 +136,9 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           method,
           execute_at: new Date(executeAt).toISOString(),
           name: name.trim() || undefined,
-          timeout_seconds: timeoutSeconds,
-          retry_count: retryCount,
-          retry_delay_seconds: retryDelaySeconds,
+          timeout_seconds: timeoutSeconds || 30,
+          retry_count: retryCount || 0,
+          retry_delay_seconds: retryDelaySeconds || 60,
           headers: parsedHeaders,
           body: body.trim() || undefined,
           callback_url: callbackUrl.trim() || undefined,
@@ -151,9 +151,9 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           method,
           execute_at: new Date(executeAt).toISOString(),
           name: name.trim() || undefined,
-          timeout_seconds: timeoutSeconds,
-          retry_count: retryCount,
-          retry_delay_seconds: retryDelaySeconds,
+          timeout_seconds: timeoutSeconds || 30,
+          retry_count: retryCount || 0,
+          retry_delay_seconds: retryDelaySeconds || 60,
           headers: parsedHeaders,
           body: body.trim() || undefined,
           idempotency_key: idempotencyKey.trim() || undefined,
@@ -251,11 +251,10 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
             type="number"
             min={1}
             max={300}
-            value={timeoutSeconds || ''}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setTimeoutSeconds(30)
+            value={timeoutSeconds}
+            onChange={(e) => setTimeoutSeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (timeoutSeconds === '' || timeoutSeconds < 1) setTimeoutSeconds(30)
             }}
           />
         </div>
@@ -267,17 +266,16 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
             type="number"
             min={0}
             max={10}
-            value={retryCount === 0 ? '0' : (retryCount || '')}
-            onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (isNaN(val) || val < 0) setRetryCount(0)
+            value={retryCount}
+            onChange={(e) => setRetryCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (retryCount === '' || retryCount < 0) setRetryCount(0)
             }}
           />
         </div>
       </div>
 
-      {retryCount > 0 && (
+      {typeof retryCount === 'number' && retryCount > 0 && (
         <div className="space-y-2">
           <Label htmlFor="retryDelay">{t('taskForm.retryDelaySeconds')}</Label>
           <Input
@@ -285,11 +283,10 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
             type="number"
             min={1}
             max={3600}
-            value={retryDelaySeconds || ''}
-            onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value)
-              if (!val || val < 1) setRetryDelaySeconds(60)
+            value={retryDelaySeconds}
+            onChange={(e) => setRetryDelaySeconds(e.target.value === '' ? '' : parseInt(e.target.value))}
+            onBlur={() => {
+              if (retryDelaySeconds === '' || retryDelaySeconds < 1) setRetryDelaySeconds(60)
             }}
           />
         </div>
