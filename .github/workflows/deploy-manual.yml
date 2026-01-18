@@ -1,4 +1,5 @@
 # Manual deployment and rollback workflow
+# Supports selective deployment of components
 
 name: Manual Deploy
 
@@ -13,49 +14,209 @@ on:
         options:
           - deploy
           - rollback
+          - build-and-deploy
       ref:
         description: 'Git ref to deploy (commit SHA, branch, tag)'
         required: false
         default: 'main'
+      components:
+        description: 'Components to deploy (comma-separated: backend,frontend,landing or "all")'
+        required: false
+        default: 'all'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
 
 jobs:
+  # Build images if action is build-and-deploy
+  build:
+    name: Build Images
+    if: github.event.inputs.action == 'build-and-deploy'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commit SHA
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push backend
+        if: contains(github.event.inputs.components, 'backend') || github.event.inputs.components == 'all'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-api:${{ steps.sha.outputs.sha }}
+            ${{ env.IMAGE_PREFIX }}-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        if: contains(github.event.inputs.components, 'frontend') || github.event.inputs.components == 'all'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.sha.outputs.sha }}
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
+          build-args: |
+            VITE_API_URL=https://api.cronbox.ru/v1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push landing
+        if: contains(github.event.inputs.components, 'landing') || github.event.inputs.components == 'all'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./landing
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-landing:${{ steps.sha.outputs.sha }}
+            ${{ env.IMAGE_PREFIX }}-landing:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+
   deploy:
     name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }}
     runs-on: ubuntu-latest
+    needs: [build]
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
     environment:
       name: production
       url: https://cronbox.ru
 
     steps:
+      - name: Get target ref
+        id: target
+        run: |
+          if [ "${{ github.event.inputs.action }}" = "rollback" ]; then
+            echo "ref=HEAD~1" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.build.outputs.sha }}" != "" ]; then
+            echo "ref=${{ needs.build.outputs.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ github.event.inputs.ref }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }} via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          TARGET_REF: ${{ steps.target.outputs.ref }}
+          COMPONENTS: ${{ github.event.inputs.components }}
+          ACTION: ${{ github.event.inputs.action }}
+          REGISTRY: ghcr.io
+          IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
         with:
           host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: TARGET_REF,COMPONENTS,ACTION,REGISTRY,IMAGE_PREFIX
           script: |
             set -e
             cd /opt/cronbox
 
-            if [ "${{ github.event.inputs.action }}" = "rollback" ]; then
+            echo "==> Action: $ACTION"
+            echo "==> Target ref: $TARGET_REF"
+            echo "==> Components: $COMPONENTS"
+
+            if [ "$ACTION" = "rollback" ]; then
               echo "==> Rolling back to previous commit..."
               git checkout HEAD~1
+              IMAGE_TAG=$(git rev-parse HEAD)
             else
-              echo "==> Deploying ref: ${{ github.event.inputs.ref }}"
+              echo "==> Deploying ref: $TARGET_REF"
               git fetch origin
-              git checkout ${{ github.event.inputs.ref }}
+              git checkout $TARGET_REF
+              IMAGE_TAG=$(git rev-parse HEAD)
             fi
 
-            echo "==> Building images..."
-            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --parallel
+            echo "==> Image tag: $IMAGE_TAG"
 
-            echo "==> Restarting services..."
-            docker compose -f docker-compose.prod.yml up -d --no-deps api
-            sleep 3
-            docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler frontend landing
+            deploy_backend() {
+              echo "==> Pulling backend image..."
+              if docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
+                echo "==> Deploying backend services..."
+                docker compose -f docker-compose.prod.yml up -d --no-deps api
+                sleep 3
+                docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
+              else
+                echo "==> Image not found in registry, building locally..."
+                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
+                docker compose -f docker-compose.prod.yml up -d --no-deps api worker scheduler bot
+              fi
+            }
+
+            deploy_frontend() {
+              echo "==> Pulling frontend image..."
+              if docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
+                echo "==> Deploying frontend..."
+                docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+              else
+                echo "==> Image not found in registry, building locally..."
+                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build frontend
+                docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+              fi
+            }
+
+            deploy_landing() {
+              echo "==> Pulling landing image..."
+              if docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
+                echo "==> Deploying landing..."
+                docker compose -f docker-compose.prod.yml up -d --no-deps landing
+              else
+                echo "==> Image not found in registry, building locally..."
+                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build landing
+                docker compose -f docker-compose.prod.yml up -d --no-deps landing
+              fi
+            }
+
+            # Deploy selected components
+            if [ "$COMPONENTS" = "all" ]; then
+              deploy_backend
+              deploy_frontend
+              deploy_landing
+            else
+              if echo "$COMPONENTS" | grep -q "backend"; then
+                deploy_backend
+              fi
+              if echo "$COMPONENTS" | grep -q "frontend"; then
+                deploy_frontend
+              fi
+              if echo "$COMPONENTS" | grep -q "landing"; then
+                deploy_landing
+              fi
+            fi
 
             echo "==> Cleaning up..."
-            docker image prune -f
+            docker image prune -f --filter "until=168h"
+
+            echo "==> Health check..."
+            curl -sf --retry 3 --retry-delay 2 https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
 
             echo "==> Done! Current commit:"
             git log -1 --oneline
