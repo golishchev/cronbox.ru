@@ -234,7 +234,7 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Clock className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('cronTasks.noTasksYet')}</h2>
-          <p className="text-muted-foreground">{t('cronTasks.createFirstTask')}</p>
+          <p className="text-muted-foreground text-center max-w-md">{t('cronTasks.createFirstTask')}</p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             {t('cronTasks.createTask')}

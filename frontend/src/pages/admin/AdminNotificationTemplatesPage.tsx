@@ -342,7 +342,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Bell className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('admin.templates.noTemplates')}</h2>
-          <p className="text-muted-foreground">{t('admin.templates.noTemplatesDescription')}</p>
+          <p className="text-muted-foreground text-center max-w-md">{t('admin.templates.noTemplatesDescription')}</p>
         </div>
       ) : (
         <div className="rounded-md border">

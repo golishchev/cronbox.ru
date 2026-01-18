@@ -302,7 +302,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Calendar className="h-16 w-16 text-muted-foreground" />
           <h2 className="text-xl font-semibold">{t('delayedTasks.noTasksYet')}</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-center max-w-md">
             {statusFilter !== 'all'
               ? t('delayedTasks.noTasksFound', { status: t(`common.${statusFilter}`) })
               : t('delayedTasks.scheduleFirstTask')}
