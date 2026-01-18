@@ -272,8 +272,12 @@ export function CronExpressionBuilder({ value, onChange }: CronExpressionBuilder
                         type="number"
                         min={1}
                         max={frequency === 'minutes' ? 59 : 23}
-                        value={interval}
-                        onChange={(e) => setInterval(parseInt(e.target.value) || 1)}
+                        value={interval || ''}
+                        onChange={(e) => setInterval(parseInt(e.target.value) || 0)}
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value)
+                          if (!val || val < 1) setInterval(1)
+                        }}
                         className="w-20"
                       />
                       <span className="text-muted-foreground">{t(`cronBuilder.${frequency}`)}</span>

@@ -238,8 +238,12 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
             type="number"
             min={1}
             max={300}
-            value={timeoutSeconds}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 30)}
+            value={timeoutSeconds || ''}
+            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value)
+              if (!val || val < 1) setTimeoutSeconds(30)
+            }}
           />
         </div>
 
@@ -250,8 +254,12 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
             type="number"
             min={0}
             max={10}
-            value={retryCount}
+            value={retryCount === 0 ? '0' : (retryCount || '')}
             onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value)
+              if (isNaN(val) || val < 0) setRetryCount(0)
+            }}
           />
         </div>
 
@@ -263,8 +271,12 @@ export function ChainStepForm({ step, stepOrder, onSubmit, onCancel }: ChainStep
               type="number"
               min={1}
               max={3600}
-              value={retryDelaySeconds}
-              onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 60)}
+              value={retryDelaySeconds || ''}
+              onChange={(e) => setRetryDelaySeconds(parseInt(e.target.value) || 0)}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value)
+                if (!val || val < 1) setRetryDelaySeconds(60)
+              }}
             />
           </div>
         )}

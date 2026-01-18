@@ -320,7 +320,18 @@ export function CronBuilder() {
                   min={1}
                   max={frequency === 'minutes' ? 59 : 23}
                   value={interval}
-                  onChange={(e) => setInterval(parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      setInterval(0)
+                    } else {
+                      setInterval(parseInt(val) || 0)
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (!val || val < 1) setInterval(1)
+                  }}
                   className="w-20 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
                 <span className="text-gray-600 dark:text-gray-400">

@@ -221,8 +221,12 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
             type="number"
             min={1}
             max={3600}
-            value={timeoutSeconds}
-            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 300)}
+            value={timeoutSeconds || ''}
+            onChange={(e) => setTimeoutSeconds(parseInt(e.target.value) || 0)}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value)
+              if (!val || val < 1) setTimeoutSeconds(300)
+            }}
           />
           <p className="text-xs text-muted-foreground">{t('chains.chainTimeoutHelp')}</p>
         </div>
@@ -327,8 +331,12 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={1}
                 max={10}
-                value={maxInstances}
-                onChange={(e) => setMaxInstances(parseInt(e.target.value) || 1)}
+                value={maxInstances || ''}
+                onChange={(e) => setMaxInstances(parseInt(e.target.value) || 0)}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value)
+                  if (!val || val < 1) setMaxInstances(1)
+                }}
               />
             </div>
           )}
@@ -343,8 +351,12 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={1}
                 max={100}
-                value={maxQueueSize}
-                onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 10)}
+                value={maxQueueSize || ''}
+                onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 0)}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value)
+                  if (!val || val < 1) setMaxQueueSize(10)
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -354,8 +366,12 @@ export function ChainForm({ workspaceId, chain, onSuccess, onCancel }: ChainForm
                 type="number"
                 min={0}
                 max={86400}
-                value={executionTimeout}
+                value={executionTimeout === 0 ? '0' : (executionTimeout || '')}
                 onChange={(e) => setExecutionTimeout(parseInt(e.target.value) || 0)}
+                onBlur={(e) => {
+                  const val = parseInt(e.target.value)
+                  if (isNaN(val) || val < 0) setExecutionTimeout(0)
+                }}
               />
               <p className="text-xs text-muted-foreground">{t('taskForm.executionTimeoutDescription')}</p>
             </div>
