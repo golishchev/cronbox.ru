@@ -9,6 +9,7 @@ import {
   Layers,
   Link,
   HeartPulse,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -25,6 +26,7 @@ export const sections: DocSection[] = [
   { id: 'delayed-tasks', name: 'Отложенные задачи', icon: Timer },
   { id: 'task-chains', name: 'Цепочки задач', icon: Link },
   { id: 'heartbeats', name: 'Heartbeat-мониторы', icon: HeartPulse },
+  { id: 'ssl-monitors', name: 'SSL-мониторинг', icon: ShieldCheck },
   { id: 'overlap-prevention', name: 'Политика запуска', icon: Layers },
   { id: 'executions', name: 'Выполнения', icon: Activity },
   { id: 'notifications', name: 'Уведомления', icon: Bell },

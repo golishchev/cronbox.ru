@@ -18,13 +18,14 @@ import {
   MessageSquare,
   Webhook,
   ChevronDown,
+  ShieldCheck,
 } from 'lucide-react'
 import { JsonLd } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'CronBox - Планирование HTTP-запросов по расписанию',
   description:
-    'CronBox - облачный сервис для планирования HTTP-запросов. Создавайте cron-задачи, цепочки запросов, heartbeat-мониторы. Получайте уведомления через Email, Telegram, Webhook.',
+    'CronBox - облачный сервис для планирования HTTP-запросов. Создавайте cron-задачи, цепочки запросов, heartbeat и SSL-мониторы. Получайте уведомления через Email, Telegram, Webhook.',
   alternates: {
     canonical: 'https://cronbox.ru',
   },
@@ -37,7 +38,7 @@ const softwareJsonLd = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Web',
   description:
-    'Облачный сервис для планирования HTTP-запросов по расписанию cron',
+    'Облачный сервис для планирования HTTP-запросов по расписанию cron и мониторинга SSL-сертификатов',
   url: 'https://cronbox.ru',
   offers: {
     '@type': 'AggregateOffer',
@@ -77,6 +78,12 @@ const features = [
     description:
       'Отслеживайте работу ваших cron-задач и сервисов. Получайте уведомления, если задача не отработала вовремя.',
     icon: HeartPulse,
+  },
+  {
+    name: 'SSL-мониторинг',
+    description:
+      'Отслеживайте срок действия SSL-сертификатов. Получайте уведомления до истечения срока, чтобы избежать простоев.',
+    icon: ShieldCheck,
   },
   {
     name: 'Политика запуска',
@@ -147,6 +154,12 @@ const useCases = [
     icon: HeartPulse,
     example: 'heartbeat',
   },
+  {
+    title: 'SSL-сертификаты',
+    description: 'Мониторинг SSL: узнайте об истечении сертификата за 30, 14 и 7 дней',
+    icon: ShieldCheck,
+    example: 'ssl',
+  },
 ]
 
 const benefits = [
@@ -180,6 +193,10 @@ const faqItems = [
   {
     question: 'Есть ли API для интеграции?',
     answer: 'Да, полноценный REST API с документацией. Вы можете создавать, обновлять и удалять задачи программно, получать историю выполнений и управлять настройками.',
+  },
+  {
+    question: 'Как работает SSL-мониторинг?',
+    answer: 'Вы указываете домен для мониторинга, и CronBox регулярно проверяет срок действия SSL-сертификата. Вы получите уведомления за 30, 14 и 7 дней до истечения срока, а также при обнаружении проблем с сертификатом (невалидная цепочка, несовпадение домена и др.).',
   },
 ]
 
@@ -398,6 +415,11 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                   {useCase.example === 'heartbeat' && (
                     <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded">
                       heartbeat
+                    </span>
+                  )}
+                  {useCase.example === 'ssl' && (
+                    <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
+                      ssl
                     </span>
                   )}
                 </div>

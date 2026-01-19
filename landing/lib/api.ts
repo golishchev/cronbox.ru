@@ -19,6 +19,7 @@ export interface Plan {
   retry_on_failure: boolean
   max_task_chains: number
   max_heartbeats: number
+  max_ssl_monitors: number
   is_active: boolean
   is_public: boolean
   sort_order: number

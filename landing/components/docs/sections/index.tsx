@@ -768,6 +768,168 @@ export function HeartbeatsSection() {
   )
 }
 
+export function SSLMonitorsSection() {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">SSL-мониторинг</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        SSL-мониторинг позволяет отслеживать срок действия SSL-сертификатов ваших доменов.
+        CronBox регулярно проверяет сертификаты и уведомляет вас заранее об истечении срока,
+        чтобы избежать простоев и проблем с безопасностью.
+      </p>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Как это работает</h3>
+
+      <ol className="mt-4 space-y-4 text-gray-600 dark:text-gray-300">
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            1
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Добавьте домен</p>
+            <p className="text-sm">
+              Укажите домен для мониторинга (например, example.com)
+            </p>
+          </div>
+        </li>
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            2
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Автоматические проверки</p>
+            <p className="text-sm">
+              CronBox регулярно проверяет SSL-сертификат домена
+            </p>
+          </div>
+        </li>
+        <li className="flex gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-sm font-semibold text-primary-600 dark:text-primary-400">
+            3
+          </span>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Уведомления</p>
+            <p className="text-sm">
+              Получайте уведомления за 30, 14 и 7 дней до истечения сертификата
+            </p>
+          </div>
+        </li>
+      </ol>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Эндпоинты</h3>
+
+      <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <Endpoint method="GET" path="/ssl-monitors" description="Список SSL-мониторов" />
+        <Endpoint method="POST" path="/ssl-monitors" description="Создание монитора" />
+        <Endpoint method="GET" path="/ssl-monitors/{id}" description="Получение монитора" />
+        <Endpoint method="PATCH" path="/ssl-monitors/{id}" description="Обновление монитора" />
+        <Endpoint method="DELETE" path="/ssl-monitors/{id}" description="Удаление монитора" />
+        <Endpoint method="POST" path="/ssl-monitors/{id}/pause" description="Приостановка монитора" />
+        <Endpoint method="POST" path="/ssl-monitors/{id}/resume" description="Возобновление монитора" />
+        <Endpoint method="POST" path="/ssl-monitors/{id}/check" description="Принудительная проверка" />
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Создание монитора</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/workspaces/{workspace_id}/ssl-monitors \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Основной сайт",
+    "description": "SSL-сертификат production сайта",
+    "domain": "example.com",
+    "port": 443,
+    "notify_on_expiring": true,
+    "notify_on_error": true
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Пример ответа</h3>
+
+      <CodeBlock
+        language="json"
+        code={`{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Основной сайт",
+  "domain": "example.com",
+  "port": 443,
+  "status": "valid",
+  "issuer": "Let's Encrypt Authority X3",
+  "subject": "CN=example.com",
+  "valid_from": "2024-01-01T00:00:00Z",
+  "valid_until": "2024-04-01T00:00:00Z",
+  "days_until_expiry": 75,
+  "tls_version": "TLSv1.3",
+  "chain_valid": true,
+  "hostname_match": true,
+  "last_check_at": "2024-01-15T10:30:00Z",
+  "next_check_at": "2024-01-16T10:30:00Z"
+}`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Статусы монитора</h3>
+
+      <div className="mt-4 space-y-4">
+        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+          <h4 className="font-semibold text-green-800 dark:text-green-200">valid</h4>
+          <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+            Сертификат валиден и действует более 30 дней
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4">
+          <h4 className="font-semibold text-yellow-800 dark:text-yellow-200">expiring_soon</h4>
+          <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+            Сертификат истекает в течение 30 дней — пора обновить
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+          <h4 className="font-semibold text-red-800 dark:text-red-200">expired</h4>
+          <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+            Сертификат истёк — требуется срочное обновление
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+          <h4 className="font-semibold text-red-800 dark:text-red-200">invalid</h4>
+          <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+            Проблема с сертификатом (невалидная цепочка, несовпадение домена и др.)
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/20 p-4">
+          <h4 className="font-semibold text-gray-800 dark:text-gray-200">unknown</h4>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+            Не удалось проверить сертификат (ошибка соединения, timeout и др.)
+          </p>
+        </div>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Проверяемые параметры</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        При каждой проверке CronBox анализирует следующие параметры сертификата:
+      </p>
+      <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">valid_from / valid_until</code> - срок действия сертификата</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">days_until_expiry</code> - дней до истечения</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">chain_valid</code> - валидность цепочки сертификатов</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">hostname_match</code> - соответствие домена сертификату</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">tls_version</code> - версия TLS (TLSv1.2, TLSv1.3)</li>
+        <li><code className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">issuer</code> - издатель сертификата</li>
+      </ul>
+
+      <div className="mt-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          <strong>Совет:</strong> Настройте уведомления в Telegram для быстрого реагирования
+          на проблемы с сертификатами. Вы получите уведомление сразу при обнаружении проблемы.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function OverlapPreventionSection() {
   return (
     <div>
@@ -947,6 +1109,7 @@ export const sectionComponents: Record<string, () => ReactNode> = {
   'delayed-tasks': DelayedTasksSection,
   'task-chains': TaskChainsSection,
   heartbeats: HeartbeatsSection,
+  'ssl-monitors': SSLMonitorsSection,
   'overlap-prevention': OverlapPreventionSection,
   executions: ExecutionsSection,
   notifications: NotificationsSection,

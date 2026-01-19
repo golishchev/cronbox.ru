@@ -15,6 +15,7 @@ const enterprisePlan = {
     'Неограниченные отложенные задачи',
     'Минимальный интервал: 10 секунд',
     'Неограниченные выполнения',
+    'Неограниченные SSL-мониторы',
     'Все каналы уведомлений',
     'Бессрочная история',
     'Выделенные воркеры',
@@ -63,7 +64,13 @@ function generateFeatures(plan: Plan): string[] {
 
   if (plan.max_heartbeats > 0) {
     features.push(
-      `До ${plan.max_heartbeats} ${pluralize(plan.max_heartbeats, 'монитора', 'мониторов', 'мониторов')}`
+      `До ${plan.max_heartbeats} heartbeat-${pluralize(plan.max_heartbeats, 'монитора', 'мониторов', 'мониторов')}`
+    )
+  }
+
+  if (plan.max_ssl_monitors > 0) {
+    features.push(
+      `До ${plan.max_ssl_monitors} SSL-${pluralize(plan.max_ssl_monitors, 'монитора', 'мониторов', 'мониторов')}`
     )
   }
 
