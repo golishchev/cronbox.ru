@@ -260,7 +260,7 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
                 {stats.revenue_this_month.toLocaleString('ru-RU')} ₽
               </div>
               <p className="text-xs text-muted-foreground">
-                {t('admin.fromSubscriptions', { count: stats.active_subscriptions })}
+                {t('admin.fromPaidSubscriptions', { count: stats.paid_subscriptions })}
               </p>
             </CardContent>
           </Card>

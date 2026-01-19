@@ -830,6 +830,7 @@
     "revenue": "Revenue",
     "revenueThisMonth": "Revenue This Month",
     "fromSubscriptions": "from {{count}} subscriptions",
+    "fromPaidSubscriptions": "from {{count}} paid subscriptions",
     "errorLoadingStats": "Error loading admin stats",
     "failedToLoadStats": "Failed to load admin statistics",
     "errorLoadingUsers": "Error loading users",

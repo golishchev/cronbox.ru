@@ -18,6 +18,7 @@ export interface AdminStats {
   executions_this_week: number
   success_rate: number
   active_subscriptions: number
+  paid_subscriptions: number
   revenue_this_month: number
 }
 

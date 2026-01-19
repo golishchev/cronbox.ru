@@ -402,7 +402,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50">
                     <useCase.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
                   </div>
-                  {useCase.example !== 'workflow' && useCase.example !== 'heartbeat' && (
+                  {useCase.example !== 'workflow' && useCase.example !== 'heartbeat' && useCase.example !== 'ssl' && (
                     <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
                       {useCase.example}
                     </code>

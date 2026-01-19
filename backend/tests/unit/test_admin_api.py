@@ -83,6 +83,40 @@ class TestGetAdminStats:
 
         assert result.total_users == 100
 
+    @pytest.mark.asyncio
+    async def test_get_stats_paid_subscriptions(self):
+        """Test paid_subscriptions counts only users with real payments."""
+        from app.api.v1.admin import get_admin_stats
+
+        mock_admin = create_mock_admin()
+        mock_db = MagicMock()
+
+        call_count = 0
+
+        async def mock_scalar(query):
+            nonlocal call_count
+            call_count += 1
+            # Different values for different queries to distinguish them
+            # Queries order: users (3), workspaces (1), tasks (6), heartbeats (2),
+            # executions (5), active_subs, paid_subs, revenue
+            if call_count <= 17:  # Basic stats
+                return 10
+            if call_count == 18:  # active_subscriptions
+                return 5
+            if call_count == 19:  # paid_subscriptions
+                return 2  # Only 2 out of 5 have real payments
+            if call_count == 20:  # revenue
+                return 99900  # 999.00 rubles in kopeks
+            return 0
+
+        mock_db.scalar = mock_scalar
+
+        result = await get_admin_stats(admin=mock_admin, db=mock_db)
+
+        assert result.active_subscriptions == 5
+        assert result.paid_subscriptions == 2
+        assert result.revenue_this_month == 999.0
+
 
 class TestGetUser:
     """Tests for get_user endpoint."""

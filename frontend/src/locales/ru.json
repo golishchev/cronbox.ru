@@ -957,6 +957,7 @@
     "revenue": "Доход",
     "revenueThisMonth": "Доход за месяц",
     "fromSubscriptions": "от {{count}} подписок",
+    "fromPaidSubscriptions": "от {{count}} оплаченных подписок",
     "errorLoadingStats": "Ошибка загрузки статистики",
     "failedToLoadStats": "Не удалось загрузить статистику администратора",
     "errorLoadingUsers": "Ошибка загрузки пользователей",

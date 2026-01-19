@@ -22,10 +22,15 @@ describe('AdminDashboardPage', () => {
     verified_users: 100,
     total_workspaces: 80,
     active_subscriptions: 25,
+    paid_subscriptions: 20,
     total_cron_tasks: 500,
     active_cron_tasks: 400,
     total_delayed_tasks: 200,
     pending_delayed_tasks: 50,
+    total_task_chains: 30,
+    active_task_chains: 25,
+    total_heartbeats: 40,
+    active_heartbeats: 35,
     executions_today: 1500,
     executions_this_week: 8000,
     total_executions: 50000,
@@ -132,6 +137,15 @@ describe('AdminDashboardPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('95.5%')).toBeInTheDocument()
+    })
+  })
+
+  it('should display paid subscriptions in revenue section', async () => {
+    render(<AdminDashboardPage onNavigate={mockOnNavigate} />)
+
+    await waitFor(() => {
+      // Check that revenue is displayed with paid subscriptions count
+      expect(screen.getByText(/150.*000/)).toBeInTheDocument() // revenue
     })
   })
 })

@@ -65,6 +65,7 @@ class AdminStatsResponse(BaseModel):
     executions_this_week: int
     success_rate: float
     active_subscriptions: int
+    paid_subscriptions: int  # Subscriptions with actual payments (excludes admin-assigned)
     revenue_this_month: float
 
 
@@ -206,6 +207,25 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         )
     )
 
+    # Paid subscriptions - count users with active subscriptions who have at least one real payment
+    # This excludes admin-assigned subscriptions (they don't have yookassa payments)
+    paid_subs_subquery = (
+        select(Payment.user_id)
+        .where(
+            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.yookassa_payment_id.isnot(None),
+        )
+        .distinct()
+        .subquery()
+    )
+    paid_subs = await db.scalar(
+        select(func.count(Subscription.id)).where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.current_period_end > now,
+            Subscription.user_id.in_(select(paid_subs_subquery.c.user_id)),
+        )
+    )
+
     # Revenue (this month) - sum of successful payments via payment system only
     # Exclude manual plan assignments by admin (they don't have yookassa_payment_id)
     revenue = (
@@ -237,6 +257,7 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         executions_this_week=executions_this_week or 0,
         success_rate=round(success_rate, 1),
         active_subscriptions=active_subs or 0,
+        paid_subscriptions=paid_subs or 0,
         revenue_this_month=float(revenue) / 100,  # Convert from kopeks to rubles
     )
 
