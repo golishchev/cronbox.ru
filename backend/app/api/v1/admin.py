@@ -206,12 +206,14 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         )
     )
 
-    # Revenue (this month) - sum of successful payments
+    # Revenue (this month) - sum of successful payments via payment system only
+    # Exclude manual plan assignments by admin (they don't have yookassa_payment_id)
     revenue = (
         await db.scalar(
             select(func.sum(Payment.amount)).where(
                 Payment.created_at >= month_start,
                 Payment.status == PaymentStatus.SUCCEEDED,
+                Payment.yookassa_payment_id.isnot(None),
             )
         )
         or 0
