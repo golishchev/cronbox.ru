@@ -217,7 +217,7 @@ export interface UpdateDelayedTaskRequest {
 }
 
 // Execution types
-export type ExecutionTaskType = 'cron' | 'delayed' | 'chain' | 'heartbeat'
+export type ExecutionTaskType = 'cron' | 'delayed' | 'chain' | 'heartbeat' | 'ssl'
 export type ExecutionStatus = TaskStatus | 'partial' | 'cancelled'
 
 export interface Execution {
@@ -371,6 +371,60 @@ export interface HeartbeatPing {
   payload: Record<string, unknown> | null
   source_ip: string | null
   created_at: string
+}
+
+// SSL Monitor types
+export type SSLMonitorStatus = 'pending' | 'valid' | 'expiring' | 'expired' | 'invalid' | 'error' | 'paused'
+
+export interface SSLMonitor {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  domain: string
+  port: number
+  status: SSLMonitorStatus
+  is_paused: boolean
+  // Certificate info
+  issuer: string | null
+  subject: string | null
+  serial_number: string | null
+  valid_from: string | null
+  valid_until: string | null
+  days_until_expiry: number | null
+  // TLS info
+  tls_version: string | null
+  cipher_suite: string | null
+  // Validation info
+  chain_valid: boolean | null
+  hostname_match: boolean | null
+  // Check tracking
+  last_check_at: string | null
+  next_check_at: string | null
+  last_error: string | null
+  retry_count: number
+  // Notifications
+  notify_on_expiring: boolean
+  notify_on_error: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSSLMonitorRequest {
+  name: string
+  description?: string
+  domain: string
+  port?: number
+  notify_on_expiring?: boolean
+  notify_on_error?: boolean
+}
+
+export interface UpdateSSLMonitorRequest {
+  name?: string
+  description?: string
+  port?: number
+  notify_on_expiring?: boolean
+  notify_on_error?: boolean
 }
 
 // API Error

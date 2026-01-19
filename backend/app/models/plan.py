@@ -42,6 +42,9 @@ class Plan(Base, UUIDMixin, TimestampMixin):
     max_heartbeats: Mapped[int] = mapped_column(Integer, default=0)
     min_heartbeat_interval_minutes: Mapped[int] = mapped_column(Integer, default=5)
 
+    # SSL monitor limits
+    max_ssl_monitors: Mapped[int] = mapped_column(Integer, default=0)
+
     # Overlap prevention settings
     overlap_prevention_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     max_queue_size: Mapped[int] = mapped_column(Integer, default=10)

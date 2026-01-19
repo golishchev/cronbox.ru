@@ -51,6 +51,7 @@ class TaskScheduler:
             self._poll_delayed_tasks(),
             self._poll_task_chains(),
             self._poll_heartbeats(),
+            self._poll_ssl_monitors(),
             self._update_next_run_times(),
             self._check_subscriptions(),
             self._check_pending_payments(),
@@ -119,6 +120,31 @@ class TaskScheduler:
             dead_count = await heartbeat_service.check_dead_heartbeats(db)
             if dead_count > 0:
                 logger.info(f"Marked {dead_count} heartbeat(s) as dead")
+
+    async def _poll_ssl_monitors(self):
+        """Poll for SSL monitors due for check every 5 minutes."""
+        while self.running:
+            try:
+                await self._process_ssl_monitor_checks()
+            except Exception as e:
+                logger.error("Error processing SSL monitor checks", error=str(e))
+
+            await asyncio.sleep(300)  # Every 5 minutes
+
+    async def _process_ssl_monitor_checks(self):
+        """Check SSL certificates for due monitors."""
+        from app.services.ssl_monitor import ssl_monitor_service
+
+        async with async_session_factory() as db:
+            # Check monitors due for regular daily check
+            checked_count = await ssl_monitor_service.check_due_monitors(db)
+            if checked_count > 0:
+                logger.info(f"Checked {checked_count} SSL monitor(s)")
+
+            # Check monitors due for retry
+            retry_count = await ssl_monitor_service.check_due_retries(db)
+            if retry_count > 0:
+                logger.info(f"Retried {retry_count} SSL monitor(s)")
 
     async def _update_next_run_times(self):
         """Update next_run_at for tasks that need it, every minute."""

@@ -21,6 +21,7 @@ const ExecutionsPage = lazy(() => import('@/pages/executions/ExecutionsPage').th
 const ChainsPage = lazy(() => import('@/pages/chains/ChainsPage').then(m => ({ default: m.ChainsPage })))
 const ChainDetailPage = lazy(() => import('@/pages/chains/ChainDetailPage').then(m => ({ default: m.ChainDetailPage })))
 const HeartbeatsPage = lazy(() => import('@/pages/heartbeats/HeartbeatsPage').then(m => ({ default: m.HeartbeatsPage })))
+const SSLMonitorsPage = lazy(() => import('@/pages/ssl/SSLMonitorsPage').then(m => ({ default: m.SSLMonitorsPage })))
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage').then(m => ({ default: m.BillingPage })))
@@ -33,10 +34,10 @@ const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 const AdminNotificationTemplatesPage = lazy(() => import('@/pages/admin/AdminNotificationTemplatesPage').then(m => ({ default: m.AdminNotificationTemplatesPage })))
 
-type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'chains' | 'heartbeats' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
+type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'chains' | 'heartbeats' | 'ssl' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
 
 const AUTH_ROUTES = ['login', 'register', 'verify-email', 'otp-login']
-const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'chains', 'heartbeats', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
+const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'chains', 'heartbeats', 'ssl', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
 
 function PageLoader() {
   return (
@@ -254,6 +255,8 @@ function App() {
         return <ChainsPage onNavigate={navigate} />
       case 'heartbeats':
         return <HeartbeatsPage onNavigate={navigate} />
+      case 'ssl':
+        return <SSLMonitorsPage onNavigate={navigate} />
       case 'executions':
         return <ExecutionsPage onNavigate={navigate} />
       case 'api-keys':

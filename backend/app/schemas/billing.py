@@ -42,6 +42,9 @@ class PlanResponse(BaseModel):
     max_heartbeats: int
     min_heartbeat_interval_minutes: int
 
+    # SSL monitor limits
+    max_ssl_monitors: int
+
     # Overlap prevention settings
     overlap_prevention_enabled: bool
     max_queue_size: int

@@ -72,6 +72,8 @@ const defaultPlanData: CreatePlanRequest = {
   // Heartbeats
   max_heartbeats: 0,
   min_heartbeat_interval_minutes: 5,
+  // SSL Monitors
+  max_ssl_monitors: 0,
   // Overlap prevention
   overlap_prevention_enabled: false,
   max_queue_size: 10,
@@ -148,6 +150,8 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       // Heartbeats
       max_heartbeats: plan.max_heartbeats,
       min_heartbeat_interval_minutes: plan.min_heartbeat_interval_minutes,
+      // SSL Monitors
+      max_ssl_monitors: plan.max_ssl_monitors,
       // Overlap prevention
       overlap_prevention_enabled: plan.overlap_prevention_enabled,
       max_queue_size: plan.max_queue_size,
@@ -294,6 +298,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                       <p>{plan.max_delayed_tasks_per_month} {t('admin.plans.delayedPerMonth')}</p>
                       {plan.max_task_chains > 0 && <p>{plan.max_task_chains} {t('admin.plans.chains')}</p>}
                       {plan.max_heartbeats > 0 && <p>{plan.max_heartbeats} {t('admin.plans.monitors')}</p>}
+                      {plan.max_ssl_monitors > 0 && <p>{plan.max_ssl_monitors} SSL</p>}
                       <p>{plan.min_cron_interval_minutes} {t('admin.plans.minInterval')}</p>
                     </div>
                   </TableCell>
@@ -411,11 +416,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   id="price_monthly"
                   type="number"
                   min={0}
-                  value={formData.price_monthly === 0 ? '0' : (formData.price_monthly || '')}
-                  onChange={(e) => setFormData({ ...formData, price_monthly: parseInt(e.target.value) || 0 })}
-                  onBlur={(e) => {
+                  placeholder="0"
+                  value={formData.price_monthly || ''}
+                  onChange={(e) => {
                     const val = parseInt(e.target.value)
-                    if (isNaN(val) || val < 0) setFormData({ ...formData, price_monthly: 0 })
+                    setFormData({ ...formData, price_monthly: isNaN(val) ? 0 : val })
                   }}
                 />
                 <p className="text-xs text-muted-foreground">{t('admin.plans.priceHint')}</p>
@@ -426,11 +431,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   id="price_yearly"
                   type="number"
                   min={0}
-                  value={formData.price_yearly === 0 ? '0' : (formData.price_yearly || '')}
-                  onChange={(e) => setFormData({ ...formData, price_yearly: parseInt(e.target.value) || 0 })}
-                  onBlur={(e) => {
+                  placeholder="0"
+                  value={formData.price_yearly || ''}
+                  onChange={(e) => {
                     const val = parseInt(e.target.value)
-                    if (isNaN(val) || val < 0) setFormData({ ...formData, price_yearly: 0 })
+                    setFormData({ ...formData, price_yearly: isNaN(val) ? 0 : val })
                   }}
                 />
               </div>
@@ -446,11 +451,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_cron_tasks"
                     type="number"
                     min={0}
-                    value={formData.max_cron_tasks === 0 ? '0' : (formData.max_cron_tasks || '')}
-                    onChange={(e) => setFormData({ ...formData, max_cron_tasks: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    placeholder="0"
+                    value={formData.max_cron_tasks || ''}
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (isNaN(val) || val < 0) setFormData({ ...formData, max_cron_tasks: 0 })
+                      setFormData({ ...formData, max_cron_tasks: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -460,11 +465,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_delayed"
                     type="number"
                     min={0}
-                    value={formData.max_delayed_tasks_per_month === 0 ? '0' : (formData.max_delayed_tasks_per_month || '')}
-                    onChange={(e) => setFormData({ ...formData, max_delayed_tasks_per_month: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    placeholder="0"
+                    value={formData.max_delayed_tasks_per_month || ''}
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (isNaN(val) || val < 0) setFormData({ ...formData, max_delayed_tasks_per_month: 0 })
+                      setFormData({ ...formData, max_delayed_tasks_per_month: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -474,11 +479,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_workspaces"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.max_workspaces || ''}
-                    onChange={(e) => setFormData({ ...formData, max_workspaces: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, max_workspaces: 1 })
+                      setFormData({ ...formData, max_workspaces: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.max_workspaces || formData.max_workspaces < 1) {
+                        setFormData({ ...formData, max_workspaces: 1 })
+                      }
                     }}
                   />
                 </div>
@@ -488,11 +498,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="history_days"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.max_execution_history_days || ''}
-                    onChange={(e) => setFormData({ ...formData, max_execution_history_days: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, max_execution_history_days: 1 })
+                      setFormData({ ...formData, max_execution_history_days: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.max_execution_history_days || formData.max_execution_history_days < 1) {
+                        setFormData({ ...formData, max_execution_history_days: 1 })
+                      }
                     }}
                   />
                 </div>
@@ -502,11 +517,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="min_interval"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.min_cron_interval_minutes || ''}
-                    onChange={(e) => setFormData({ ...formData, min_cron_interval_minutes: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, min_cron_interval_minutes: 1 })
+                      setFormData({ ...formData, min_cron_interval_minutes: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.min_cron_interval_minutes || formData.min_cron_interval_minutes < 1) {
+                        setFormData({ ...formData, min_cron_interval_minutes: 1 })
+                      }
                     }}
                   />
                 </div>
@@ -515,11 +535,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   <Input
                     id="sort_order"
                     type="number"
-                    value={formData.sort_order === 0 ? '0' : (formData.sort_order || '')}
-                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    placeholder="0"
+                    value={formData.sort_order || ''}
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (isNaN(val)) setFormData({ ...formData, sort_order: 0 })
+                      setFormData({ ...formData, sort_order: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -583,11 +603,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_task_chains"
                     type="number"
                     min={0}
-                    value={formData.max_task_chains === 0 ? '0' : (formData.max_task_chains || '')}
-                    onChange={(e) => setFormData({ ...formData, max_task_chains: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    placeholder="0"
+                    value={formData.max_task_chains || ''}
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (isNaN(val) || val < 0) setFormData({ ...formData, max_task_chains: 0 })
+                      setFormData({ ...formData, max_task_chains: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -597,11 +617,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_chain_steps"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.max_chain_steps || ''}
-                    onChange={(e) => setFormData({ ...formData, max_chain_steps: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, max_chain_steps: 1 })
+                      setFormData({ ...formData, max_chain_steps: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.max_chain_steps || formData.max_chain_steps < 1) {
+                        setFormData({ ...formData, max_chain_steps: 1 })
+                      }
                     }}
                   />
                 </div>
@@ -611,11 +636,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="min_chain_interval"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.min_chain_interval_minutes || ''}
-                    onChange={(e) => setFormData({ ...formData, min_chain_interval_minutes: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, min_chain_interval_minutes: 1 })
+                      setFormData({ ...formData, min_chain_interval_minutes: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.min_chain_interval_minutes || formData.min_chain_interval_minutes < 1) {
+                        setFormData({ ...formData, min_chain_interval_minutes: 1 })
+                      }
                     }}
                   />
                 </div>
@@ -640,11 +670,11 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="max_heartbeats"
                     type="number"
                     min={0}
-                    value={formData.max_heartbeats === 0 ? '0' : (formData.max_heartbeats || '')}
-                    onChange={(e) => setFormData({ ...formData, max_heartbeats: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    placeholder="0"
+                    value={formData.max_heartbeats || ''}
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (isNaN(val) || val < 0) setFormData({ ...formData, max_heartbeats: 0 })
+                      setFormData({ ...formData, max_heartbeats: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -654,11 +684,37 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="min_heartbeat_interval"
                     type="number"
                     min={1}
+                    placeholder="1"
                     value={formData.min_heartbeat_interval_minutes || ''}
-                    onChange={(e) => setFormData({ ...formData, min_heartbeat_interval_minutes: parseInt(e.target.value) || 0 })}
-                    onBlur={(e) => {
+                    onChange={(e) => {
                       const val = parseInt(e.target.value)
-                      if (!val || val < 1) setFormData({ ...formData, min_heartbeat_interval_minutes: 1 })
+                      setFormData({ ...formData, min_heartbeat_interval_minutes: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.min_heartbeat_interval_minutes || formData.min_heartbeat_interval_minutes < 1) {
+                        setFormData({ ...formData, min_heartbeat_interval_minutes: 1 })
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SSL Monitors */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">{t('admin.plans.sslMonitors')}</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_ssl_monitors" className="text-sm">{t('admin.plans.maxSslMonitors')}</Label>
+                  <Input
+                    id="max_ssl_monitors"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={formData.max_ssl_monitors || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      setFormData({ ...formData, max_ssl_monitors: isNaN(val) ? 0 : val })
                     }}
                   />
                 </div>
@@ -682,11 +738,16 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                   id="max_queue_size"
                   type="number"
                   min={1}
+                  placeholder="1"
                   value={formData.max_queue_size || ''}
-                  onChange={(e) => setFormData({ ...formData, max_queue_size: parseInt(e.target.value) || 0 })}
-                  onBlur={(e) => {
+                  onChange={(e) => {
                     const val = parseInt(e.target.value)
-                    if (!val || val < 1) setFormData({ ...formData, max_queue_size: 10 })
+                    setFormData({ ...formData, max_queue_size: isNaN(val) ? 0 : val })
+                  }}
+                  onBlur={() => {
+                    if (!formData.max_queue_size || formData.max_queue_size < 1) {
+                      setFormData({ ...formData, max_queue_size: 1 })
+                    }
                   }}
                 />
               </div>

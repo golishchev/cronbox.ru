@@ -32,6 +32,7 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
     delayed_tasks_this_month: Mapped[int] = mapped_column(Integer, default=0)
     task_chains_count: Mapped[int] = mapped_column(Integer, default=0)
     heartbeats_count: Mapped[int] = mapped_column(Integer, default=0)
+    ssl_monitors_count: Mapped[int] = mapped_column(Integer, default=0)
 
     # Overlap prevention metrics
     executions_skipped: Mapped[int] = mapped_column(Integer, default=0)
@@ -65,6 +66,10 @@ class Workspace(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
     )
     heartbeats: Mapped[list["Heartbeat"]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
+    ssl_monitors: Mapped[list["SSLMonitor"]] = relationship(
         back_populates="workspace",
         cascade="all, delete-orphan",
     )

@@ -38,6 +38,7 @@ import {
   AlertCircle,
   Link2,
   HeartPulse,
+  ShieldCheck,
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -296,11 +297,14 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                     <Badge variant="outline" className="gap-1">
                       {execution.task_type === 'chain' && <Link2 className="h-3 w-3" />}
                       {execution.task_type === 'heartbeat' && <HeartPulse className="h-3 w-3" />}
+                      {execution.task_type === 'ssl' && <ShieldCheck className="h-3 w-3" />}
                       {execution.task_type === 'chain'
                         ? t('executions.chain')
                         : execution.task_type === 'heartbeat'
                           ? t('executions.heartbeat')
-                          : execution.task_type}
+                          : execution.task_type === 'ssl'
+                            ? t('executions.ssl')
+                            : execution.task_type}
                     </Badge>
                   </TableCell>
                   <TableCell>

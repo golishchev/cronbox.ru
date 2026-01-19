@@ -595,6 +595,227 @@ class NotificationService:
             )
         return f"Chain '{chain_name}': {event}"
 
+    async def send_ssl_expiring(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        monitor_name: str,
+        domain: str,
+        days_until_expiry: int,
+        valid_until: "datetime | None" = None,
+    ) -> None:
+        """Send SSL certificate expiring notification."""
+
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        expiry_date = valid_until.strftime("%Y-%m-%d") if valid_until else "Unknown"
+
+        variables = {
+            "workspace_name": workspace_name,
+            "monitor_name": monitor_name,
+            "domain": domain,
+            "days_until_expiry": str(days_until_expiry),
+            "expiry_date": expiry_date,
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            try:
+                await self._send_templated_telegram(
+                    db, settings.telegram_chat_ids, "ssl_expiring", language, variables
+                )
+            except Exception:
+                # Template might not exist, send fallback
+                if days_until_expiry <= 0:
+                    message = f"SSL certificate for {domain} ({monitor_name}) has expired!"
+                else:
+                    message = f"SSL certificate for {domain} ({monitor_name}) expires in {days_until_expiry} days (on {expiry_date})"
+                for chat_id in settings.telegram_chat_ids:
+                    await telegram_service.send_message(chat_id, message)
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            try:
+                await self._send_templated_email(
+                    db,
+                    settings.email_addresses,
+                    "ssl_expiring",
+                    language,
+                    variables,
+                    workspace_id,
+                    tag="ssl-expiring",
+                )
+            except Exception:
+                pass
+
+        # Send Webhook notifications
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="ssl.expiring",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "monitor_name": monitor_name,
+                    "domain": domain,
+                    "days_until_expiry": days_until_expiry,
+                    "expiry_date": expiry_date,
+                },
+            )
+
+        logger.info(
+            "SSL expiring notification sent",
+            workspace_id=str(workspace_id),
+            domain=domain,
+            days_until_expiry=days_until_expiry,
+        )
+
+    async def send_ssl_error(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        monitor_name: str,
+        domain: str,
+        error: str,
+    ) -> None:
+        """Send SSL check error notification."""
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "monitor_name": monitor_name,
+            "domain": domain,
+            "error": error,
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            try:
+                await self._send_templated_telegram(
+                    db, settings.telegram_chat_ids, "ssl_error", language, variables
+                )
+            except Exception:
+                # Template might not exist, send fallback
+                message = f"SSL check failed for {domain} ({monitor_name})\nError: {error}"
+                for chat_id in settings.telegram_chat_ids:
+                    await telegram_service.send_message(chat_id, message)
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            try:
+                await self._send_templated_email(
+                    db,
+                    settings.email_addresses,
+                    "ssl_error",
+                    language,
+                    variables,
+                    workspace_id,
+                    tag="ssl-error",
+                )
+            except Exception:
+                pass
+
+        # Send Webhook notifications
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="ssl.error",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "monitor_name": monitor_name,
+                    "domain": domain,
+                    "error": error,
+                },
+            )
+
+        logger.info(
+            "SSL error notification sent",
+            workspace_id=str(workspace_id),
+            domain=domain,
+            error=error,
+        )
+
+    async def send_ssl_invalid(
+        self,
+        db: AsyncSession,
+        workspace_id: UUID,
+        monitor_name: str,
+        domain: str,
+        error: str,
+    ) -> None:
+        """Send SSL certificate invalid notification."""
+        settings = await self.get_settings(db, workspace_id)
+        if not settings:
+            return
+
+        workspace_name, language = await self._get_workspace_info(db, workspace_id)
+
+        variables = {
+            "workspace_name": workspace_name,
+            "monitor_name": monitor_name,
+            "domain": domain,
+            "error": error,
+        }
+
+        # Send Telegram notifications
+        if settings.telegram_enabled and settings.telegram_chat_ids:
+            try:
+                await self._send_templated_telegram(
+                    db, settings.telegram_chat_ids, "ssl_invalid", language, variables
+                )
+            except Exception:
+                # Template might not exist, send fallback
+                message = f"SSL certificate invalid for {domain} ({monitor_name})\n{error}"
+                for chat_id in settings.telegram_chat_ids:
+                    await telegram_service.send_message(chat_id, message)
+
+        # Send Email notifications
+        if settings.email_enabled and settings.email_addresses:
+            try:
+                await self._send_templated_email(
+                    db,
+                    settings.email_addresses,
+                    "ssl_invalid",
+                    language,
+                    variables,
+                    workspace_id,
+                    tag="ssl-invalid",
+                )
+            except Exception:
+                pass
+
+        # Send Webhook notifications
+        if settings.webhook_enabled and settings.webhook_url:
+            await self._send_webhook(
+                url=settings.webhook_url,
+                secret=settings.webhook_secret,
+                event="ssl.invalid",
+                data={
+                    "workspace_id": str(workspace_id),
+                    "workspace_name": workspace_name,
+                    "monitor_name": monitor_name,
+                    "domain": domain,
+                    "error": error,
+                },
+            )
+
+        logger.info(
+            "SSL invalid notification sent",
+            workspace_id=str(workspace_id),
+            domain=domain,
+        )
+
     async def _send_webhook(
         self,
         url: str,

@@ -96,6 +96,13 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         await self.db.refresh(workspace)
         return workspace
 
+    async def update_ssl_monitors_count(self, workspace: Workspace, delta: int) -> Workspace:
+        """Update SSL monitors count by delta."""
+        workspace.ssl_monitors_count = max(0, workspace.ssl_monitors_count + delta)
+        await self.db.flush()
+        await self.db.refresh(workspace)
+        return workspace
+
     async def get_best_plan_for_owner(self, owner_id: UUID) -> Plan | None:
         """Get the best plan among all owner's workspaces (by max_workspaces limit)."""
         stmt = (

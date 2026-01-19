@@ -19,6 +19,7 @@ export interface Plan {
   retry_on_failure: boolean
   max_task_chains: number
   max_heartbeats: number
+  max_ssl_monitors: number
   overlap_prevention_enabled: boolean
   max_queue_size: number
 }

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Shield,
+  ShieldCheck,
   Link2,
   Heart,
 } from 'lucide-react'
@@ -30,6 +31,7 @@ const mainNav: NavItem[] = [
   { titleKey: 'nav.delayedTasks', route: 'delayed', icon: Calendar },
   { titleKey: 'nav.chains', route: 'chains', icon: Link2 },
   { titleKey: 'nav.heartbeats', route: 'heartbeats', icon: Heart },
+  { titleKey: 'nav.ssl', route: 'ssl', icon: ShieldCheck },
   { titleKey: 'nav.executions', route: 'executions', icon: History },
 ]
 

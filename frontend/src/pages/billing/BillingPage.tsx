@@ -376,6 +376,12 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                       <span>{plan.max_heartbeats} {t('billing.heartbeats', { count: plan.max_heartbeats })}</span>
                     </li>
                   )}
+                  {plan.max_ssl_monitors > 0 && (
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{plan.max_ssl_monitors} {t('billing.sslMonitors', { count: plan.max_ssl_monitors })}</span>
+                    </li>
+                  )}
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
                     <span>{plan.max_workspaces} {t('billing.workspaces', { count: plan.max_workspaces })}</span>

@@ -114,6 +114,9 @@ async def free_plan(db_session: AsyncSession) -> Plan:
         min_chain_interval_minutes=5,
         # Heartbeat limits
         max_heartbeats=3,
+        min_heartbeat_interval_minutes=5,
+        # SSL monitor limits
+        max_ssl_monitors=5,
         is_active=True,
         is_public=True,
         sort_order=0,
