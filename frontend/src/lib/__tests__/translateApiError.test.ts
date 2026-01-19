@@ -62,6 +62,42 @@ describe('translateApiError', () => {
     })
   })
 
+  describe('heartbeat interval too short', () => {
+    it('should translate heartbeat interval error with minutes', () => {
+      const message = 'Heartbeat interval too short. Your plan requires minimum 5 minute(s)'
+      const result = translateApiError(message, mockT)
+
+      expect(mockT).toHaveBeenCalledWith('apiErrors.heartbeatIntervalTooShort', { minutes: 5 })
+      expect(result).toBe('apiErrors.heartbeatIntervalTooShort')
+    })
+
+    it('should be case insensitive', () => {
+      const message = 'HEARTBEAT INTERVAL TOO SHORT. Your plan requires MINIMUM 10 MINUTE(S)'
+      const result = translateApiError(message, mockT)
+
+      expect(mockT).toHaveBeenCalledWith('apiErrors.heartbeatIntervalTooShort', { minutes: 10 })
+      expect(result).toBe('apiErrors.heartbeatIntervalTooShort')
+    })
+  })
+
+  describe('heartbeat limit reached', () => {
+    it('should translate heartbeat limit error with limit', () => {
+      const message = 'Heartbeat monitor limit reached. Your plan allows 5 heartbeat(s)'
+      const result = translateApiError(message, mockT)
+
+      expect(mockT).toHaveBeenCalledWith('apiErrors.heartbeatLimitReached', { limit: 5 })
+      expect(result).toBe('apiErrors.heartbeatLimitReached')
+    })
+
+    it('should handle singular form', () => {
+      const message = 'Heartbeat monitor limit reached. Your plan allows 1 heartbeat'
+      const result = translateApiError(message, mockT)
+
+      expect(mockT).toHaveBeenCalledWith('apiErrors.heartbeatLimitReached', { limit: 1 })
+      expect(result).toBe('apiErrors.heartbeatLimitReached')
+    })
+  })
+
   describe('connection failed with DNS error', () => {
     it('should translate DNS resolution error', () => {
       const message = 'All connection attempts failed: nodename nor servname provided, or not known'

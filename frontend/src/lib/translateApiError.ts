@@ -26,8 +26,18 @@ const errorPatterns: ErrorPattern[] = [
     extractParams: (match) => ({ minutes: parseInt(match[1], 10) }),
   },
   {
+    pattern: /Heartbeat interval too short.*minimum (\d+) minute/i,
+    key: 'apiErrors.heartbeatIntervalTooShort',
+    extractParams: (match) => ({ minutes: parseInt(match[1], 10) }),
+  },
+  {
     pattern: /Cron task limit reached.*allows (\d+) cron task/i,
     key: 'apiErrors.cronTaskLimitReached',
+    extractParams: (match) => ({ limit: parseInt(match[1], 10) }),
+  },
+  {
+    pattern: /Heartbeat monitor limit reached.*allows (\d+) heartbeat/i,
+    key: 'apiErrors.heartbeatLimitReached',
     extractParams: (match) => ({ limit: parseInt(match[1], 10) }),
   },
   {
