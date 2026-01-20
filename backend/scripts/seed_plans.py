@@ -38,6 +38,8 @@ PLANS = [
         # Heartbeat monitors
         "max_heartbeats": 1,
         "min_heartbeat_interval_minutes": 60,
+        # SSL monitors
+        "max_ssl_monitors": 1,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": False,
         "max_queue_size": 0,
@@ -69,6 +71,8 @@ PLANS = [
         # Heartbeat monitors
         "max_heartbeats": 10,
         "min_heartbeat_interval_minutes": 5,
+        # SSL monitors
+        "max_ssl_monitors": 10,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": True,
         "max_queue_size": 10,
@@ -100,6 +104,8 @@ PLANS = [
         # Heartbeat monitors
         "max_heartbeats": 50,
         "min_heartbeat_interval_minutes": 1,
+        # SSL monitors
+        "max_ssl_monitors": 50,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": True,
         "max_queue_size": 100,

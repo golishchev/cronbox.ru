@@ -42,6 +42,22 @@ class CronTaskRepository(BaseRepository[CronTask]):
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
+    async def count_failing(self, workspace_id: UUID) -> int:
+        """Count cron tasks with consecutive failures > 0."""
+        stmt = (
+            select(func.count())
+            .select_from(CronTask)
+            .where(
+                and_(
+                    CronTask.workspace_id == workspace_id,
+                    CronTask.is_active.is_(True),
+                    CronTask.consecutive_failures > 0,
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
+
     async def get_due_tasks(self, now: datetime, limit: int = 100) -> list[CronTask]:
         """Get tasks due for execution.
 

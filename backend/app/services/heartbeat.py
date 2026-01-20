@@ -1,8 +1,9 @@
 """Heartbeat monitor service - Dead Man's Switch logic."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
+import pytz
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +31,38 @@ class HeartbeatService:
         if workspace and workspace.owner:
             return workspace.owner.preferred_language or "en"
         return "en"
+
+    async def _get_workspace_settings(
+        self, db: AsyncSession, workspace_id: UUID
+    ) -> tuple[str, str]:
+        """Get workspace language and timezone."""
+        result = await db.execute(
+            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
+        )
+        workspace = result.scalar_one_or_none()
+
+        lang = "en"
+        tz = "Europe/Moscow"
+
+        if workspace:
+            tz = workspace.default_timezone or "Europe/Moscow"
+            if workspace.owner:
+                lang = workspace.owner.preferred_language or "en"
+
+        return lang, tz
+
+    def _format_datetime(self, dt: datetime, tz_name: str) -> str:
+        """Format datetime in Russian format with workspace timezone."""
+        try:
+            tz = pytz.timezone(tz_name)
+        except pytz.UnknownTimeZoneError:
+            tz = pytz.timezone("Europe/Moscow")
+
+        # Convert UTC to workspace timezone
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(tz)
+        return local_dt.strftime("%d.%m.%Y %H:%M:%S")
 
     async def process_ping(
         self,
@@ -189,9 +222,9 @@ class HeartbeatService:
         heartbeat: Heartbeat,
     ) -> None:
         """Send notification when heartbeat becomes late."""
-        lang = await self._get_workspace_language(db, heartbeat.workspace_id)
+        lang, tz = await self._get_workspace_settings(db, heartbeat.workspace_id)
         last_ping = (
-            heartbeat.last_ping_at.isoformat()
+            self._format_datetime(heartbeat.last_ping_at, tz)
             if heartbeat.last_ping_at
             else t("heartbeat.never", lang)
         )
@@ -211,9 +244,9 @@ class HeartbeatService:
         heartbeat: Heartbeat,
     ) -> None:
         """Send notification when heartbeat becomes dead."""
-        lang = await self._get_workspace_language(db, heartbeat.workspace_id)
+        lang, tz = await self._get_workspace_settings(db, heartbeat.workspace_id)
         last_ping = (
-            heartbeat.last_ping_at.isoformat()
+            self._format_datetime(heartbeat.last_ping_at, tz)
             if heartbeat.last_ping_at
             else t("heartbeat.never", lang)
         )

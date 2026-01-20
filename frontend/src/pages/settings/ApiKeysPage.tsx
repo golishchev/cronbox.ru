@@ -252,9 +252,7 @@ export function ApiKeysPage({ onNavigate: _ }: ApiKeysPageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('apiKeys.title')}</h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">{t('apiKeys.title')}</h1>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t('apiKeys.createApiKey')}

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
-import { updateProfile, connectTelegram, disconnectTelegram, uploadAvatar, deleteAvatar, deleteAccount, sendEmailVerification } from '@/api/auth'
+import { updateProfile, uploadAvatar, deleteAvatar, deleteAccount, sendEmailVerification } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { getAssetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -26,8 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Loader2, Save, User, Globe, MessageSquare, CheckCircle, XCircle, Copy, ExternalLink, Camera, Trash2, AlertTriangle, Mail } from 'lucide-react'
-import type { TelegramConnectResponse } from '@/types'
+import { Loader2, Save, User, Globe, CheckCircle, XCircle, Camera, Trash2, AlertTriangle, Mail } from 'lucide-react'
 
 interface ProfilePageProps {
   onNavigate: (route: string) => void
@@ -46,12 +45,6 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarLoading, setAvatarLoading] = useState(false)
   const [avatarKey, setAvatarKey] = useState(Date.now())
-
-  // Telegram connection state
-  const [telegramLoading, setTelegramLoading] = useState(false)
-  const [telegramData, setTelegramData] = useState<TelegramConnectResponse | null>(null)
-  const [telegramError, setTelegramError] = useState('')
-  const [codeCopied, setCodeCopied] = useState(false)
 
   // Email verification state
   const [emailVerificationLoading, setEmailVerificationLoading] = useState(false)
@@ -141,45 +134,6 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
-
-  const handleConnectTelegram = async () => {
-    setTelegramLoading(true)
-    setTelegramError('')
-    setTelegramData(null)
-
-    try {
-      const data = await connectTelegram()
-      setTelegramData(data)
-    } catch (err) {
-      setTelegramError(getErrorMessage(err))
-    } finally {
-      setTelegramLoading(false)
-    }
-  }
-
-  const handleDisconnectTelegram = async () => {
-    setTelegramLoading(true)
-    setTelegramError('')
-
-    try {
-      await disconnectTelegram()
-      updateUser({ telegram_id: null, telegram_username: null })
-      setSuccess(t('profile.telegramDisconnected'))
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      setTelegramError(getErrorMessage(err))
-    } finally {
-      setTelegramLoading(false)
-    }
-  }
-
-  const copyCode = async () => {
-    if (telegramData?.code) {
-      await navigator.clipboard.writeText(`/link ${telegramData.code}`)
-      setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
-    }
-  }
 
   const handleSendEmailVerification = async () => {
     setEmailVerificationLoading(true)
@@ -401,121 +355,6 @@ export function ProfilePage({ onNavigate: _ }: ProfilePageProps) {
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Telegram Connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Telegram
-          </CardTitle>
-          <CardDescription>
-            {t('profile.telegramDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {telegramError && (
-            <div className="rounded-md bg-destructive/15 p-3 text-destructive text-sm">
-              {telegramError}
-            </div>
-          )}
-
-          {user?.telegram_id ? (
-            // Connected state
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <p className="font-medium text-blue-600">
-                      {t('profile.telegramConnected')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      @{user.telegram_username || user.telegram_id}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDisconnectTelegram}
-                  disabled={telegramLoading}
-                >
-                  {telegramLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t('profile.disconnect')}
-                </Button>
-              </div>
-            </div>
-          ) : telegramData ? (
-            // Show connection code
-            <div className="space-y-4">
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t('profile.telegramStep1')}
-                </p>
-                <a
-                  href={`https://t.me/${telegramData.bot_username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-500 hover:text-blue-600 font-medium"
-                >
-                  @{telegramData.bot_username}
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-3">
-                  {t('profile.telegramStep2')}
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 p-3 bg-background rounded border font-mono text-lg text-center">
-                    /link {telegramData.code}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copyCode}
-                    title={t('profile.copyCode')}
-                  >
-                    {codeCopied ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t('profile.codeExpires', { minutes: Math.floor(telegramData.expires_in / 60) })}
-                </p>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setTelegramData(null)}
-              >
-                {t('common.cancel')}
-              </Button>
-            </div>
-          ) : (
-            // Not connected state
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {t('profile.telegramNotConnectedDesc')}
-              </p>
-              <Button
-                onClick={handleConnectTelegram}
-                disabled={telegramLoading}
-              >
-                {telegramLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <MessageSquare className="mr-2 h-4 w-4" />
-                {t('profile.connectTelegram')}
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 

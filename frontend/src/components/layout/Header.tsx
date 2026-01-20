@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LogOut, User, Menu, Settings, Globe, ChevronDown, Plus, Check, Trash2, BookOpen, Sun, Moon, Monitor } from 'lucide-react'
+import { LogOut, User, Menu, Globe, ChevronDown, Plus, Check, Trash2, BookOpen, Sun, Moon, Monitor, CreditCard, Bell, Key, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -331,18 +331,39 @@ export function Header({ onNavigate, onLogout }: HeaderProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => onNavigate('profile')}
+              onClick={() => onNavigate('billing')}
               className="cursor-pointer"
             >
-              <User className="mr-2 h-4 w-4" />
-              {t('header.profile')}
+              <CreditCard className="mr-2 h-4 w-4" />
+              {t('nav.billing')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onNavigate('notifications')}
+              className="cursor-pointer"
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              {t('nav.notifications')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onNavigate('api-keys')}
               className="cursor-pointer"
             >
-              <Settings className="mr-2 h-4 w-4" />
+              <Key className="mr-2 h-4 w-4" />
               {t('nav.apiKeys')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onNavigate('workspace-settings')}
+              className="cursor-pointer"
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              {t('nav.workspaceSettings')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onNavigate('profile')}
+              className="cursor-pointer"
+            >
+              <User className="mr-2 h-4 w-4" />
+              {t('header.profile')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

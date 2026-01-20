@@ -42,6 +42,25 @@ class HeartbeatRepository(BaseRepository[Heartbeat]):
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
+    async def count_by_status(
+        self,
+        workspace_id: UUID,
+        statuses: list[HeartbeatStatus],
+    ) -> int:
+        """Count heartbeats for a workspace with given statuses."""
+        stmt = (
+            select(func.count())
+            .select_from(Heartbeat)
+            .where(
+                and_(
+                    Heartbeat.workspace_id == workspace_id,
+                    Heartbeat.status.in_(statuses),
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
+
     async def get_by_ping_token(self, ping_token: str) -> Heartbeat | None:
         """Get heartbeat by its ping token."""
         stmt = select(Heartbeat).where(Heartbeat.ping_token == ping_token)

@@ -48,3 +48,22 @@ class WorkspaceWithStats(WorkspaceResponse):
     pending_delayed_tasks: int = 0
     executions_today: int = 0
     success_rate_7d: float = 0.0
+
+    # Heartbeats
+    heartbeats_total: int = 0
+    heartbeats_healthy: int = 0
+    heartbeats_unhealthy: int = 0  # late + dead
+
+    # SSL Monitors
+    ssl_monitors_total: int = 0
+    ssl_expiring_soon: int = 0  # status = EXPIRING
+
+    # Task Chains
+    chains_total: int = 0
+    chains_active: int = 0
+
+    # Needs Attention (aggregated problems)
+    attention_cron_failing: int = 0  # consecutive_failures > 0
+    attention_heartbeats: int = 0  # LATE + DEAD
+    attention_ssl: int = 0  # EXPIRING + EXPIRED + ERROR
+    attention_chains_failing: int = 0  # consecutive_failures > 0

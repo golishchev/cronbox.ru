@@ -22,8 +22,10 @@ const ChainsPage = lazy(() => import('@/pages/chains/ChainsPage').then(m => ({ d
 const ChainDetailPage = lazy(() => import('@/pages/chains/ChainDetailPage').then(m => ({ default: m.ChainDetailPage })))
 const HeartbeatsPage = lazy(() => import('@/pages/heartbeats/HeartbeatsPage').then(m => ({ default: m.HeartbeatsPage })))
 const SSLMonitorsPage = lazy(() => import('@/pages/ssl/SSLMonitorsPage').then(m => ({ default: m.SSLMonitorsPage })))
-const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
+// NotificationsPage is now integrated into WorkspaceSettingsPage as a tab
+// const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const WorkspaceSettingsPage = lazy(() => import('@/pages/settings/WorkspaceSettingsPage').then(m => ({ default: m.WorkspaceSettingsPage })))
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage').then(m => ({ default: m.BillingPage })))
 const ApiKeysPage = lazy(() => import('@/pages/settings/ApiKeysPage').then(m => ({ default: m.ApiKeysPage })))
 
@@ -34,10 +36,10 @@ const AdminWorkspacesPage = lazy(() => import('@/pages/admin/AdminWorkspacesPage
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage').then(m => ({ default: m.AdminPlansPage })))
 const AdminNotificationTemplatesPage = lazy(() => import('@/pages/admin/AdminNotificationTemplatesPage').then(m => ({ default: m.AdminNotificationTemplatesPage })))
 
-type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'chains' | 'heartbeats' | 'ssl' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
+type Route = 'login' | 'register' | 'verify-email' | 'otp-login' | 'dashboard' | 'cron' | 'delayed' | 'chains' | 'heartbeats' | 'ssl' | 'executions' | 'api-keys' | 'notifications' | 'settings' | 'workspace-settings' | 'billing' | 'profile' | 'admin' | 'admin-users' | 'admin-workspaces' | 'admin-plans' | 'admin-templates'
 
 const AUTH_ROUTES = ['login', 'register', 'verify-email', 'otp-login']
-const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'chains', 'heartbeats', 'ssl', 'executions', 'api-keys', 'notifications', 'settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
+const PROTECTED_ROUTES = ['dashboard', 'cron', 'delayed', 'chains', 'heartbeats', 'ssl', 'executions', 'api-keys', 'notifications', 'settings', 'workspace-settings', 'billing', 'profile', 'admin', 'admin-users', 'admin-workspaces', 'admin-plans', 'admin-templates']
 
 function PageLoader() {
   return (
@@ -262,11 +264,15 @@ function App() {
       case 'api-keys':
         return <ApiKeysPage onNavigate={navigate} />
       case 'notifications':
-        return <NotificationsPage onNavigate={navigate} />
+        // Redirect to workspace-settings (notifications is now a tab there)
+        window.location.hash = 'workspace-settings'
+        return <WorkspaceSettingsPage onNavigate={navigate} />
       case 'settings':
         return <ProfilePage onNavigate={navigate} />
       case 'profile':
         return <ProfilePage onNavigate={navigate} />
+      case 'workspace-settings':
+        return <WorkspaceSettingsPage onNavigate={navigate} />
       case 'billing':
         return <BillingPage onNavigate={navigate} />
       case 'admin':

@@ -4,7 +4,6 @@ import {
   History,
   Settings,
   Key,
-  Bell,
   ChevronLeft,
   LayoutDashboard,
   CreditCard,
@@ -12,6 +11,7 @@ import {
   ShieldCheck,
   Link2,
   Heart,
+  Building2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -37,8 +37,8 @@ const mainNav: NavItem[] = [
 
 const settingsNav: NavItem[] = [
   { titleKey: 'nav.billing', route: 'billing', icon: CreditCard },
-  { titleKey: 'nav.notifications', route: 'notifications', icon: Bell },
   { titleKey: 'nav.apiKeys', route: 'api-keys', icon: Key },
+  { titleKey: 'nav.workspaceSettings', route: 'workspace-settings', icon: Building2 },
   { titleKey: 'nav.settings', route: 'settings', icon: Settings },
 ]
 

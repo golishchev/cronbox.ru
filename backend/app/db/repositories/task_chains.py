@@ -45,6 +45,22 @@ class TaskChainRepository(BaseRepository[TaskChain]):
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
+    async def count_failing(self, workspace_id: UUID) -> int:
+        """Count task chains with consecutive failures > 0."""
+        stmt = (
+            select(func.count())
+            .select_from(TaskChain)
+            .where(
+                and_(
+                    TaskChain.workspace_id == workspace_id,
+                    TaskChain.is_active.is_(True),
+                    TaskChain.consecutive_failures > 0,
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
+
     async def get_with_steps(self, chain_id: UUID) -> TaskChain | None:
         """Get a task chain with its steps loaded."""
         stmt = select(TaskChain).options(selectinload(TaskChain.steps)).where(TaskChain.id == chain_id)

@@ -234,16 +234,14 @@ export function NotificationsPage({ onNavigate: _ }: NotificationsPageProps) {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{t('notifications.title')}</h1>
-          {saveStatus === 'saving' && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          {saveStatus === 'saved' && (
-            <Check className="h-4 w-4 text-green-600" />
-          )}
-        </div>
+      <div className="flex items-center gap-3">
+        <h1 className="text-3xl font-bold tracking-tight">{t('notifications.title')}</h1>
+        {saveStatus === 'saving' && (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+        {saveStatus === 'saved' && (
+          <Check className="h-4 w-4 text-green-600" />
+        )}
       </div>
 
       {error && (

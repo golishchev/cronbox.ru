@@ -72,6 +72,21 @@ export interface WorkspaceWithStats extends Workspace {
   pending_delayed_tasks: number
   executions_today: number
   success_rate_7d: number
+  // Heartbeats
+  heartbeats_total: number
+  heartbeats_healthy: number
+  heartbeats_unhealthy: number
+  // SSL monitors
+  ssl_monitors_total: number
+  ssl_expiring_soon: number
+  // Task chains
+  chains_total: number
+  chains_active: number
+  // Needs Attention
+  attention_cron_failing: number
+  attention_heartbeats: number
+  attention_ssl: number
+  attention_chains_failing: number
 }
 
 export interface CreateWorkspaceRequest {

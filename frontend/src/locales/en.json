@@ -126,7 +126,8 @@
     "billing": "Billing",
     "notifications": "Notifications",
     "apiKeys": "API Keys",
-    "adminDashboard": "Admin Panel"
+    "adminDashboard": "Admin Panel",
+    "workspaceSettings": "Workspace Settings"
   },
   "header": {
     "profile": "Profile",
@@ -158,7 +159,22 @@
     "successAndFailureRate": "Success and failure rate over time",
     "noExecutionDataYet": "No execution data yet",
     "recentExecutions": "Recent Executions",
-    "latestTaskExecutions": "Latest task executions"
+    "latestTaskExecutions": "Latest task executions",
+    "heartbeats": "Heartbeats",
+    "healthyMonitors": "{{healthy}} healthy",
+    "unhealthyMonitors": "{{unhealthy}} unhealthy",
+    "sslMonitors": "SSL Monitors",
+    "validCertificates": "valid",
+    "expiringCertificates": "{{count}} expiring",
+    "taskChains": "Task Chains",
+    "activeChains": "{{active}} active",
+    "needsAttention": "Needs Attention",
+    "allGood": "All good",
+    "attentionDetails": "{{cron}} cron · {{heartbeats}} hb · {{ssl}} SSL · {{chains}} chains",
+    "attentionCron": "cron",
+    "attentionHeartbeats": "hb",
+    "attentionSsl": "SSL",
+    "attentionChains": "chains"
   },
   "workspace": {
     "create": "Create Workspace",
@@ -177,6 +193,20 @@
     "deleted": "Workspace \"{{name}}\" has been deleted",
     "deleteFailed": "Failed to delete workspace",
     "cannotDeleteLast": "Cannot delete the last workspace"
+  },
+  "workspaceSettings": {
+    "title": "Workspace Settings",
+    "description": "Manage your workspace settings",
+    "noWorkspace": "Please select a workspace",
+    "generalInfo": "General Information",
+    "name": "Name",
+    "namePlaceholder": "My Project",
+    "slug": "Slug",
+    "slugDescription": "Slug cannot be changed after creation",
+    "timezone": "Timezone",
+    "timezoneDescription": "Timezone for task scheduling",
+    "selectTimezone": "Select timezone",
+    "tabNotifications": "Notifications"
   },
   "cronTasks": {
     "title": "Cron Tasks",
@@ -620,6 +650,7 @@
     "webhookDescription": "Send notifications to a custom webhook URL",
     "webhookUrl": "Webhook URL",
     "webhookSecret": "Secret (optional)",
+    "webhookSecretPlaceholder": "Enter secret key",
     "webhookSecretHint": "Will be sent in X-Webhook-Secret header",
     "sendTest": "Send Test",
     "testSent": "Test notification sent",

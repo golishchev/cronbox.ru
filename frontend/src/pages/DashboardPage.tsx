@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Clock, Calendar, CheckCircle, XCircle, Loader2, Plus, TrendingUp, Activity } from 'lucide-react'
+import { Clock, Calendar, CheckCircle, XCircle, Loader2, Plus, TrendingUp, Activity, Heart, ShieldCheck, Link2, AlertTriangle } from 'lucide-react'
 import { DashboardSkeleton } from '@/components/ui/skeleton'
 import { toast } from '@/hooks/use-toast'
 import {
@@ -337,6 +337,95 @@ export function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('dashboard.heartbeats')}</CardTitle>
+            <Heart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.heartbeats_total ?? 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {(stats?.heartbeats_unhealthy ?? 0) > 0 ? (
+                <span className="text-destructive">
+                  {t('dashboard.unhealthyMonitors', { unhealthy: stats?.heartbeats_unhealthy ?? 0 })}
+                </span>
+              ) : (
+                t('dashboard.healthyMonitors', { healthy: stats?.heartbeats_healthy ?? 0 })
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('dashboard.sslMonitors')}</CardTitle>
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.ssl_monitors_total ?? 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {(stats?.ssl_expiring_soon ?? 0) > 0 ? (
+                <span className="text-warning">
+                  {t('dashboard.expiringCertificates', { count: stats?.ssl_expiring_soon ?? 0 })}
+                </span>
+              ) : (
+                t('dashboard.validCertificates')
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('dashboard.taskChains')}</CardTitle>
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.chains_total ?? 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.activeChains', { active: stats?.chains_active ?? 0 })}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('dashboard.needsAttention')}</CardTitle>
+            <AlertTriangle className={`h-4 w-4 ${
+              ((stats?.attention_cron_failing ?? 0) +
+               (stats?.attention_heartbeats ?? 0) +
+               (stats?.attention_ssl ?? 0) +
+               (stats?.attention_chains_failing ?? 0)) > 0
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            }`} />
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const total = (stats?.attention_cron_failing ?? 0) +
+                           (stats?.attention_heartbeats ?? 0) +
+                           (stats?.attention_ssl ?? 0) +
+                           (stats?.attention_chains_failing ?? 0)
+              const parts: string[] = []
+              if (stats?.attention_cron_failing) parts.push(`${stats.attention_cron_failing} ${t('dashboard.attentionCron')}`)
+              if (stats?.attention_heartbeats) parts.push(`${stats.attention_heartbeats} ${t('dashboard.attentionHeartbeats')}`)
+              if (stats?.attention_ssl) parts.push(`${stats.attention_ssl} ${t('dashboard.attentionSsl')}`)
+              if (stats?.attention_chains_failing) parts.push(`${stats.attention_chains_failing} ${t('dashboard.attentionChains')}`)
+
+              return (
+                <>
+                  <div className={`text-2xl font-bold ${total > 0 ? 'text-destructive' : 'text-success'}`}>
+                    {total}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {total > 0 ? parts.join(' · ') : t('dashboard.allGood')}
+                  </p>
+                </>
+              )
+            })()}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Chart and Recent Executions */}
@@ -451,33 +540,6 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Current Workspace Info */}
-      {currentWorkspace && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{currentWorkspace.name}</CardTitle>
-                <CardDescription>/{currentWorkspace.slug}</CardDescription>
-              </div>
-              <Badge variant="secondary">{stats?.plan_name ?? t('billing.free')}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('dashboard.timezone')}</span>
-                <span>{currentWorkspace.default_timezone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('dashboard.created')}</span>
-                <span>{new Date(currentWorkspace.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

@@ -84,11 +84,19 @@ async def get_workspace(
     from app.db.repositories.cron_tasks import CronTaskRepository
     from app.db.repositories.delayed_tasks import DelayedTaskRepository
     from app.db.repositories.executions import ExecutionRepository
+    from app.db.repositories.heartbeats import HeartbeatRepository
+    from app.db.repositories.ssl_monitors import SSLMonitorRepository
+    from app.db.repositories.task_chains import TaskChainRepository
     from app.models.cron_task import TaskStatus
+    from app.models.heartbeat import HeartbeatStatus
+    from app.models.ssl_monitor import SSLMonitorStatus
 
     cron_repo = CronTaskRepository(db)
     delayed_repo = DelayedTaskRepository(db)
     exec_repo = ExecutionRepository(db)
+    heartbeat_repo = HeartbeatRepository(db)
+    ssl_repo = SSLMonitorRepository(db)
+    chain_repo = TaskChainRepository(db)
 
     active_cron = await cron_repo.count_by_workspace(workspace.id, is_active=True)
     pending_delayed = await delayed_repo.count_by_workspace(workspace.id, status=TaskStatus.PENDING)
@@ -100,6 +108,33 @@ async def get_workspace(
     # 7-day success rate
     week_ago = datetime.utcnow() - timedelta(days=7)
     stats_7d = await exec_repo.get_stats(workspace.id, start_date=week_ago)
+
+    # Heartbeats stats
+    heartbeats_total = await heartbeat_repo.count_by_workspace(workspace.id)
+    heartbeats_healthy = await heartbeat_repo.count_by_status(
+        workspace.id, [HeartbeatStatus.HEALTHY]
+    )
+    heartbeats_unhealthy = await heartbeat_repo.count_by_status(
+        workspace.id, [HeartbeatStatus.LATE, HeartbeatStatus.DEAD]
+    )
+
+    # SSL monitors stats
+    ssl_monitors_total = await ssl_repo.count_by_workspace(workspace.id)
+    ssl_expiring_soon = await ssl_repo.count_by_status(
+        workspace.id, [SSLMonitorStatus.EXPIRING]
+    )
+
+    # Task chains stats
+    chains_total = await chain_repo.count_by_workspace(workspace.id)
+    chains_active = await chain_repo.count_by_workspace(workspace.id, is_active=True)
+
+    # Needs Attention stats
+    attention_cron_failing = await cron_repo.count_failing(workspace.id)
+    attention_heartbeats = heartbeats_unhealthy  # Already calculated (LATE + DEAD)
+    attention_ssl = await ssl_repo.count_by_status(
+        workspace.id, [SSLMonitorStatus.EXPIRING, SSLMonitorStatus.EXPIRED, SSLMonitorStatus.ERROR]
+    )
+    attention_chains_failing = await chain_repo.count_failing(workspace.id)
 
     return WorkspaceWithStats(
         id=workspace.id,
@@ -118,6 +153,21 @@ async def get_workspace(
         pending_delayed_tasks=pending_delayed,
         executions_today=exec_today,
         success_rate_7d=stats_7d["success_rate"],
+        # Heartbeats
+        heartbeats_total=heartbeats_total,
+        heartbeats_healthy=heartbeats_healthy,
+        heartbeats_unhealthy=heartbeats_unhealthy,
+        # SSL monitors
+        ssl_monitors_total=ssl_monitors_total,
+        ssl_expiring_soon=ssl_expiring_soon,
+        # Task chains
+        chains_total=chains_total,
+        chains_active=chains_active,
+        # Needs Attention
+        attention_cron_failing=attention_cron_failing,
+        attention_heartbeats=attention_heartbeats,
+        attention_ssl=attention_ssl,
+        attention_chains_failing=attention_chains_failing,
     )
 
 

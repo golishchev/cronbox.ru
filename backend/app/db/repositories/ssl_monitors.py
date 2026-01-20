@@ -42,6 +42,25 @@ class SSLMonitorRepository(BaseRepository[SSLMonitor]):
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
+    async def count_by_status(
+        self,
+        workspace_id: UUID,
+        statuses: list[SSLMonitorStatus],
+    ) -> int:
+        """Count SSL monitors for a workspace with given statuses."""
+        stmt = (
+            select(func.count())
+            .select_from(SSLMonitor)
+            .where(
+                and_(
+                    SSLMonitor.workspace_id == workspace_id,
+                    SSLMonitor.status.in_(statuses),
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
+
     async def get_by_domain(self, workspace_id: UUID, domain: str) -> SSLMonitor | None:
         """Get SSL monitor by domain within a workspace."""
         stmt = select(SSLMonitor).where(

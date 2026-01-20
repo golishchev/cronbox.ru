@@ -126,7 +126,8 @@
     "billing": "Оплата",
     "notifications": "Уведомления",
     "apiKeys": "API ключи",
-    "adminDashboard": "Админ панель"
+    "adminDashboard": "Админ панель",
+    "workspaceSettings": "Пространства"
   },
   "header": {
     "profile": "Профиль",
@@ -158,7 +159,22 @@
     "successAndFailureRate": "Успешные и неуспешные выполнения",
     "noExecutionDataYet": "Данных о выполнениях пока нет",
     "recentExecutions": "Недавние выполнения",
-    "latestTaskExecutions": "Последние выполнения задач"
+    "latestTaskExecutions": "Последние выполнения задач",
+    "heartbeats": "Мониторы",
+    "healthyMonitors": "{{healthy}} работает",
+    "unhealthyMonitors": "{{unhealthy}} с проблемами",
+    "sslMonitors": "SSL мониторы",
+    "validCertificates": "действительных",
+    "expiringCertificates": "{{count}} истекает",
+    "taskChains": "Цепочки задач",
+    "activeChains": "{{active}} активных",
+    "needsAttention": "Требуют внимания",
+    "allGood": "Всё в порядке",
+    "attentionDetails": "{{cron}} cron · {{heartbeats}} монит. · {{ssl}} SSL · {{chains}} цеп.",
+    "attentionCron": "cron",
+    "attentionHeartbeats": "монит.",
+    "attentionSsl": "SSL",
+    "attentionChains": "цеп."
   },
   "workspace": {
     "create": "Создать рабочее пространство",
@@ -177,6 +193,20 @@
     "deleted": "Рабочее пространство \"{{name}}\" удалено",
     "deleteFailed": "Не удалось удалить рабочее пространство",
     "cannotDeleteLast": "Нельзя удалить последнее рабочее пространство"
+  },
+  "workspaceSettings": {
+    "title": "Настройки пространства",
+    "description": "Управление настройками рабочего пространства",
+    "noWorkspace": "Выберите рабочее пространство",
+    "generalInfo": "Общая информация",
+    "name": "Название",
+    "namePlaceholder": "Мой проект",
+    "slug": "Идентификатор",
+    "slugDescription": "Идентификатор нельзя изменить после создания",
+    "timezone": "Часовой пояс",
+    "timezoneDescription": "Часовой пояс для расписания задач",
+    "selectTimezone": "Выберите часовой пояс",
+    "tabNotifications": "Уведомления"
   },
   "cronTasks": {
     "title": "Cron задачи",
@@ -621,6 +651,7 @@
     "webhookDescription": "Отправлять уведомления на пользовательский webhook URL",
     "webhookUrl": "Webhook URL",
     "webhookSecret": "Секрет (опционально)",
+    "webhookSecretPlaceholder": "Введите секретный ключ",
     "webhookSecretHint": "Будет отправлен в заголовке X-Webhook-Secret",
     "sendTest": "Тестовое уведомление",
     "testSent": "Тестовое уведомление отправлено",
