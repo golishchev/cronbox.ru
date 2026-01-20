@@ -4,6 +4,7 @@ import {
   getAdminUsers,
   getAdminUser,
   updateAdminUser,
+  deleteAdminUser,
   getAdminWorkspaces,
   getAdminPlans,
   createAdminPlan,
@@ -173,6 +174,16 @@ describe('admin API', () => {
       await expect(updateAdminUser('user-1', { is_superuser: true })).resolves.not.toThrow()
 
       expect(apiClient.patch).toHaveBeenCalledWith('/admin/users/user-1', { is_superuser: true })
+    })
+  })
+
+  describe('deleteAdminUser', () => {
+    it('should delete user', async () => {
+      vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
+
+      await expect(deleteAdminUser('user-1')).resolves.not.toThrow()
+
+      expect(apiClient.delete).toHaveBeenCalledWith('/admin/users/user-1')
     })
   })
 

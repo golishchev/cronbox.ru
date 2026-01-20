@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -46,7 +47,22 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Update last_login_at on each visit (throttled to every 5 minutes)
+    await _update_last_activity(db, user)
+
     return user
+
+
+async def _update_last_activity(db: AsyncSession, user: User) -> None:
+    """Update user's last_login_at timestamp if more than 5 minutes have passed."""
+    now = datetime.now(timezone.utc)
+    throttle_interval = timedelta(minutes=5)
+
+    # Update if never set or if throttle interval has passed
+    if user.last_login_at is None or (now - user.last_login_at) > throttle_interval:
+        user.last_login_at = now
+        await db.commit()
+        await db.refresh(user)
 
 
 async def get_current_active_superuser(

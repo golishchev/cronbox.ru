@@ -434,6 +434,25 @@ async def update_user(admin: AdminUser, db: DB, user_id: str, data: UpdateUserRe
     return {"message": "User updated successfully"}
 
 
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(admin: AdminUser, db: DB, user_id: str):
+    """Delete user and all their data (admin only). This is a destructive operation."""
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent admin from deleting themselves
+    if str(user.id) == str(admin.id):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete your own account",
+        )
+
+    # Delete user (cascade will handle related data)
+    await db.delete(user)
+    await db.commit()
+
+
 @router.post("/users/{user_id}/subscription")
 async def assign_user_plan(
     admin: AdminUser,

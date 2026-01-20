@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getAdminUsers, updateAdminUser, assignUserPlan, getAdminPlans, AdminUser, AdminPlan } from '@/api/admin'
+import { getAdminUsers, updateAdminUser, assignUserPlan, getAdminPlans, deleteAdminUser, AdminUser, AdminPlan } from '@/api/admin'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -41,6 +57,8 @@ import {
   Mail,
   Loader2,
   Edit,
+  MoreHorizontal,
+  Trash2,
 } from 'lucide-react'
 
 interface AdminUsersPageProps {
@@ -56,7 +74,9 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
   const [updateLoading, setUpdateLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [plans, setPlans] = useState<AdminPlan[]>([])
 
   // Edit form state
@@ -147,6 +167,30 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       })
     } finally {
       setUpdateLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingUser) return
+
+    setDeleteLoading(true)
+    try {
+      await deleteAdminUser(deletingUser.id)
+      toast({
+        title: t('admin.userDeleted'),
+        description: t('admin.userDeletedDescription', { email: deletingUser.email }),
+        variant: 'success',
+      })
+      setDeletingUser(null)
+      loadUsers()
+    } catch (err) {
+      toast({
+        title: t('admin.errorDeletingUser'),
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -286,14 +330,26 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                         : '-'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(user)}
-                        aria-label={t('common.edit')}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(user)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {t('common.edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeletingUser(user)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {t('common.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -415,6 +471,31 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.deleteUser')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.deleteUserConfirm', { email: deletingUser?.email })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

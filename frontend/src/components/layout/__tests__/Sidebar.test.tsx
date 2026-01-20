@@ -69,8 +69,8 @@ describe('Sidebar', () => {
     render(<Sidebar currentRoute="dashboard" onNavigate={mockOnNavigate} />)
 
     expect(screen.getByText('Billing')).toBeInTheDocument()
-    expect(screen.getByText('Notifications')).toBeInTheDocument()
     expect(screen.getByText('API Keys')).toBeInTheDocument()
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
   })
 
   it('should highlight current route', () => {

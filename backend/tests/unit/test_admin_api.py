@@ -251,6 +251,79 @@ class TestUpdateUser:
         assert result["message"] == "User updated successfully"
 
 
+class TestDeleteUser:
+    """Tests for delete_user endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_delete_user_success(self):
+        """Test successfully deleting a user."""
+        from app.api.v1.admin import delete_user
+
+        admin_id = uuid4()
+        mock_admin = create_mock_admin(id=admin_id)
+        mock_db = MagicMock()
+        user_id = uuid4()  # Different user
+        mock_user = create_mock_user(id=user_id)
+
+        async def mock_get(model, id):
+            return mock_user
+
+        async def mock_delete(obj):
+            pass
+
+        async def mock_commit():
+            pass
+
+        mock_db.get = mock_get
+        mock_db.delete = mock_delete
+        mock_db.commit = mock_commit
+
+        # Should not raise, returns None (204 No Content)
+        result = await delete_user(admin=mock_admin, db=mock_db, user_id=str(user_id))
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_delete_user_not_found(self):
+        """Test deleting non-existent user."""
+        from app.api.v1.admin import delete_user
+
+        mock_admin = create_mock_admin()
+        mock_db = MagicMock()
+        user_id = str(uuid4())
+
+        async def mock_get(model, id):
+            return None
+
+        mock_db.get = mock_get
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_user(admin=mock_admin, db=mock_db, user_id=user_id)
+
+        assert exc_info.value.status_code == 404
+        assert "User not found" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_delete_user_cannot_delete_self(self):
+        """Test admin cannot delete their own account."""
+        from app.api.v1.admin import delete_user
+
+        admin_id = uuid4()
+        mock_admin = create_mock_admin(id=admin_id)
+        mock_db = MagicMock()
+        mock_user = create_mock_user(id=admin_id)  # Same ID as admin
+
+        async def mock_get(model, id):
+            return mock_user
+
+        mock_db.get = mock_get
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_user(admin=mock_admin, db=mock_db, user_id=str(admin_id))
+
+        assert exc_info.value.status_code == 400
+        assert "Cannot delete your own account" in exc_info.value.detail
+
+
 class TestListUsers:
     """Tests for list_users endpoint."""
 

@@ -109,6 +109,10 @@ export async function assignUserPlan(userId: string, data: AssignPlanRequest): P
   await apiClient.post(`/admin/users/${userId}/subscription`, data)
 }
 
+export async function deleteAdminUser(userId: string): Promise<void> {
+  await apiClient.delete(`/admin/users/${userId}`)
+}
+
 export async function getAdminWorkspaces(params?: {
   page?: number
   page_size?: number

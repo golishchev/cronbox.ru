@@ -90,10 +90,10 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Not verified')).toBeInTheDocument()
   })
 
-  it('should show telegram not connected when no telegram_id', () => {
+  it('should display avatar section', () => {
     render(<ProfilePage onNavigate={mockOnNavigate} />)
 
-    expect(screen.getByText('Connect Telegram')).toBeInTheDocument()
+    expect(screen.getByText('Avatar')).toBeInTheDocument()
   })
 
   it('should disable save button when no changes', () => {

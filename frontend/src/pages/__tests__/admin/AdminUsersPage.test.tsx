@@ -136,8 +136,18 @@ describe('AdminUsersPage', () => {
       expect(screen.getByText('Admin User')).toBeInTheDocument()
     })
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i })
-    await user.click(editButtons[0])
+    // Find the table row with Admin User and click the menu button in that row
+    const adminUserRow = screen.getByText('Admin User').closest('tr')
+    expect(adminUserRow).toBeTruthy()
+    const menuButton = adminUserRow!.querySelector('button')
+    expect(menuButton).toBeTruthy()
+    await user.click(menuButton!)
+
+    // Click on Edit menu item
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Edit'))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -176,8 +186,18 @@ describe('AdminUsersPage', () => {
       expect(screen.getByText('Admin User')).toBeInTheDocument()
     })
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i })
-    await user.click(editButtons[0])
+    // Find the table row with Admin User and click the menu button in that row
+    const adminUserRow = screen.getByText('Admin User').closest('tr')
+    expect(adminUserRow).toBeTruthy()
+    const menuButton = adminUserRow!.querySelector('button')
+    expect(menuButton).toBeTruthy()
+    await user.click(menuButton!)
+
+    // Click on Edit menu item
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Edit'))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
