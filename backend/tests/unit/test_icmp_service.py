@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.icmp import IcmpResult, _parse_ping_output, execute_icmp_ping
+from app.services.icmp import IS_MACOS, IcmpResult, _parse_ping_output, execute_icmp_ping
 
 
 class TestIcmpResult:
@@ -341,9 +341,11 @@ rtt min/avg/max/mdev = 1.000/1.233/1.500/0.204 ms"""
             await execute_icmp_ping("test.com", count=3, timeout=30.0)
 
             call_args = mock_create.call_args[0]
-            assert "-W" in call_args
-            w_index = call_args.index("-W")
-            assert call_args[w_index + 1] == "10"  # 30/3 = 10
+            # Check for platform-specific timeout flag (-t on macOS, -W on Linux)
+            timeout_flag = "-t" if IS_MACOS else "-W"
+            assert timeout_flag in call_args
+            flag_index = call_args.index(timeout_flag)
+            assert call_args[flag_index + 1] == "10"  # 30/3 = 10
 
     @pytest.mark.asyncio
     async def test_minimum_per_packet_timeout(self):
@@ -359,8 +361,10 @@ rtt min/avg/max/mdev = 1.000/1.233/1.500/0.204 ms"""
             await execute_icmp_ping("test.com", count=10, timeout=5.0)
 
             call_args = mock_create.call_args[0]
-            w_index = call_args.index("-W")
-            assert call_args[w_index + 1] == "1"  # Minimum 1 second
+            # Check for platform-specific timeout flag (-t on macOS, -W on Linux)
+            timeout_flag = "-t" if IS_MACOS else "-W"
+            flag_index = call_args.index(timeout_flag)
+            assert call_args[flag_index + 1] == "1"  # Minimum 1 second
 
     @pytest.mark.asyncio
     async def test_wait_for_process_timeout(self):

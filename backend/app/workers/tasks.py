@@ -27,6 +27,16 @@ from app.services.tcp import execute_tcp_check
 logger = structlog.get_logger()
 
 
+def calculate_next_run(schedule: str, tz_name: str) -> datetime:
+    """Calculate next run time based on cron schedule and timezone."""
+    tz = pytz.timezone(tz_name)
+    now = datetime.now(tz)
+    cron = croniter(schedule, now)
+    next_run = cron.get_next(datetime)
+    # Convert to UTC for storage (naive datetime)
+    return next_run.astimezone(pytz.UTC).replace(tzinfo=None)
+
+
 async def send_task_notification(
     ctx: dict,
     *,
@@ -283,6 +293,39 @@ async def execute_cron_task(
         # Get protocol type (default to HTTP for backwards compatibility)
         protocol_type = getattr(task, "protocol_type", ProtocolType.HTTP) or ProtocolType.HTTP
 
+        # Validate required fields based on protocol type
+        validation_error = None
+        if protocol_type == ProtocolType.HTTP:
+            if not task.url or task.url == "None":
+                validation_error = "HTTP task has no valid URL configured"
+        elif protocol_type == ProtocolType.ICMP:
+            if not task.host:
+                validation_error = "ICMP task has no host configured"
+        elif protocol_type == ProtocolType.TCP:
+            if not task.host:
+                validation_error = "TCP task has no host configured"
+            elif not task.port:
+                validation_error = "TCP task has no port configured"
+
+        if validation_error:
+            logger.error(
+                "Cron task validation failed",
+                task_id=task_id,
+                task_name=task.name,
+                protocol_type=protocol_type.value,
+                error=validation_error,
+            )
+            # Update task status to failed without creating execution
+            next_run_at = calculate_next_run(task.schedule, task.timezone)
+            await cron_repo.update_last_run(
+                task=task,
+                status=TaskStatus.FAILED,
+                run_at=datetime.utcnow(),
+                next_run_at=next_run_at,
+            )
+            await db.commit()
+            return {"success": False, "error": validation_error}
+
         # Create execution record based on protocol type
         execution = await exec_repo.create_execution(
             workspace_id=task.workspace_id,
@@ -525,6 +568,32 @@ async def execute_delayed_task(
 
         # Get protocol type (default to HTTP for backwards compatibility)
         protocol_type = getattr(task, "protocol_type", ProtocolType.HTTP) or ProtocolType.HTTP
+
+        # Validate required fields based on protocol type
+        validation_error = None
+        if protocol_type == ProtocolType.HTTP:
+            if not task.url or task.url == "None":
+                validation_error = "HTTP task has no valid URL configured"
+        elif protocol_type == ProtocolType.ICMP:
+            if not task.host:
+                validation_error = "ICMP task has no host configured"
+        elif protocol_type == ProtocolType.TCP:
+            if not task.host:
+                validation_error = "TCP task has no host configured"
+            elif not task.port:
+                validation_error = "TCP task has no port configured"
+
+        if validation_error:
+            logger.error(
+                "Delayed task validation failed",
+                task_id=task_id,
+                task_name=task.name,
+                protocol_type=protocol_type.value,
+                error=validation_error,
+            )
+            await delayed_repo.mark_failed(task, error=validation_error)
+            await db.commit()
+            return {"success": False, "error": validation_error}
 
         # Create execution record based on protocol type
         execution = await exec_repo.create_execution(

@@ -2,11 +2,15 @@
 
 import asyncio
 import logging
+import platform
 import re
 import time
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+# Detect OS for ping command differences
+IS_MACOS = platform.system() == "Darwin"
 
 
 @dataclass
@@ -50,9 +54,15 @@ async def execute_icmp_ping(
     # Calculate per-packet timeout (total timeout / count, minimum 1 second)
     packet_timeout = max(1, int(timeout / count))
 
-    # Build ping command (Linux compatible)
-    # -c: count, -W: timeout per packet in seconds
-    cmd = ["ping", "-c", str(count), "-W", str(packet_timeout), host]
+    # Build ping command (platform-specific)
+    # macOS: -c count, -t timeout (seconds), -W waittime (milliseconds)
+    # Linux: -c count, -W timeout (seconds)
+    if IS_MACOS:
+        # macOS uses -t for overall timeout and -W for wait time in milliseconds
+        cmd = ["ping", "-c", str(count), "-t", str(packet_timeout), host]
+    else:
+        # Linux uses -W for timeout per packet in seconds
+        cmd = ["ping", "-c", str(count), "-W", str(packet_timeout), host]
 
     try:
         process = await asyncio.wait_for(
