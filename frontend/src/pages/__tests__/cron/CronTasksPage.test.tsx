@@ -39,6 +39,7 @@ describe('CronTasksPage', () => {
     workspace_id: 'workspace-1',
     name: 'Test Cron Task',
     description: 'A test task',
+    protocol_type: 'http' as const,
     url: 'https://example.com/webhook',
     method: 'POST' as const,
     schedule: '*/5 * * * *',

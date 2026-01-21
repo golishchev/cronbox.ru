@@ -36,6 +36,7 @@ describe('ExecutionsPage', () => {
     task_id: 'task-1',
     task_type: 'cron' as const,
     task_name: 'Test Task',
+    protocol_type: 'http' as const,
     status: 'success' as const,
     started_at: '2024-01-01T12:00:00Z',
     finished_at: '2024-01-01T12:00:01Z',

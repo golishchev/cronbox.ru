@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { CronTaskForm } from '../CronTaskForm'
 import * as cronTasksApi from '@/api/cronTasks'
-import type { CronTask } from '@/types'
+import type { CronTask, ProtocolType } from '@/types'
 
 // Mock API
 vi.mock('@/api/cronTasks', () => ({
@@ -29,6 +29,7 @@ describe('CronTaskForm', () => {
     workspace_id: 'workspace-1',
     name: 'Test Task',
     description: 'Test description',
+    protocol_type: 'http' as ProtocolType,
     url: 'https://example.com/webhook',
     method: 'POST',
     schedule: '*/5 * * * *',
@@ -37,6 +38,46 @@ describe('CronTaskForm', () => {
     retry_count: 3,
     headers: { 'Content-Type': 'application/json' },
     body: '{"test": true}',
+    is_active: true,
+    notify_on_failure: true,
+    last_run_at: null,
+    next_run_at: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  }
+
+  const mockIcmpTask: CronTask = {
+    id: 'task-2',
+    workspace_id: 'workspace-1',
+    name: 'ICMP Test Task',
+    description: 'Ping test',
+    protocol_type: 'icmp' as ProtocolType,
+    host: 'example.com',
+    icmp_count: 5,
+    schedule: '*/5 * * * *',
+    timezone: 'Europe/Moscow',
+    timeout_seconds: 30,
+    retry_count: 0,
+    is_active: true,
+    notify_on_failure: true,
+    last_run_at: null,
+    next_run_at: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  }
+
+  const mockTcpTask: CronTask = {
+    id: 'task-3',
+    workspace_id: 'workspace-1',
+    name: 'TCP Test Task',
+    description: 'Port check',
+    protocol_type: 'tcp' as ProtocolType,
+    host: 'db.example.com',
+    port: 5432,
+    schedule: '*/5 * * * *',
+    timezone: 'Europe/Moscow',
+    timeout_seconds: 30,
+    retry_count: 0,
     is_active: true,
     notify_on_failure: true,
     last_run_at: null,
@@ -194,6 +235,108 @@ describe('CronTaskForm', () => {
     // The toast should be called with error, but form doesn't show inline error
     await waitFor(() => {
       expect(mockOnSuccess).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Protocol Type Selection', () => {
+    it('should render protocol type selector', () => {
+      render(<CronTaskForm {...defaultProps} />)
+
+      // Protocol type radio buttons should be present
+      expect(screen.getByText('HTTP')).toBeInTheDocument()
+      expect(screen.getByText('ICMP')).toBeInTheDocument()
+      expect(screen.getByText('TCP')).toBeInTheDocument()
+    })
+
+    it('should show URL field by default (HTTP protocol)', () => {
+      render(<CronTaskForm {...defaultProps} />)
+
+      expect(screen.getByRole('textbox', { name: /url/i })).toBeInTheDocument()
+    })
+
+    it('should show host field for ICMP task in edit mode', () => {
+      render(<CronTaskForm {...defaultProps} task={mockIcmpTask} />)
+
+      expect(screen.getByLabelText(/host/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/host/i)).toHaveValue('example.com')
+    })
+
+    it('should show host and port fields for TCP task in edit mode', () => {
+      render(<CronTaskForm {...defaultProps} task={mockTcpTask} />)
+
+      expect(screen.getByLabelText(/host/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/host/i)).toHaveValue('db.example.com')
+      expect(screen.getByLabelText(/port/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/port/i)).toHaveValue(5432)
+    })
+
+    it('should call createCronTask with protocol_type for HTTP', async () => {
+      const { user } = render(<CronTaskForm {...defaultProps} />)
+
+      await user.type(screen.getByRole('textbox', { name: /^name/i }), 'HTTP Task')
+      await user.type(screen.getByRole('textbox', { name: /url/i }), 'https://api.example.com')
+
+      await user.click(screen.getByRole('button', { name: /create task/i }))
+
+      await waitFor(() => {
+        expect(cronTasksApi.createCronTask).toHaveBeenCalledWith(
+          'workspace-1',
+          expect.objectContaining({
+            name: 'HTTP Task',
+            protocol_type: 'http',
+            url: 'https://api.example.com',
+          })
+        )
+      })
+    })
+
+    it('should update ICMP task correctly', async () => {
+      vi.mocked(cronTasksApi.updateCronTask).mockResolvedValue(mockIcmpTask)
+
+      const { user } = render(<CronTaskForm {...defaultProps} task={mockIcmpTask} />)
+
+      const nameInput = screen.getByRole('textbox', { name: /^name/i })
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Updated ICMP Task')
+
+      await user.click(screen.getByRole('button', { name: /update task/i }))
+
+      await waitFor(() => {
+        expect(cronTasksApi.updateCronTask).toHaveBeenCalledWith(
+          'workspace-1',
+          'task-2',
+          expect.objectContaining({
+            name: 'Updated ICMP Task',
+            protocol_type: 'icmp',
+            host: 'example.com',
+          })
+        )
+      })
+    })
+
+    it('should update TCP task correctly', async () => {
+      vi.mocked(cronTasksApi.updateCronTask).mockResolvedValue(mockTcpTask)
+
+      const { user } = render(<CronTaskForm {...defaultProps} task={mockTcpTask} />)
+
+      const nameInput = screen.getByRole('textbox', { name: /^name/i })
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Updated TCP Task')
+
+      await user.click(screen.getByRole('button', { name: /update task/i }))
+
+      await waitFor(() => {
+        expect(cronTasksApi.updateCronTask).toHaveBeenCalledWith(
+          'workspace-1',
+          'task-3',
+          expect.objectContaining({
+            name: 'Updated TCP Task',
+            protocol_type: 'tcp',
+            host: 'db.example.com',
+            port: 5432,
+          })
+        )
+      })
     })
   })
 })
