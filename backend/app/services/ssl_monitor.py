@@ -182,12 +182,13 @@ class SSLMonitorService:
         hostname = hostname.lower()
 
         if pattern.startswith("*."):
-            # Wildcard certificate
-            suffix = pattern[2:]
+            # Wildcard certificate - include the dot in suffix
+            # e.g., *.example.com -> suffix = ".example.com"
+            suffix = pattern[1:]
             # Hostname should end with suffix and have at least one subdomain
             if hostname.endswith(suffix):
                 prefix = hostname[: -len(suffix)]
-                # Check there's exactly one level of subdomain
+                # Check there's exactly one level of subdomain (no dots in prefix)
                 return prefix.count(".") == 0 and prefix != ""
             return False
         else:

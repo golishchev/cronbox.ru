@@ -207,3 +207,54 @@ class TestSSLMonitorStatus:
         assert SSLMonitorStatus.INVALID == "invalid"
         assert SSLMonitorStatus.ERROR == "error"
         assert SSLMonitorStatus.PAUSED == "paused"
+
+
+class TestHostnameMatches:
+    """Tests for SSLMonitorService._hostname_matches method."""
+
+    @pytest.fixture
+    def service(self):
+        """Create SSL monitor service instance."""
+        return SSLMonitorService()
+
+    def test_exact_match(self, service):
+        """Test exact hostname match."""
+        assert service._hostname_matches("example.com", "example.com") is True
+        assert service._hostname_matches("example.com", "other.com") is False
+
+    def test_exact_match_case_insensitive(self, service):
+        """Test that matching is case insensitive."""
+        assert service._hostname_matches("Example.Com", "example.com") is True
+        assert service._hostname_matches("EXAMPLE.COM", "example.com") is True
+
+    def test_wildcard_single_subdomain(self, service):
+        """Test wildcard certificate matches single subdomain."""
+        assert service._hostname_matches("*.example.com", "sub.example.com") is True
+        assert service._hostname_matches("*.example.com", "www.example.com") is True
+        assert service._hostname_matches("*.example.com", "api.example.com") is True
+
+    def test_wildcard_no_subdomain(self, service):
+        """Test wildcard certificate does not match bare domain."""
+        assert service._hostname_matches("*.example.com", "example.com") is False
+
+    def test_wildcard_multiple_subdomains(self, service):
+        """Test wildcard certificate does not match multiple subdomain levels."""
+        assert service._hostname_matches("*.example.com", "sub.sub.example.com") is False
+        assert service._hostname_matches("*.example.com", "a.b.example.com") is False
+
+    def test_wildcard_different_domain(self, service):
+        """Test wildcard certificate does not match different domains."""
+        assert service._hostname_matches("*.example.com", "sub.other.com") is False
+        assert service._hostname_matches("*.example.com", "example.org") is False
+
+    def test_wildcard_case_insensitive(self, service):
+        """Test wildcard matching is case insensitive."""
+        assert service._hostname_matches("*.Example.Com", "sub.example.com") is True
+        assert service._hostname_matches("*.EXAMPLE.COM", "SUB.EXAMPLE.COM") is True
+
+    def test_wildcard_partial_match_not_allowed(self, service):
+        """Test that partial wildcard matches are not allowed."""
+        # notexample.com should not match *.example.com
+        assert service._hostname_matches("*.example.com", "notexample.com") is False
+        # fooexample.com should not match *.example.com
+        assert service._hostname_matches("*.example.com", "fooexample.com") is False
