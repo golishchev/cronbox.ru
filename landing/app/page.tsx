@@ -2,30 +2,28 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   Clock,
-  Zap,
   Bell,
   BarChart3,
   Code2,
-  Globe,
-  RefreshCw,
   ArrowRight,
-  Link2,
   HeartPulse,
   Layers,
   Users,
-  Server,
   Mail,
   MessageSquare,
   Webhook,
   ChevronDown,
   ShieldCheck,
+  Activity,
+  Timer,
+  GitBranch,
 } from 'lucide-react'
 import { JsonLd } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
-  title: 'CronBox - Планирование HTTP-запросов по расписанию',
+  title: 'CronBox — Платформа мониторинга и автоматизации',
   description:
-    'CronBox - облачный сервис для планирования HTTP-запросов. Создавайте cron-задачи, цепочки запросов, heartbeat и SSL-мониторы. Получайте уведомления через Email, Telegram, Webhook.',
+    'CronBox — платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация, цепочки запросов. Узнайте первым, когда что-то пойдёт не так.',
   alternates: {
     canonical: 'https://cronbox.ru',
   },
@@ -38,7 +36,7 @@ const softwareJsonLd = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Web',
   description:
-    'Облачный сервис для планирования HTTP-запросов по расписанию cron и мониторинга SSL-сертификатов',
+    'Платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг, SSL-алерты, HTTP-автоматизация.',
   url: 'https://cronbox.ru',
   offers: {
     '@type': 'AggregateOffer',
@@ -54,149 +52,155 @@ const softwareJsonLd = {
   },
 }
 
-const features = [
+const monitoringFeatures = [
+  {
+    name: 'Heartbeat-мониторинг',
+    description:
+      'Отслеживайте работу cron-задач, бэкапов и скриптов на ваших серверах. Если задача не отработала — вы узнаете первым.',
+    icon: HeartPulse,
+    tag: 'Dead Man\'s Switch',
+  },
+  {
+    name: 'SSL-мониторинг',
+    description:
+      'Отслеживайте срок действия SSL-сертификатов. Получайте уведомления за 30, 14 и 7 дней до истечения.',
+    icon: ShieldCheck,
+    tag: 'Сертификаты',
+  },
+]
+
+const automationFeatures = [
   {
     name: 'Cron-задачи',
     description:
-      'Планируйте регулярные HTTP-запросы по расписанию cron. Поддержка всех стандартных выражений с интервалом от 1 минуты.',
+      'Планируйте HTTP-запросы по расписанию. Синхронизация данных, отправка отчётов, очистка кеша — всё автоматически.',
     icon: Clock,
   },
   {
     name: 'Отложенные запросы',
     description:
       'Выполняйте одноразовые HTTP-запросы в указанное время. Идеально для отложенных уведомлений и напоминаний.',
-    icon: Zap,
+    icon: Timer,
   },
   {
     name: 'Цепочки задач',
     description:
-      'Создавайте сложные workflow из нескольких шагов. Передавайте данные между запросами через переменные.',
-    icon: Link2,
-  },
-  {
-    name: 'Heartbeat-мониторы',
-    description:
-      'Отслеживайте работу ваших cron-задач и сервисов. Получайте уведомления, если задача не отработала вовремя.',
-    icon: HeartPulse,
-  },
-  {
-    name: 'SSL-мониторинг',
-    description:
-      'Отслеживайте срок действия SSL-сертификатов. Получайте уведомления до истечения срока, чтобы избежать простоев.',
-    icon: ShieldCheck,
+      'Создавайте workflow из нескольких шагов. Передавайте данные между запросами через переменные.',
+    icon: GitBranch,
   },
   {
     name: 'Политика запуска',
     description:
-      'Контролируйте параллельные выполнения. Пропускайте, ставьте в очередь или разрешайте overlap задач.',
+      'Контролируйте параллельные выполнения. Пропускайте, ставьте в очередь или разрешайте overlap.',
     icon: Layers,
   },
+]
+
+const additionalFeatures = [
   {
-    name: 'Уведомления',
-    description:
-      'Получайте уведомления об ошибках через Email, Telegram или Webhook. Гибкая настройка условий.',
+    name: 'Мгновенные уведомления',
+    description: 'Email, Telegram, Webhook — выберите удобный канал для алертов.',
     icon: Bell,
   },
   {
     name: 'История выполнений',
-    description:
-      'Полная история с деталями каждого запроса и ответа. Фильтрация по статусу и типу задачи.',
+    description: 'Полная история с деталями каждого запроса и ответа.',
     icon: BarChart3,
   },
   {
     name: 'REST API',
-    description:
-      'Полноценный API для интеграции. Управляйте задачами программно из вашего приложения.',
+    description: 'Управляйте задачами программно из вашего приложения.',
     icon: Code2,
   },
   {
     name: 'Рабочие пространства',
-    description:
-      'Разделяйте проекты по workspace. Приглашайте коллег и работайте вместе над задачами.',
+    description: 'Разделяйте проекты по workspace. Работайте в команде.',
     icon: Users,
   },
 ]
 
 const useCases = [
   {
-    title: 'Синхронизация данных',
-    description: 'Автоматическая синхронизация между CRM, складом и бухгалтерией каждые 15 минут',
-    icon: RefreshCw,
-    example: '*/15 * * * *',
-  },
-  {
-    title: 'Мониторинг API',
-    description: 'Проверка доступности ваших сервисов и API каждую минуту с уведомлениями при сбоях',
-    icon: Globe,
-    example: '* * * * *',
-  },
-  {
-    title: 'Рассылка отчётов',
-    description: 'Автоматическая генерация и отправка ежедневных отчётов клиентам в 9:00',
-    icon: Mail,
-    example: '0 9 * * *',
-  },
-  {
-    title: 'Очистка данных',
-    description: 'Регулярное удаление устаревших записей и очистка кеша каждую ночь',
-    icon: Server,
-    example: '0 3 * * *',
-  },
-  {
-    title: 'Обработка заказов',
-    description: 'Цепочка задач: проверка оплаты → резервирование товара → отправка уведомления',
-    icon: Link2,
-    example: 'workflow',
-  },
-  {
-    title: 'Контроль бэкапов',
-    description: 'Heartbeat-мониторы: убедитесь, что ваш скрипт бэкапа отработал успешно',
+    title: 'Мониторинг бэкапов',
+    description: 'Убедитесь, что ваш скрипт резервного копирования отработал успешно. Если пинг не пришёл — получите алерт.',
     icon: HeartPulse,
-    example: 'heartbeat',
+    type: 'heartbeat',
+    color: 'green',
   },
   {
     title: 'SSL-сертификаты',
-    description: 'Мониторинг SSL: узнайте об истечении сертификата за 30, 14 и 7 дней',
+    description: 'Никогда не пропустите истечение сертификата. Уведомления за 30, 14 и 7 дней до дедлайна.',
     icon: ShieldCheck,
-    example: 'ssl',
+    type: 'ssl',
+    color: 'purple',
+  },
+  {
+    title: 'Контроль cron-задач',
+    description: 'Мониторьте системные cron-задачи на серверах. Узнайте, если задача зависла или не запустилась.',
+    icon: Activity,
+    type: 'heartbeat',
+    color: 'green',
+  },
+  {
+    title: 'Синхронизация данных',
+    description: 'Автоматическая синхронизация между CRM, складом и бухгалтерией по расписанию.',
+    icon: Clock,
+    type: 'cron',
+    color: 'blue',
+  },
+  {
+    title: 'Обработка заказов',
+    description: 'Цепочка: проверка оплаты → резервирование → отправка уведомления клиенту.',
+    icon: GitBranch,
+    type: 'chain',
+    color: 'orange',
+  },
+  {
+    title: 'Рассылка отчётов',
+    description: 'Автоматическая генерация и отправка ежедневных отчётов в 9:00.',
+    icon: Mail,
+    type: 'cron',
+    color: 'blue',
   },
 ]
 
 const benefits = [
-  { value: '99.9%', label: 'Uptime SLA', description: 'Гарантированная доступность сервиса' },
-  { value: '< 1 сек', label: 'Точность запуска', description: 'Задачи запускаются вовремя' },
-  { value: '24/7', label: 'Мониторинг', description: 'Круглосуточный контроль выполнения' },
+  { value: '99.9%', label: 'Uptime SLA', description: 'Гарантированная доступность' },
+  { value: '< 1 сек', label: 'Скорость алертов', description: 'Мгновенные уведомления' },
+  { value: '24/7', label: 'Мониторинг', description: 'Круглосуточный контроль' },
   { value: '0 ₽', label: 'Старт', description: 'Бесплатный тариф навсегда' },
 ]
 
 const faqItems = [
   {
-    question: 'Чем CronBox отличается от системного cron?',
-    answer: 'CronBox работает в облаке и не зависит от состояния вашего сервера. Вы получаете уведомления об ошибках, историю выполнений, retry при сбоях и удобную панель управления. Не нужно настраивать сервер и следить за его работой.',
-  },
-  {
-    question: 'Какой минимальный интервал между запусками?',
-    answer: 'На бесплатном тарифе — 5 минут. На платных тарифах — от 1 минуты. Для Enterprise-клиентов доступен интервал от 10 секунд.',
-  },
-  {
     question: 'Как работают Heartbeat-мониторы?',
-    answer: 'Вы создаёте монитор и получаете уникальный URL. Добавляете вызов этого URL в конец вашего скрипта (curl). Если пинг не приходит в ожидаемое время — вы получаете уведомление. Идеально для контроля cron-задач на ваших серверах.',
+    answer:
+      'Вы создаёте монитор и получаете уникальный URL. Добавляете вызов этого URL (curl) в конец вашего скрипта. Если пинг не приходит в ожидаемое время — вы получаете уведомление. Это идеальный способ контролировать cron-задачи, бэкапы и любые регулярные процессы на ваших серверах.',
+  },
+  {
+    question: 'Что такое SSL-мониторинг?',
+    answer:
+      'Вы указываете домен, и CronBox регулярно проверяет срок действия SSL-сертификата. Вы получите уведомления за 30, 14, 7 и 1 день до истечения, а также при обнаружении проблем: невалидная цепочка сертификатов, несовпадение домена, использование устаревших протоколов.',
+  },
+  {
+    question: 'Чем CronBox отличается от системного cron?',
+    answer:
+      'CronBox работает в облаке и не зависит от состояния вашего сервера. Вы получаете уведомления об ошибках, полную историю выполнений, retry при сбоях и удобную панель управления. Главное — вы можете мониторить сам системный cron через Heartbeat-мониторы.',
   },
   {
     question: 'Что такое цепочки задач?',
-    answer: 'Цепочки позволяют выполнять несколько HTTP-запросов последовательно, передавая данные между шагами. Например: получить заказ → списать оплату → отправить уведомление. Результат каждого шага доступен в следующем через переменные.',
+    answer:
+      'Цепочки позволяют выполнять несколько HTTP-запросов последовательно, передавая данные между шагами через переменные. Например: получить заказ → проверить оплату → отправить уведомление. Можно задавать условия выполнения для каждого шага.',
   },
   {
     question: 'Какие каналы уведомлений поддерживаются?',
-    answer: 'Email, Telegram и Webhook. Вы можете настроить разные каналы для разных событий: ошибки, успешные выполнения, восстановление после сбоя.',
+    answer:
+      'Email, Telegram и Webhook. Вы можете настроить разные каналы для разных событий: ошибки выполнения, пропущенные heartbeat-пинги, истекающие сертификаты, восстановление после сбоя.',
   },
   {
     question: 'Есть ли API для интеграции?',
-    answer: 'Да, полноценный REST API с документацией. Вы можете создавать, обновлять и удалять задачи программно, получать историю выполнений и управлять настройками.',
-  },
-  {
-    question: 'Как работает SSL-мониторинг?',
-    answer: 'Вы указываете домен для мониторинга, и CronBox регулярно проверяет срок действия SSL-сертификата. Вы получите уведомления за 30, 14 и 7 дней до истечения срока, а также при обнаружении проблем с сертификатом (невалидная цепочка, несовпадение домена и др.).',
+    answer:
+      'Да, полноценный REST API с документацией. Вы можете создавать и управлять задачами, мониторами, получать историю выполнений и статистику программно.',
   },
 ]
 
@@ -209,13 +213,17 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-gradient-to-b from-primary-50 to-white dark:from-gray-800 dark:to-gray-900 py-20 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
-              Планирование HTTP-запросов{' '}
-              <span className="text-primary-600 dark:text-primary-400">по расписанию</span>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-green-100 dark:bg-green-900/30 px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300">
+              <Activity className="h-4 w-4" />
+              Платформа мониторинга и автоматизации
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl leading-tight sm:leading-tight">
+              Узнайте первым, когда{' '}
+              <span className="text-primary-600 dark:text-primary-400">что-то пойдёт не так</span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              Облачный сервис для автоматизации HTTP-запросов. Cron-задачи, цепочки запросов,
-              heartbeat-мониторинг — всё в одном месте. Работает 24/7 без вашего сервера.
+              Heartbeat-мониторинг cron-задач и бэкапов. SSL-алерты до истечения сертификатов.
+              HTTP-автоматизация и цепочки запросов. Всё в одном месте.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <a
@@ -233,7 +241,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Code example */}
+          {/* Visual: Monitoring Dashboard Preview */}
           <div className="mx-auto mt-16 max-w-4xl">
             <div className="rounded-xl bg-gray-900 p-6 shadow-2xl">
               <div className="flex items-center gap-2 mb-4">
@@ -241,19 +249,44 @@ export default function HomePage() {
                 <div className="h-3 w-3 rounded-full bg-yellow-500" />
                 <div className="h-3 w-3 rounded-full bg-green-500" />
               </div>
-              <pre className="text-sm text-gray-300 overflow-x-auto">
-                <code>{`# Создание cron-задачи через API
-curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Синхронизация данных",
-    "url": "https://your-api.com/sync",
-    "method": "POST",
-    "cron_expression": "0 */6 * * *",
-    "overlap_policy": "skip"
-  }'`}</code>
-              </pre>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg bg-gray-800 p-3">
+                  <div className="flex items-center gap-3">
+                    <HeartPulse className="h-5 w-5 text-green-400" />
+                    <span className="text-sm text-gray-300">backup-database</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-green-400">Работает</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-gray-800 p-3">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5 text-yellow-400" />
+                    <span className="text-sm text-gray-300">example.com</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-yellow-400">Истекает через 12 дней</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-gray-800 p-3">
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm text-gray-300">sync-crm</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Следующий запуск: 14:30</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-red-900/30 p-3 border border-red-500/30">
+                  <div className="flex items-center gap-3">
+                    <HeartPulse className="h-5 w-5 text-red-400" />
+                    <span className="text-sm text-gray-300">cleanup-job</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-400">Не отвечает</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -280,26 +313,62 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Monitoring Features Section */}
       <section id="features" className="py-20 sm:py-32 bg-white dark:bg-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-              Всё для автоматизации HTTP-запросов
+              Мониторинг критичных процессов
             </h2>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-              Мощные инструменты для планирования, мониторинга и управления задачами
+              Контролируйте cron-задачи, бэкапы и SSL-сертификаты. Получайте алерты, когда что-то идёт не так.
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
+          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-8 lg:grid-cols-2">
+            {monitoringFeatures.map((feature) => (
               <div
                 key={feature.name}
-                className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+                className="relative rounded-2xl border-2 border-primary-200 dark:border-primary-800 bg-gradient-to-br from-primary-50 to-white dark:from-gray-800 dark:to-gray-900 p-8 shadow-sm hover:shadow-lg transition-all"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/50">
-                  <feature.icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/50">
+                    <feature.icon className="h-7 w-7 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <span className="text-xs font-medium bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full">
+                    {feature.tag}
+                  </span>
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
+                  {feature.name}
+                </h3>
+                <p className="mt-3 text-gray-600 dark:text-gray-300">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Automation Features Section */}
+      <section className="py-20 sm:py-32 bg-gray-50 dark:bg-gray-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+              Автоматизация HTTP-запросов
+            </h2>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              Планируйте задачи, создавайте цепочки запросов, управляйте выполнением
+            </p>
+          </div>
+
+          <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
+            {automationFeatures.map((feature) => (
+              <div
+                key={feature.name}
+                className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                  <feature.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-gray-900 dark:text-white">
                   {feature.name}
@@ -312,16 +381,16 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
       </section>
 
       {/* Notifications Section */}
-      <section className="py-20 sm:py-32 bg-gray-50 dark:bg-gray-800">
+      <section className="py-20 sm:py-32 bg-white dark:bg-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-                Уведомления там, где вам удобно
+                Алерты там, где вам удобно
               </h2>
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-                Получайте мгновенные уведомления об ошибках и успешных выполнениях через
-                привычные каналы связи.
+                Мгновенные уведомления о проблемах через привычные каналы связи.
+                Настройте разные каналы для разных типов событий.
               </p>
               <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-4">
@@ -330,7 +399,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">Telegram</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Мгновенные уведомления в чат</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Мгновенные алерты в чат</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -348,7 +417,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">Webhook</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Интеграция с любой системой</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Интеграция с PagerDuty, Slack и другими</p>
                   </div>
                 </div>
               </div>
@@ -361,21 +430,40 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
               </div>
               <pre className="text-sm text-gray-300 overflow-x-auto">
                 <code>{`{
-  "event": "task.failed",
-  "task": {
-    "id": "550e8400-e29b-41d4...",
-    "name": "Синхронизация данных",
-    "status": "failed"
+  "event": "heartbeat.dead",
+  "monitor": {
+    "id": "550e8400-e29b...",
+    "name": "backup-daily",
+    "status": "dead"
   },
-  "execution": {
-    "status_code": 500,
-    "duration_ms": 1234,
-    "error": "Internal Server Error"
+  "alert": {
+    "missed_pings": 3,
+    "last_ping": "2024-01-15T03:00:00Z",
+    "expected_at": "2024-01-16T03:00:00Z"
   },
-  "timestamp": "2024-01-15T10:30:00Z"
+  "message": "Бэкап не выполнился 3 раза подряд"
 }`}</code>
               </pre>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Additional Features */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+            {additionalFeatures.map((feature) => (
+              <div key={feature.name} className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700">
+                  <feature.icon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-gray-900 dark:text-white">
+                  {feature.name}
+                </h3>
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{feature.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -388,7 +476,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
               Сценарии использования
             </h2>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-              CronBox подходит для любых задач автоматизации HTTP-запросов
+              От мониторинга бэкапов до автоматизации бизнес-процессов
             </p>
           </div>
 
@@ -399,29 +487,42 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                 className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50">
-                    <useCase.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                      useCase.color === 'green'
+                        ? 'bg-green-100 dark:bg-green-900/50'
+                        : useCase.color === 'purple'
+                        ? 'bg-purple-100 dark:bg-purple-900/50'
+                        : useCase.color === 'blue'
+                        ? 'bg-blue-100 dark:bg-blue-900/50'
+                        : 'bg-orange-100 dark:bg-orange-900/50'
+                    }`}
+                  >
+                    <useCase.icon
+                      className={`h-6 w-6 ${
+                        useCase.color === 'green'
+                          ? 'text-green-600 dark:text-green-400'
+                          : useCase.color === 'purple'
+                          ? 'text-purple-600 dark:text-purple-400'
+                          : useCase.color === 'blue'
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-orange-600 dark:text-orange-400'
+                      }`}
+                    />
                   </div>
-                  {useCase.example !== 'workflow' && useCase.example !== 'heartbeat' && useCase.example !== 'ssl' && (
-                    <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
-                      {useCase.example}
-                    </code>
-                  )}
-                  {useCase.example === 'workflow' && (
-                    <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
-                      цепочка
-                    </span>
-                  )}
-                  {useCase.example === 'heartbeat' && (
-                    <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                      heartbeat
-                    </span>
-                  )}
-                  {useCase.example === 'ssl' && (
-                    <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
-                      ssl
-                    </span>
-                  )}
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${
+                      useCase.type === 'heartbeat'
+                        ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                        : useCase.type === 'ssl'
+                        ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                        : useCase.type === 'cron'
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                        : 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300'
+                    }`}
+                  >
+                    {useCase.type}
+                  </span>
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
                   {useCase.title}
@@ -455,9 +556,7 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
                   {item.question}
                   <ChevronDown className="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" />
                 </summary>
-                <div className="px-4 pb-4 text-gray-600 dark:text-gray-300">
-                  {item.answer}
-                </div>
+                <div className="px-4 pb-4 text-gray-600 dark:text-gray-300">{item.answer}</div>
               </details>
             ))}
           </div>
@@ -468,11 +567,11 @@ curl -X POST https://api.cronbox.ru/v1/cron-tasks \\
       <section className="bg-primary-600 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Готовы автоматизировать ваши задачи?
+            Начните мониторить уже сегодня
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-primary-100">
-            Начните использовать CronBox бесплатно. Регистрация занимает меньше минуты.
-            Кредитная карта не требуется.
+            Бесплатный тариф включает heartbeat-мониторы, SSL-проверки и cron-задачи.
+            Регистрация занимает меньше минуты.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <a

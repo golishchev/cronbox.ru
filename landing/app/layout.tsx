@@ -31,22 +31,24 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://cronbox.ru'),
   title: {
-    default: 'CronBox - Планирование HTTP-запросов',
+    default: 'CronBox — Платформа мониторинга и автоматизации',
     template: '%s | CronBox',
   },
   description:
-    'CronBox - облачный сервис для планирования HTTP-запросов. Cron-задачи, отложенные запросы, мониторинг выполнения и уведомления.',
+    'CronBox — платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация, цепочки запросов.',
   keywords: [
+    'мониторинг',
+    'heartbeat',
+    'dead man switch',
+    'ssl мониторинг',
     'cron',
     'scheduler',
-    'http',
+    'http автоматизация',
     'api',
-    'задачи',
-    'планировщик',
     'webhook',
     'уведомления',
-    'автоматизация',
-    'http запросы по расписанию',
+    'алерты',
+    'бэкап мониторинг',
   ],
   authors: [{ name: 'CronBox' }],
   creator: 'CronBox',
@@ -77,24 +79,15 @@ export const metadata: Metadata = {
     locale: 'ru_RU',
     url: 'https://cronbox.ru',
     siteName: 'CronBox',
-    title: 'CronBox - Планирование HTTP-запросов',
+    title: 'CronBox — Платформа мониторинга и автоматизации',
     description:
-      'Облачный сервис для планирования и автоматического выполнения HTTP-запросов',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'CronBox - Планирование HTTP-запросов',
-      },
-    ],
+      'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CronBox - Планирование HTTP-запросов',
+    title: 'CronBox — Платформа мониторинга и автоматизации',
     description:
-      'Облачный сервис для планирования и автоматического выполнения HTTP-запросов',
-    images: ['/og-image.png'],
+      'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
   },
   robots: {
     index: true,

@@ -97,15 +97,16 @@ class TestGetAdminStats:
             nonlocal call_count
             call_count += 1
             # Different values for different queries to distinguish them
-            # Queries order: users (3), workspaces (1), tasks (6), heartbeats (2),
-            # executions (5), active_subs, paid_subs, revenue
-            if call_count <= 17:  # Basic stats
+            # Queries order: users (3), workspaces (1), tasks (6), chains (2), heartbeats (2),
+            # ssl_monitors (2), executions (3), success_rate (2), active_subs, paid_subs, revenue
+            # Total basic stats: 3 + 1 + 6 + 2 + 2 + 3 + 2 = 19
+            if call_count <= 19:  # Basic stats
                 return 10
-            if call_count == 18:  # active_subscriptions
+            if call_count == 20:  # active_subscriptions
                 return 5
-            if call_count == 19:  # paid_subscriptions
+            if call_count == 21:  # paid_subscriptions
                 return 2  # Only 2 out of 5 have real payments
-            if call_count == 20:  # revenue
+            if call_count == 22:  # revenue
                 return 99900  # 999.00 rubles in kopeks
             return 0
 
@@ -140,8 +141,8 @@ class TestGetUser:
         async def mock_scalar(query):
             nonlocal call_count
             call_count += 1
-            # Calls: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-executions, 7-subscription
-            if call_count == 7:
+            # Calls: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-ssl_monitors, 7-executions, 8-subscription
+            if call_count == 8:
                 return mock_sub
             return 5
 
@@ -344,9 +345,9 @@ class TestListUsers:
             call_count += 1
             if call_count == 1:
                 return 2  # total count
-            # For each user: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-executions, 7-subscription
-            # Subscription calls are at 8, 15 (for 2 users: 1 + 7*1 + 1 = 8, 1 + 7*2 = 15)
-            if (call_count - 1) % 7 == 0 and call_count > 1:
+            # For each user: 1-workspace, 2-cron, 3-delayed, 4-chains, 5-heartbeats, 6-ssl_monitors, 7-executions, 8-subscription
+            # Subscription calls are at 9, 17 (for 2 users: 1 + 8 = 9, 1 + 16 = 17)
+            if (call_count - 1) % 8 == 0 and call_count > 1:
                 return mock_sub
             return 5
 
@@ -380,8 +381,8 @@ class TestListUsers:
             call_count += 1
             if call_count == 1:
                 return 1  # total count
-            # For 1 user: subscription is at call 8 (1 + 7)
-            if call_count == 8:
+            # For 1 user: subscription is at call 9 (1 + 8)
+            if call_count == 9:
                 return mock_sub
             return 3
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import cronstrue from 'cronstrue/i18n'
+import cronstrue from 'cronstrue'
 
 interface PresetSchedule {
   label: string
