@@ -207,22 +207,13 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         )
     )
 
-    # Paid subscriptions - count users with active subscriptions who have at least one real payment
-    # This excludes admin-assigned subscriptions (they don't have yookassa payments)
-    paid_subs_subquery = (
-        select(Payment.user_id)
-        .where(
-            Payment.status == PaymentStatus.SUCCEEDED,
-            Payment.yookassa_payment_id.isnot(None),
-        )
-        .distinct()
-        .subquery()
-    )
+    # Paid subscriptions - count active subscriptions that were paid via YooKassa
+    # Admin-assigned subscriptions don't have yookassa_payment_method_id set
     paid_subs = await db.scalar(
         select(func.count(Subscription.id)).where(
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.current_period_end > now,
-            Subscription.user_id.in_(select(paid_subs_subquery.c.user_id)),
+            Subscription.yookassa_payment_method_id.isnot(None),
         )
     )
 

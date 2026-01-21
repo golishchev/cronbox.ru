@@ -45,6 +45,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     subscription: Mapped["Subscription | None"] = relationship(
         back_populates="user",
         uselist=False,
+        cascade="all, delete-orphan",
     )
 
     @property
