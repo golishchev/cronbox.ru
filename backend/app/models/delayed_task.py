@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
-from app.models.cron_task import HttpMethod, TaskStatus
+from app.models.cron_task import HttpMethod, ProtocolType, TaskStatus
 
 
 class DelayedTask(Base, UUIDMixin, TimestampMixin):
@@ -34,11 +34,22 @@ class DelayedTask(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tags: Mapped[dict] = mapped_column(JSONB, default=list)
 
-    # HTTP Request
-    url: Mapped[str] = mapped_column(String(2048))
+    # Protocol type (http, icmp, tcp)
+    protocol_type: Mapped[ProtocolType] = mapped_column(
+        SQLEnum(ProtocolType, values_callable=lambda x: [e.value for e in x], create_type=False),
+        default=ProtocolType.HTTP,
+    )
+
+    # HTTP Request (used when protocol_type = HTTP)
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     method: Mapped[HttpMethod] = mapped_column(SQLEnum(HttpMethod), default=HttpMethod.POST)
     headers: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ICMP/TCP (used when protocol_type = ICMP or TCP)
+    host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    port: Mapped[int | None] = mapped_column(Integer, nullable=True)  # TCP only
+    icmp_count: Mapped[int] = mapped_column(Integer, default=3)  # ICMP only: number of packets
 
     # Schedule
     execute_at: Mapped[datetime] = mapped_column(index=True)

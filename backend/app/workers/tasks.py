@@ -1,4 +1,4 @@
-"""Worker tasks for executing HTTP requests."""
+"""Worker tasks for executing HTTP, ICMP, and TCP requests."""
 
 import asyncio
 from datetime import datetime
@@ -18,9 +18,11 @@ from app.core.url_validator import (
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.executions import ExecutionRepository
-from app.models.cron_task import OverlapPolicy, TaskStatus
+from app.models.cron_task import OverlapPolicy, ProtocolType, TaskStatus
+from app.services.icmp import execute_icmp_ping
 from app.services.notifications import notification_service
 from app.services.overlap import overlap_service
+from app.services.tcp import execute_tcp_check
 
 logger = structlog.get_logger()
 
@@ -185,6 +187,69 @@ async def execute_http_task(
         }
 
 
+async def execute_icmp_task(
+    ctx: dict,
+    *,
+    host: str,
+    count: int = 3,
+    timeout_seconds: int = 30,
+) -> dict:
+    """Execute an ICMP ping and return the result.
+
+    Args:
+        ctx: Worker context
+        host: Target host (IP or domain)
+        count: Number of ping packets
+        timeout_seconds: Total timeout
+
+    Returns:
+        dict with ping results
+    """
+    result = await execute_icmp_ping(host, count, timeout_seconds)
+
+    return {
+        "success": result.success,
+        "packets_sent": result.packets_sent,
+        "packets_received": result.packets_received,
+        "packet_loss": result.packet_loss,
+        "min_rtt": result.min_rtt,
+        "avg_rtt": result.avg_rtt,
+        "max_rtt": result.max_rtt,
+        "duration_ms": int(result.duration_ms),
+        "error": result.error_message,
+        "error_type": "icmp_error" if result.error_message else None,
+    }
+
+
+async def execute_tcp_task(
+    ctx: dict,
+    *,
+    host: str,
+    port: int,
+    timeout_seconds: int = 30,
+) -> dict:
+    """Execute a TCP port check and return the result.
+
+    Args:
+        ctx: Worker context
+        host: Target host (IP or domain)
+        port: Target port
+        timeout_seconds: Connection timeout
+
+    Returns:
+        dict with TCP check results
+    """
+    result = await execute_tcp_check(host, port, timeout_seconds)
+
+    return {
+        "success": result.success,
+        "connection_time": result.connection_time,
+        "duration_ms": int(result.duration_ms),
+        "error": result.error_message,
+        "error_type": "tcp_error" if result.error_message else None,
+    }
+
+
 async def execute_cron_task(
     ctx: dict,
     *,
@@ -215,53 +280,117 @@ async def execute_cron_task(
         # Save previous status for recovery detection
         previous_status = task.last_status
 
-        # Create execution record
+        # Get protocol type (default to HTTP for backwards compatibility)
+        protocol_type = getattr(task, "protocol_type", ProtocolType.HTTP) or ProtocolType.HTTP
+
+        # Create execution record based on protocol type
         execution = await exec_repo.create_execution(
             workspace_id=task.workspace_id,
             task_type="cron",
             task_id=task.id,
             task_name=task.name,
-            request_url=task.url,
-            request_method=task.method,
-            request_headers=task.headers,
-            request_body=task.body,
+            request_url=task.url if protocol_type == ProtocolType.HTTP else None,
+            request_method=task.method if protocol_type == ProtocolType.HTTP else None,
+            request_headers=task.headers if protocol_type == ProtocolType.HTTP else None,
+            request_body=task.body if protocol_type == ProtocolType.HTTP else None,
             cron_task_id=task.id,
             retry_attempt=retry_attempt,
+            protocol_type=protocol_type,
+            target_host=task.host if protocol_type in (ProtocolType.ICMP, ProtocolType.TCP) else None,
+            target_port=task.port if protocol_type == ProtocolType.TCP else None,
         )
 
-        # Log with sanitized URL (credentials removed)
-        logger.info(
-            "Executing cron task",
-            task_id=task_id,
-            task_name=task.name,
-            url=sanitize_url_for_logging(task.url),
-            retry_attempt=retry_attempt,
-        )
+        # Log execution start
+        if protocol_type == ProtocolType.HTTP:
+            logger.info(
+                "Executing cron task (HTTP)",
+                task_id=task_id,
+                task_name=task.name,
+                url=sanitize_url_for_logging(task.url),
+                retry_attempt=retry_attempt,
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            logger.info(
+                "Executing cron task (ICMP)",
+                task_id=task_id,
+                task_name=task.name,
+                host=task.host,
+                count=task.icmp_count,
+                retry_attempt=retry_attempt,
+            )
+        elif protocol_type == ProtocolType.TCP:
+            logger.info(
+                "Executing cron task (TCP)",
+                task_id=task_id,
+                task_name=task.name,
+                host=task.host,
+                port=task.port,
+                retry_attempt=retry_attempt,
+            )
 
-        # Execute HTTP request
-        result = await execute_http_task(
-            ctx,
-            url=task.url,
-            method=task.method.value,
-            headers=task.headers,
-            body=task.body,
-            timeout_seconds=task.timeout_seconds,
-        )
+        # Execute task based on protocol type
+        if protocol_type == ProtocolType.HTTP:
+            result = await execute_http_task(
+                ctx,
+                url=task.url,
+                method=task.method.value,
+                headers=task.headers,
+                body=task.body,
+                timeout_seconds=task.timeout_seconds,
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            result = await execute_icmp_task(
+                ctx,
+                host=task.host,
+                count=task.icmp_count,
+                timeout_seconds=task.timeout_seconds,
+            )
+        elif protocol_type == ProtocolType.TCP:
+            result = await execute_tcp_task(
+                ctx,
+                host=task.host,
+                port=task.port,
+                timeout_seconds=task.timeout_seconds,
+            )
+        else:
+            result = {"success": False, "error": f"Unknown protocol type: {protocol_type}"}
 
         # Determine status
         status = TaskStatus.SUCCESS if result["success"] else TaskStatus.FAILED
 
-        # Update execution record
-        await exec_repo.complete_execution(
-            execution=execution,
-            status=status,
-            response_status_code=result.get("status_code"),
-            response_headers=result.get("headers"),
-            response_body=result.get("body"),
-            response_size_bytes=result.get("size_bytes"),
-            error_message=result.get("error"),
-            error_type=result.get("error_type"),
-        )
+        # Update execution record based on protocol type
+        if protocol_type == ProtocolType.HTTP:
+            await exec_repo.complete_execution(
+                execution=execution,
+                status=status,
+                response_status_code=result.get("status_code"),
+                response_headers=result.get("headers"),
+                response_body=result.get("body"),
+                response_size_bytes=result.get("size_bytes"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            await exec_repo.complete_icmp_execution(
+                execution=execution,
+                status=status,
+                packets_sent=result.get("packets_sent"),
+                packets_received=result.get("packets_received"),
+                packet_loss=result.get("packet_loss"),
+                min_rtt=result.get("min_rtt"),
+                avg_rtt=result.get("avg_rtt"),
+                max_rtt=result.get("max_rtt"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
+        elif protocol_type == ProtocolType.TCP:
+            await exec_repo.complete_tcp_execution(
+                execution=execution,
+                status=status,
+                connection_time=result.get("connection_time"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
 
         # Calculate next run time
         tz = pytz.timezone(task.timezone)
@@ -318,6 +447,15 @@ async def execute_cron_task(
             else:
                 # Only send failure notification on final attempt (no more retries)
                 if retry_attempt >= task.retry_count:
+                    # Get target for notification
+                    task_target = None
+                    if protocol_type == ProtocolType.HTTP and task.url:
+                        task_target = sanitize_url_for_logging(task.url)
+                    elif protocol_type == ProtocolType.ICMP and task.host:
+                        task_target = task.host
+                    elif protocol_type == ProtocolType.TCP and task.host:
+                        task_target = f"{task.host}:{task.port}"
+
                     await redis.enqueue_job(
                         "send_task_notification",
                         workspace_id=str(task.workspace_id),
@@ -325,7 +463,7 @@ async def execute_cron_task(
                         task_type="cron",
                         notification_event="failure",
                         error_message=result.get("error"),
-                        task_url=sanitize_url_for_logging(task.url),
+                        task_url=task_target,
                     )
         except Exception as e:
             logger.error("Failed to enqueue notification", error=str(e), task_id=task_id)
@@ -385,52 +523,116 @@ async def execute_delayed_task(
         if task.status == TaskStatus.PENDING:
             await delayed_repo.mark_running(task)
 
-        # Create execution record
+        # Get protocol type (default to HTTP for backwards compatibility)
+        protocol_type = getattr(task, "protocol_type", ProtocolType.HTTP) or ProtocolType.HTTP
+
+        # Create execution record based on protocol type
         execution = await exec_repo.create_execution(
             workspace_id=task.workspace_id,
             task_type="delayed",
             task_id=task.id,
             task_name=task.name,
-            request_url=task.url,
-            request_method=task.method,
-            request_headers=task.headers,
-            request_body=task.body,
+            request_url=task.url if protocol_type == ProtocolType.HTTP else None,
+            request_method=task.method if protocol_type == ProtocolType.HTTP else None,
+            request_headers=task.headers if protocol_type == ProtocolType.HTTP else None,
+            request_body=task.body if protocol_type == ProtocolType.HTTP else None,
             retry_attempt=retry_attempt,
+            protocol_type=protocol_type,
+            target_host=task.host if protocol_type in (ProtocolType.ICMP, ProtocolType.TCP) else None,
+            target_port=task.port if protocol_type == ProtocolType.TCP else None,
         )
 
-        # Log with sanitized URL (credentials removed)
-        logger.info(
-            "Executing delayed task",
-            task_id=task_id,
-            task_name=task.name,
-            url=sanitize_url_for_logging(task.url),
-            retry_attempt=retry_attempt,
-        )
+        # Log execution start
+        if protocol_type == ProtocolType.HTTP:
+            logger.info(
+                "Executing delayed task (HTTP)",
+                task_id=task_id,
+                task_name=task.name,
+                url=sanitize_url_for_logging(task.url),
+                retry_attempt=retry_attempt,
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            logger.info(
+                "Executing delayed task (ICMP)",
+                task_id=task_id,
+                task_name=task.name,
+                host=task.host,
+                count=task.icmp_count,
+                retry_attempt=retry_attempt,
+            )
+        elif protocol_type == ProtocolType.TCP:
+            logger.info(
+                "Executing delayed task (TCP)",
+                task_id=task_id,
+                task_name=task.name,
+                host=task.host,
+                port=task.port,
+                retry_attempt=retry_attempt,
+            )
 
-        # Execute HTTP request
-        result = await execute_http_task(
-            ctx,
-            url=task.url,
-            method=task.method.value,
-            headers=task.headers,
-            body=task.body,
-            timeout_seconds=task.timeout_seconds,
-        )
+        # Execute task based on protocol type
+        if protocol_type == ProtocolType.HTTP:
+            result = await execute_http_task(
+                ctx,
+                url=task.url,
+                method=task.method.value,
+                headers=task.headers,
+                body=task.body,
+                timeout_seconds=task.timeout_seconds,
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            result = await execute_icmp_task(
+                ctx,
+                host=task.host,
+                count=task.icmp_count,
+                timeout_seconds=task.timeout_seconds,
+            )
+        elif protocol_type == ProtocolType.TCP:
+            result = await execute_tcp_task(
+                ctx,
+                host=task.host,
+                port=task.port,
+                timeout_seconds=task.timeout_seconds,
+            )
+        else:
+            result = {"success": False, "error": f"Unknown protocol type: {protocol_type}"}
 
         # Determine status
         status = TaskStatus.SUCCESS if result["success"] else TaskStatus.FAILED
 
-        # Update execution record
-        await exec_repo.complete_execution(
-            execution=execution,
-            status=status,
-            response_status_code=result.get("status_code"),
-            response_headers=result.get("headers"),
-            response_body=result.get("body"),
-            response_size_bytes=result.get("size_bytes"),
-            error_message=result.get("error"),
-            error_type=result.get("error_type"),
-        )
+        # Update execution record based on protocol type
+        if protocol_type == ProtocolType.HTTP:
+            await exec_repo.complete_execution(
+                execution=execution,
+                status=status,
+                response_status_code=result.get("status_code"),
+                response_headers=result.get("headers"),
+                response_body=result.get("body"),
+                response_size_bytes=result.get("size_bytes"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
+        elif protocol_type == ProtocolType.ICMP:
+            await exec_repo.complete_icmp_execution(
+                execution=execution,
+                status=status,
+                packets_sent=result.get("packets_sent"),
+                packets_received=result.get("packets_received"),
+                packet_loss=result.get("packet_loss"),
+                min_rtt=result.get("min_rtt"),
+                avg_rtt=result.get("avg_rtt"),
+                max_rtt=result.get("max_rtt"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
+        elif protocol_type == ProtocolType.TCP:
+            await exec_repo.complete_tcp_execution(
+                execution=execution,
+                status=status,
+                connection_time=result.get("connection_time"),
+                error_message=result.get("error"),
+                error_type=result.get("error_type"),
+            )
 
         # Update task status
         if result["success"]:
@@ -467,6 +669,15 @@ async def execute_delayed_task(
             else:
                 # Only send failure notification on final attempt (no more retries)
                 if retry_attempt >= task.retry_count:
+                    # Get target for notification
+                    task_target = None
+                    if protocol_type == ProtocolType.HTTP and task.url:
+                        task_target = sanitize_url_for_logging(task.url)
+                    elif protocol_type == ProtocolType.ICMP and task.host:
+                        task_target = task.host
+                    elif protocol_type == ProtocolType.TCP and task.host:
+                        task_target = f"{task.host}:{task.port}"
+
                     await redis.enqueue_job(
                         "send_task_notification",
                         workspace_id=str(task.workspace_id),
@@ -474,7 +685,7 @@ async def execute_delayed_task(
                         task_type="delayed",
                         notification_event="failure",
                         error_message=result.get("error"),
-                        task_url=sanitize_url_for_logging(task.url),
+                        task_url=task_target,
                     )
         except Exception as e:
             logger.error("Failed to enqueue notification", error=str(e), task_id=task_id)

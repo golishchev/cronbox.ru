@@ -40,6 +40,9 @@ import {
   Pencil,
   RotateCcw,
   Copy,
+  Globe,
+  Radio,
+  Plug,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -332,8 +335,25 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
                       {task.name && (
                         <p className="font-medium">{task.name}</p>
                       )}
-                      <p className={`text-sm truncate max-w-[300px] ${task.name ? 'text-muted-foreground' : 'font-medium'}`}>
-                        {task.url}
+                      <p className={`text-sm truncate max-w-[300px] flex items-center gap-1 ${task.name ? 'text-muted-foreground' : 'font-medium'}`}>
+                        {task.protocol_type === 'http' && (
+                          <>
+                            <Globe className="h-3 w-3 flex-shrink-0" />
+                            {task.url}
+                          </>
+                        )}
+                        {task.protocol_type === 'icmp' && (
+                          <>
+                            <Radio className="h-3 w-3 flex-shrink-0" />
+                            {task.host}
+                          </>
+                        )}
+                        {task.protocol_type === 'tcp' && (
+                          <>
+                            <Plug className="h-3 w-3 flex-shrink-0" />
+                            {task.host}:{task.port}
+                          </>
+                        )}
                       </p>
                       {task.tags.length > 0 && (
                         <div className="flex gap-1 mt-1">
@@ -363,7 +383,7 @@ export function DelayedTasksPage({ onNavigate: _ }: DelayedTasksPageProps) {
                   </TableCell>
                   <TableCell>
                     <code className="text-sm bg-muted px-1 rounded">
-                      {task.method}
+                      {task.protocol_type === 'http' ? task.method : task.protocol_type.toUpperCase()}
                     </code>
                   </TableCell>
                   <TableCell>{getStatusBadge(task.status)}</TableCell>

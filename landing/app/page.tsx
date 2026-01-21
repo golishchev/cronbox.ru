@@ -17,13 +17,15 @@ import {
   Activity,
   Timer,
   GitBranch,
+  Radio,
+  Plug,
 } from 'lucide-react'
 import { JsonLd } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'CronBox — Платформа мониторинга и автоматизации',
   description:
-    'CronBox — платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация, цепочки запросов. Узнайте первым, когда что-то пойдёт не так.',
+    'CronBox — платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, ICMP ping и TCP порты, HTTP-автоматизация, цепочки запросов. Узнайте первым, когда что-то пойдёт не так.',
   alternates: {
     canonical: 'https://cronbox.ru',
   },
@@ -66,6 +68,20 @@ const monitoringFeatures = [
       'Отслеживайте срок действия SSL-сертификатов. Получайте уведомления за 30, 14 и 7 дней до истечения.',
     icon: ShieldCheck,
     tag: 'Сертификаты',
+  },
+  {
+    name: 'ICMP (Ping) мониторинг',
+    description:
+      'Проверяйте доступность серверов и сетевых устройств. Отслеживайте время отклика и потерю пакетов.',
+    icon: Radio,
+    tag: 'Ping',
+  },
+  {
+    name: 'TCP-мониторинг',
+    description:
+      'Проверяйте открытость портов на серверах. Мониторьте базы данных, почтовые серверы и другие TCP-сервисы.',
+    icon: Plug,
+    tag: 'Порты',
   },
 ]
 
@@ -135,6 +151,20 @@ const useCases = [
     color: 'purple',
   },
   {
+    title: 'Доступность серверов',
+    description: 'Ping-мониторинг серверов и сетевых устройств. Отслеживайте время отклика и потерю пакетов.',
+    icon: Radio,
+    type: 'ping',
+    color: 'cyan',
+  },
+  {
+    title: 'Проверка портов',
+    description: 'Мониторьте открытость портов баз данных, почтовых серверов и других TCP-сервисов.',
+    icon: Plug,
+    type: 'tcp',
+    color: 'cyan',
+  },
+  {
     title: 'Контроль cron-задач',
     description: 'Мониторьте системные cron-задачи на серверах. Узнайте, если задача зависла или не запустилась.',
     icon: Activity,
@@ -202,6 +232,11 @@ const faqItems = [
     answer:
       'Да, полноценный REST API с документацией. Вы можете создавать и управлять задачами, мониторами, получать историю выполнений и статистику программно.',
   },
+  {
+    question: 'Что такое ICMP и TCP мониторинг?',
+    answer:
+      'ICMP (ping) мониторинг проверяет доступность серверов и сетевых устройств, показывая время отклика и потерю пакетов. TCP мониторинг проверяет открытость портов на серверах — это позволяет мониторить базы данных (3306, 5432), почтовые серверы (25, 587), веб-серверы (80, 443) и другие TCP-сервисы.',
+  },
 ]
 
 export default function HomePage() {
@@ -223,7 +258,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
               Heartbeat-мониторинг cron-задач и бэкапов. SSL-алерты до истечения сертификатов.
-              HTTP-автоматизация и цепочки запросов. Всё в одном месте.
+              Ping и TCP-мониторинг серверов. HTTP-автоматизация и цепочки запросов. Всё в одном месте.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <a
@@ -325,7 +360,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-8 lg:grid-cols-2">
+          <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
             {monitoringFeatures.map((feature) => (
               <div
                 key={feature.name}
@@ -495,6 +530,8 @@ export default function HomePage() {
                         ? 'bg-purple-100 dark:bg-purple-900/50'
                         : useCase.color === 'blue'
                         ? 'bg-blue-100 dark:bg-blue-900/50'
+                        : useCase.color === 'cyan'
+                        ? 'bg-cyan-100 dark:bg-cyan-900/50'
                         : 'bg-orange-100 dark:bg-orange-900/50'
                     }`}
                   >
@@ -506,6 +543,8 @@ export default function HomePage() {
                           ? 'text-purple-600 dark:text-purple-400'
                           : useCase.color === 'blue'
                           ? 'text-blue-600 dark:text-blue-400'
+                          : useCase.color === 'cyan'
+                          ? 'text-cyan-600 dark:text-cyan-400'
                           : 'text-orange-600 dark:text-orange-400'
                       }`}
                     />
@@ -518,6 +557,8 @@ export default function HomePage() {
                         ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
                         : useCase.type === 'cron'
                         ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                        : useCase.type === 'ping' || useCase.type === 'tcp'
+                        ? 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300'
                         : 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300'
                     }`}
                   >

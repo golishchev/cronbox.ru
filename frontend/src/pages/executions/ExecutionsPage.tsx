@@ -39,6 +39,8 @@ import {
   Link2,
   HeartPulse,
   ShieldCheck,
+  Radio,
+  Plug,
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -286,6 +288,16 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                         <p className="text-sm text-muted-foreground">
                           {t('executions.pingReceived')}
                         </p>
+                      ) : execution.protocol_type === 'icmp' ? (
+                        <p className="text-sm text-muted-foreground truncate max-w-[250px]">
+                          <Radio className="h-3 w-3 inline mr-1" />
+                          {execution.target_host}
+                        </p>
+                      ) : execution.protocol_type === 'tcp' ? (
+                        <p className="text-sm text-muted-foreground truncate max-w-[250px]">
+                          <Plug className="h-3 w-3 inline mr-1" />
+                          {execution.target_host}:{execution.target_port}
+                        </p>
                       ) : (
                         <p className="text-sm text-muted-foreground truncate max-w-[250px]">
                           {execution.request_url}
@@ -326,6 +338,37 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                             {t('executions.failedSteps', { count: execution.failed_steps })}
                           </span>
                         ) : null
+                      ) : execution.protocol_type === 'icmp' ? (
+                        <>
+                          {execution.icmp_packet_loss !== null && (
+                            <Badge variant={execution.icmp_packet_loss === 0 ? 'success' : execution.icmp_packet_loss < 50 ? 'warning' : 'destructive'}>
+                              {execution.icmp_packet_loss === 0 ? '0%' : `${execution.icmp_packet_loss.toFixed(0)}%`} loss
+                            </Badge>
+                          )}
+                          {execution.icmp_avg_rtt !== null && (
+                            <span className="text-xs text-muted-foreground">
+                              {execution.icmp_avg_rtt.toFixed(1)}ms avg
+                            </span>
+                          )}
+                          {execution.error_message && (
+                            <span className="text-xs text-destructive truncate max-w-[150px]" title={translateApiError(execution.error_message, t)}>
+                              {translateApiError(execution.error_message, t)}
+                            </span>
+                          )}
+                        </>
+                      ) : execution.protocol_type === 'tcp' ? (
+                        <>
+                          {execution.tcp_connection_time !== null && (
+                            <Badge variant="success">
+                              {execution.tcp_connection_time.toFixed(0)}ms
+                            </Badge>
+                          )}
+                          {execution.error_message && (
+                            <span className="text-xs text-destructive truncate max-w-[150px]" title={translateApiError(execution.error_message, t)}>
+                              {translateApiError(execution.error_message, t)}
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <>
                           {getStatusCodeBadge(execution.response_status_code)}
@@ -461,66 +504,151 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                 </div>
               )}
 
-              {/* Request (for non-chain executions) */}
+              {/* Request/Target (for non-chain executions) */}
               {selectedExecution.task_type !== 'chain' && (
                 <div className="space-y-2">
-                  <h3 className="font-semibold">{t('executions.request')}</h3>
+                  <h3 className="font-semibold">
+                    {selectedExecution.protocol_type === 'http' || !selectedExecution.protocol_type
+                      ? t('executions.request')
+                      : t('executionResults.target')}
+                  </h3>
                   <div className="rounded-md bg-muted p-4 space-y-2">
-                    <div className="flex gap-2">
-                      <Badge variant="outline">{selectedExecution.request_method}</Badge>
-                      <code className="text-sm break-all">{selectedExecution.request_url}</code>
-                    </div>
-                    {selectedExecution.request_headers && Object.keys(selectedExecution.request_headers).length > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
-                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
-                          {JSON.stringify(selectedExecution.request_headers, null, 2)}
-                        </pre>
+                    {/* HTTP request */}
+                    {(selectedExecution.protocol_type === 'http' || !selectedExecution.protocol_type) && selectedExecution.request_url && (
+                      <>
+                        <div className="flex gap-2">
+                          <Badge variant="outline">{selectedExecution.request_method}</Badge>
+                          <code className="text-sm break-all">{selectedExecution.request_url}</code>
+                        </div>
+                        {selectedExecution.request_headers && Object.keys(selectedExecution.request_headers).length > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
+                            <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
+                              {JSON.stringify(selectedExecution.request_headers, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {selectedExecution.request_body && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
+                            <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px] whitespace-pre-wrap break-all">
+                              {selectedExecution.request_body}
+                            </pre>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {/* ICMP target */}
+                    {selectedExecution.protocol_type === 'icmp' && (
+                      <div className="flex gap-2 items-center">
+                        <Radio className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline">ICMP</Badge>
+                        <code className="text-sm">{selectedExecution.target_host}</code>
                       </div>
                     )}
-                    {selectedExecution.request_body && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
-                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[200px] whitespace-pre-wrap break-all">
-                          {selectedExecution.request_body}
-                        </pre>
+                    {/* TCP target */}
+                    {selectedExecution.protocol_type === 'tcp' && (
+                      <div className="flex gap-2 items-center">
+                        <Plug className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline">TCP</Badge>
+                        <code className="text-sm">{selectedExecution.target_host}:{selectedExecution.target_port}</code>
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Response (for non-chain executions) */}
+              {/* Response/Results (for non-chain executions) */}
               {selectedExecution.task_type !== 'chain' && (
                 <div className="space-y-2">
-                  <h3 className="font-semibold">{t('executions.response')}</h3>
+                  <h3 className="font-semibold">
+                    {selectedExecution.protocol_type === 'http' || !selectedExecution.protocol_type
+                      ? t('executions.response')
+                      : t('executionResults.results')}
+                  </h3>
                   <div className="rounded-md bg-muted p-4 space-y-2">
-                    <div className="flex gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t('executions.statusCode')}</p>
-                        {getStatusCodeBadge(selectedExecution.response_status_code)}
-                      </div>
-                      {selectedExecution.response_size_bytes && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">{t('executions.size')}</p>
-                          <p className="text-sm">{(selectedExecution.response_size_bytes / 1024).toFixed(2)} KB</p>
+                    {/* HTTP Response */}
+                    {(selectedExecution.protocol_type === 'http' || !selectedExecution.protocol_type) && (
+                      <>
+                        <div className="flex gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">{t('executions.statusCode')}</p>
+                            {getStatusCodeBadge(selectedExecution.response_status_code)}
+                          </div>
+                          {selectedExecution.response_size_bytes && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">{t('executions.size')}</p>
+                              <p className="text-sm">{(selectedExecution.response_size_bytes / 1024).toFixed(2)} KB</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    {selectedExecution.response_headers && Object.keys(selectedExecution.response_headers).length > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
-                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
-                          {JSON.stringify(selectedExecution.response_headers, null, 2)}
-                        </pre>
+                        {selectedExecution.response_headers && Object.keys(selectedExecution.response_headers).length > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">{t('executions.headers')}:</p>
+                            <pre className="text-xs bg-background p-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
+                              {JSON.stringify(selectedExecution.response_headers, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {selectedExecution.response_body && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
+                            <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px] whitespace-pre-wrap break-all">
+                              {selectedExecution.response_body}
+                            </pre>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {/* ICMP Results */}
+                    {selectedExecution.protocol_type === 'icmp' && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.packetsSent')}</p>
+                          <p className="text-lg font-semibold">{selectedExecution.icmp_packets_sent ?? '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.packetsReceived')}</p>
+                          <p className="text-lg font-semibold">{selectedExecution.icmp_packets_received ?? '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.packetLoss')}</p>
+                          <p className={`text-lg font-semibold ${
+                            selectedExecution.icmp_packet_loss === 0 ? 'text-green-600' :
+                            selectedExecution.icmp_packet_loss !== null && selectedExecution.icmp_packet_loss < 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {selectedExecution.icmp_packet_loss !== null ? `${selectedExecution.icmp_packet_loss.toFixed(1)}%` : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.minRtt')}</p>
+                          <p className="text-lg font-semibold">{selectedExecution.icmp_min_rtt !== null ? `${selectedExecution.icmp_min_rtt.toFixed(2)}ms` : '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.avgRtt')}</p>
+                          <p className="text-lg font-semibold">{selectedExecution.icmp_avg_rtt !== null ? `${selectedExecution.icmp_avg_rtt.toFixed(2)}ms` : '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.maxRtt')}</p>
+                          <p className="text-lg font-semibold">{selectedExecution.icmp_max_rtt !== null ? `${selectedExecution.icmp_max_rtt.toFixed(2)}ms` : '-'}</p>
+                        </div>
                       </div>
                     )}
-                    {selectedExecution.response_body && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">{t('executions.body')}:</p>
-                        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px] whitespace-pre-wrap break-all">
-                          {selectedExecution.response_body}
-                        </pre>
+                    {/* TCP Results */}
+                    {selectedExecution.protocol_type === 'tcp' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.connectionTime')}</p>
+                          <p className="text-lg font-semibold text-green-600">
+                            {selectedExecution.tcp_connection_time !== null ? `${selectedExecution.tcp_connection_time.toFixed(2)}ms` : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t('executionResults.portStatus')}</p>
+                          <Badge variant={selectedExecution.status === 'success' ? 'success' : 'destructive'}>
+                            {selectedExecution.status === 'success' ? t('executionResults.portOpen') : t('executionResults.portClosed')}
+                          </Badge>
+                        </div>
                       </div>
                     )}
                   </div>

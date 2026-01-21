@@ -104,16 +104,27 @@ export type TaskStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancell
 // Overlap policy enum
 export type OverlapPolicy = 'allow' | 'skip' | 'queue'
 
+// Protocol type enum
+export type ProtocolType = 'http' | 'icmp' | 'tcp'
+
 // Cron Task types
 export interface CronTask {
   id: string
   workspace_id: string
   name: string
   description: string | null
-  url: string
+  // Protocol type
+  protocol_type: ProtocolType
+  // HTTP fields
+  url: string | null
   method: HttpMethod
   headers: Record<string, string>
   body: string | null
+  // ICMP/TCP fields
+  host: string | null
+  port: number | null
+  icmp_count: number
+  // Schedule
   schedule: string
   timezone: string
   timeout_seconds: number
@@ -140,10 +151,18 @@ export interface CronTask {
 export interface CreateCronTaskRequest {
   name: string
   description?: string
-  url: string
+  // Protocol type
+  protocol_type?: ProtocolType
+  // HTTP fields
+  url?: string
   method?: HttpMethod
   headers?: Record<string, string>
   body?: string
+  // ICMP/TCP fields
+  host?: string
+  port?: number
+  icmp_count?: number
+  // Schedule
   schedule: string
   timezone?: string
   timeout_seconds?: number
@@ -161,10 +180,18 @@ export interface CreateCronTaskRequest {
 export interface UpdateCronTaskRequest {
   name?: string
   description?: string
+  // Protocol type
+  protocol_type?: ProtocolType
+  // HTTP fields
   url?: string
   method?: HttpMethod
   headers?: Record<string, string>
   body?: string
+  // ICMP/TCP fields
+  host?: string
+  port?: number
+  icmp_count?: number
+  // Schedule
   schedule?: string
   timezone?: string
   timeout_seconds?: number
@@ -186,10 +213,18 @@ export interface DelayedTask {
   idempotency_key: string | null
   name: string | null
   tags: string[]
-  url: string
+  // Protocol type
+  protocol_type: ProtocolType
+  // HTTP fields
+  url: string | null
   method: HttpMethod
   headers: Record<string, string>
   body: string | null
+  // ICMP/TCP fields
+  host: string | null
+  port: number | null
+  icmp_count: number
+  // Schedule
   execute_at: string
   timeout_seconds: number
   retry_count: number
@@ -203,10 +238,18 @@ export interface DelayedTask {
 }
 
 export interface CreateDelayedTaskRequest {
-  url: string
+  // Protocol type
+  protocol_type?: ProtocolType
+  // HTTP fields
+  url?: string
   method?: HttpMethod
   headers?: Record<string, string>
   body?: string
+  // ICMP/TCP fields
+  host?: string
+  port?: number
+  icmp_count?: number
+  // Schedule
   execute_at: string
   name?: string
   idempotency_key?: string
@@ -218,10 +261,18 @@ export interface CreateDelayedTaskRequest {
 }
 
 export interface UpdateDelayedTaskRequest {
+  // Protocol type
+  protocol_type?: ProtocolType
+  // HTTP fields
   url?: string
   method?: HttpMethod
   headers?: Record<string, string>
   body?: string
+  // ICMP/TCP fields
+  host?: string
+  port?: number
+  icmp_count?: number
+  // Schedule
   execute_at?: string
   name?: string
   tags?: string[]
@@ -246,9 +297,25 @@ export interface Execution {
   finished_at: string | null
   duration_ms: number | null
   retry_attempt: number | null  // null for chains
-  request_url: string | null    // null for chains
-  request_method: HttpMethod | null  // null for chains
+  // Protocol type
+  protocol_type: ProtocolType | null
+  // HTTP fields
+  request_url: string | null    // null for ICMP/TCP and chains
+  request_method: HttpMethod | null  // null for ICMP/TCP and chains
   response_status_code: number | null
+  // ICMP/TCP target
+  target_host: string | null
+  target_port: number | null
+  // ICMP results
+  icmp_packets_sent: number | null
+  icmp_packets_received: number | null
+  icmp_packet_loss: number | null
+  icmp_min_rtt: number | null
+  icmp_avg_rtt: number | null
+  icmp_max_rtt: number | null
+  // TCP results
+  tcp_connection_time: number | null
+  // Error
   error_message: string | null
   error_type: string | null
   created_at: string
