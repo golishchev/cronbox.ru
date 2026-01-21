@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { DelayedTaskForm } from '../DelayedTaskForm'
 import * as delayedTasksApi from '@/api/delayedTasks'
-import type { DelayedTask } from '@/types'
+import type { DelayedTask, ProtocolType } from '@/types'
 
 // Mock API
 vi.mock('@/api/delayedTasks', () => ({
@@ -27,6 +27,7 @@ describe('DelayedTaskForm', () => {
     id: 'task-1',
     workspace_id: 'workspace-1',
     name: 'Test Delayed Task',
+    protocol_type: 'http' as ProtocolType,
     url: 'https://example.com/webhook',
     method: 'POST',
     execute_at: futureDate.toISOString(),
@@ -38,6 +39,46 @@ describe('DelayedTaskForm', () => {
     idempotency_key: 'key-123',
     callback_url: null,
     tags: ['tag1', 'tag2'],
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    executed_at: null,
+    execution_id: null,
+  }
+
+  const mockIcmpTask: DelayedTask = {
+    id: 'task-2',
+    workspace_id: 'workspace-1',
+    name: 'ICMP Delayed Task',
+    protocol_type: 'icmp' as ProtocolType,
+    host: 'ping.example.com',
+    icmp_count: 3,
+    execute_at: futureDate.toISOString(),
+    status: 'pending',
+    timeout_seconds: 30,
+    retry_count: 0,
+    idempotency_key: 'key-456',
+    callback_url: null,
+    tags: [],
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    executed_at: null,
+    execution_id: null,
+  }
+
+  const mockTcpTask: DelayedTask = {
+    id: 'task-3',
+    workspace_id: 'workspace-1',
+    name: 'TCP Delayed Task',
+    protocol_type: 'tcp' as ProtocolType,
+    host: 'api.example.com',
+    port: 443,
+    execute_at: futureDate.toISOString(),
+    status: 'pending',
+    timeout_seconds: 30,
+    retry_count: 0,
+    idempotency_key: 'key-789',
+    callback_url: null,
+    tags: [],
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     executed_at: null,
@@ -201,5 +242,85 @@ describe('DelayedTaskForm', () => {
 
     expect(screen.getByRole('spinbutton', { name: /timeout/i })).toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: /retry count/i })).toBeInTheDocument()
+  })
+
+  describe('Protocol Type Selection', () => {
+    it('should render protocol type selector', () => {
+      render(<DelayedTaskForm {...defaultProps} />)
+
+      // Protocol type radio buttons should be present
+      expect(screen.getByText('HTTP')).toBeInTheDocument()
+      expect(screen.getByText('ICMP')).toBeInTheDocument()
+      expect(screen.getByText('TCP')).toBeInTheDocument()
+    })
+
+    it('should show URL field by default (HTTP protocol)', () => {
+      render(<DelayedTaskForm {...defaultProps} />)
+
+      expect(screen.getByLabelText(/^url/i)).toBeInTheDocument()
+    })
+
+    it('should show host field for ICMP task in edit mode', () => {
+      render(<DelayedTaskForm {...defaultProps} task={mockIcmpTask} />)
+
+      expect(screen.getByLabelText(/host/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/host/i)).toHaveValue('ping.example.com')
+    })
+
+    it('should show host and port fields for TCP task in edit mode', () => {
+      render(<DelayedTaskForm {...defaultProps} task={mockTcpTask} />)
+
+      expect(screen.getByLabelText(/host/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/host/i)).toHaveValue('api.example.com')
+      expect(screen.getByLabelText(/port/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/port/i)).toHaveValue(443)
+    })
+
+    it('should update ICMP task correctly', async () => {
+      vi.mocked(delayedTasksApi.updateDelayedTask).mockResolvedValue(mockIcmpTask)
+
+      const { user } = render(<DelayedTaskForm {...defaultProps} task={mockIcmpTask} />)
+
+      const nameInput = screen.getByLabelText(/name/i)
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Updated ICMP Task')
+
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      await waitFor(() => {
+        expect(delayedTasksApi.updateDelayedTask).toHaveBeenCalledWith(
+          'workspace-1',
+          'task-2',
+          expect.objectContaining({
+            protocol_type: 'icmp',
+            host: 'ping.example.com',
+          })
+        )
+      })
+    })
+
+    it('should update TCP task correctly', async () => {
+      vi.mocked(delayedTasksApi.updateDelayedTask).mockResolvedValue(mockTcpTask)
+
+      const { user } = render(<DelayedTaskForm {...defaultProps} task={mockTcpTask} />)
+
+      const nameInput = screen.getByLabelText(/name/i)
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Updated TCP Task')
+
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      await waitFor(() => {
+        expect(delayedTasksApi.updateDelayedTask).toHaveBeenCalledWith(
+          'workspace-1',
+          'task-3',
+          expect.objectContaining({
+            protocol_type: 'tcp',
+            host: 'api.example.com',
+            port: 443,
+          })
+        )
+      })
+    })
   })
 })

@@ -110,26 +110,18 @@ async def create_cron_task(
     # Calculate next run time
     next_run_at = calculate_next_run(data.schedule, data.timezone)
 
+    # Convert schema to dict, automatically including all fields
+    # mode="json" ensures HttpUrl and enums are serialized to primitives
+    task_data = data.model_dump(mode="json")
+
+    # Add system fields
+    task_data["workspace_id"] = workspace.id
+    task_data["is_active"] = True
+    task_data["is_paused"] = False
+    task_data["next_run_at"] = next_run_at
+
     # Create task
-    task = await cron_repo.create(
-        workspace_id=workspace.id,
-        name=data.name,
-        description=data.description,
-        url=str(data.url),
-        method=data.method,
-        headers=data.headers,
-        body=data.body,
-        schedule=data.schedule,
-        timezone=data.timezone,
-        timeout_seconds=data.timeout_seconds,
-        retry_count=data.retry_count,
-        retry_delay_seconds=data.retry_delay_seconds,
-        notify_on_failure=data.notify_on_failure,
-        notify_on_recovery=data.notify_on_recovery,
-        is_active=True,
-        is_paused=False,
-        next_run_at=next_run_at,
-    )
+    task = await cron_repo.create(**task_data)
 
     # Update workspace counter
     await workspace_repo.update_cron_tasks_count(workspace, 1)

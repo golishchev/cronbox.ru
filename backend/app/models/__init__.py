@@ -1,7 +1,7 @@
 # Models module - import all models for Alembic autogenerate
 from app.models.base import Base
 from app.models.chain_execution import ChainExecution, StepExecution, StepStatus
-from app.models.cron_task import CronTask, HttpMethod, OverlapPolicy, TaskStatus
+from app.models.cron_task import CronTask, HttpMethod, OverlapPolicy, ProtocolType, TaskStatus
 from app.models.delayed_task import DelayedTask
 from app.models.email_log import EmailLog, EmailStatus, EmailType
 from app.models.execution import Execution
@@ -39,6 +39,7 @@ __all__ = [
     "HttpMethod",
     "TaskStatus",
     "OverlapPolicy",
+    "ProtocolType",
     "PaymentStatus",
     "SubscriptionStatus",
     "EmailStatus",

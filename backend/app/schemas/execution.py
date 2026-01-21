@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_serializer
 
-from app.models.cron_task import HttpMethod
+from app.models.cron_task import HttpMethod, ProtocolType
 from app.schemas.cron_task import PaginationMeta
 
 
@@ -22,9 +22,30 @@ class ExecutionResponse(BaseModel):
     finished_at: datetime | None
     duration_ms: int | None
     retry_attempt: int | None = None  # None for chains
-    request_url: str | None = None  # None for chains
-    request_method: HttpMethod | None = None  # None for chains
+
+    # Protocol type (http, icmp, tcp)
+    protocol_type: ProtocolType | None = None
+
+    # HTTP-specific fields
+    request_url: str | None = None  # None for ICMP/TCP and chains
+    request_method: HttpMethod | None = None  # None for ICMP/TCP and chains
     response_status_code: int | None = None
+
+    # ICMP/TCP target info
+    target_host: str | None = None
+    target_port: int | None = None
+
+    # ICMP results
+    icmp_packets_sent: int | None = None
+    icmp_packets_received: int | None = None
+    icmp_packet_loss: float | None = None  # percentage
+    icmp_min_rtt: float | None = None  # ms
+    icmp_avg_rtt: float | None = None  # ms
+    icmp_max_rtt: float | None = None  # ms
+
+    # TCP results
+    tcp_connection_time: float | None = None  # ms
+
     error_message: str | None = None
     error_type: str | None = None
     created_at: datetime

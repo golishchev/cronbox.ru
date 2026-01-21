@@ -21,6 +21,14 @@ class HttpMethod(str, enum.Enum):
     HEAD = "HEAD"
 
 
+class ProtocolType(str, enum.Enum):
+    """Protocol type for tasks."""
+
+    HTTP = "http"  # HTTP/HTTPS requests
+    ICMP = "icmp"  # ICMP ping
+    TCP = "tcp"  # TCP port check
+
+
 class TaskStatus(str, enum.Enum):
     """Task execution status."""
 
@@ -62,11 +70,22 @@ class CronTask(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[dict] = mapped_column(JSONB, default=list)
 
-    # HTTP Request
-    url: Mapped[str] = mapped_column(String(2048))
+    # Protocol type (http, icmp, tcp)
+    protocol_type: Mapped[ProtocolType] = mapped_column(
+        SQLEnum(ProtocolType, values_callable=lambda x: [e.value for e in x], create_type=False),
+        default=ProtocolType.HTTP,
+    )
+
+    # HTTP Request (used when protocol_type = HTTP)
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     method: Mapped[HttpMethod] = mapped_column(SQLEnum(HttpMethod), default=HttpMethod.GET)
     headers: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ICMP/TCP (used when protocol_type = ICMP or TCP)
+    host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    port: Mapped[int | None] = mapped_column(Integer, nullable=True)  # TCP only
+    icmp_count: Mapped[int] = mapped_column(Integer, default=3)  # ICMP only: number of packets
 
     # Schedule
     schedule: Mapped[str] = mapped_column(String(100))  # Cron expression

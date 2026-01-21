@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.base import BaseRepository
 from app.models.chain_execution import ChainExecution
-from app.models.cron_task import HttpMethod, TaskStatus
+from app.models.cron_task import HttpMethod, ProtocolType, TaskStatus
 from app.models.execution import Execution
 from app.models.heartbeat import Heartbeat, HeartbeatPing
 from app.models.task_chain import ChainStatus, TaskChain
@@ -133,12 +133,15 @@ class ExecutionRepository(BaseRepository[Execution]):
         task_type: str,
         task_id: UUID,
         task_name: str | None,
-        request_url: str,
-        request_method: HttpMethod,
+        request_url: str | None = None,
+        request_method: HttpMethod | None = None,
         request_headers: dict | None = None,
         request_body: str | None = None,
         cron_task_id: UUID | None = None,
         retry_attempt: int = 0,
+        protocol_type: ProtocolType | None = None,
+        target_host: str | None = None,
+        target_port: int | None = None,
     ) -> Execution:
         """Create a new execution record."""
         return await self.create(
@@ -154,6 +157,9 @@ class ExecutionRepository(BaseRepository[Execution]):
             request_method=request_method,
             request_headers=request_headers,
             request_body=request_body,
+            protocol_type=protocol_type,
+            target_host=target_host,
+            target_port=target_port,
         )
 
     async def complete_execution(
@@ -167,7 +173,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         error_message: str | None = None,
         error_type: str | None = None,
     ) -> Execution:
-        """Complete an execution record."""
+        """Complete an HTTP execution record."""
         now = datetime.utcnow()
         execution.status = status
         execution.finished_at = now
@@ -176,6 +182,58 @@ class ExecutionRepository(BaseRepository[Execution]):
         execution.response_headers = response_headers
         execution.response_body = response_body
         execution.response_size_bytes = response_size_bytes
+        execution.error_message = error_message
+        execution.error_type = error_type
+
+        await self.db.flush()
+        await self.db.refresh(execution)
+        return execution
+
+    async def complete_icmp_execution(
+        self,
+        execution: Execution,
+        status: TaskStatus,
+        packets_sent: int | None = None,
+        packets_received: int | None = None,
+        packet_loss: float | None = None,
+        min_rtt: float | None = None,
+        avg_rtt: float | None = None,
+        max_rtt: float | None = None,
+        error_message: str | None = None,
+        error_type: str | None = None,
+    ) -> Execution:
+        """Complete an ICMP execution record."""
+        now = datetime.utcnow()
+        execution.status = status
+        execution.finished_at = now
+        execution.duration_ms = int((now - execution.started_at).total_seconds() * 1000)
+        execution.icmp_packets_sent = packets_sent
+        execution.icmp_packets_received = packets_received
+        execution.icmp_packet_loss = packet_loss
+        execution.icmp_min_rtt = min_rtt
+        execution.icmp_avg_rtt = avg_rtt
+        execution.icmp_max_rtt = max_rtt
+        execution.error_message = error_message
+        execution.error_type = error_type
+
+        await self.db.flush()
+        await self.db.refresh(execution)
+        return execution
+
+    async def complete_tcp_execution(
+        self,
+        execution: Execution,
+        status: TaskStatus,
+        connection_time: float | None = None,
+        error_message: str | None = None,
+        error_type: str | None = None,
+    ) -> Execution:
+        """Complete a TCP execution record."""
+        now = datetime.utcnow()
+        execution.status = status
+        execution.finished_at = now
+        execution.duration_ms = int((now - execution.started_at).total_seconds() * 1000)
+        execution.tcp_connection_time = connection_time
         execution.error_message = error_message
         execution.error_type = error_type
 

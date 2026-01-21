@@ -536,7 +536,7 @@ class TestExecuteCronTask:
     @pytest.mark.asyncio
     async def test_successful_execution(self, mock_db_context):
         """Test successful cron task execution."""
-        from app.models.cron_task import HttpMethod
+        from app.models.cron_task import HttpMethod, ProtocolType
         from app.workers.tasks import execute_cron_task
 
         ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
@@ -546,6 +546,7 @@ class TestExecuteCronTask:
         mock_task.id = task_id
         mock_task.workspace_id = uuid4()
         mock_task.name = "Test Task"
+        mock_task.protocol_type = ProtocolType.HTTP
         mock_task.url = "https://api.example.com/test"
         mock_task.method = HttpMethod.GET
         mock_task.headers = {}
@@ -556,6 +557,9 @@ class TestExecuteCronTask:
         mock_task.schedule = "*/5 * * * *"
         mock_task.timezone = "UTC"
         mock_task.retry_count = 0
+        mock_task.last_status = None
+        mock_task.overlap_policy = MagicMock()
+        mock_task.overlap_policy.value = "allow"
 
         mock_execution = MagicMock()
         mock_execution.id = uuid4()
@@ -709,7 +713,7 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_successful_execution(self, mock_db_context):
         """Test successful delayed task execution."""
-        from app.models.cron_task import HttpMethod, TaskStatus
+        from app.models.cron_task import HttpMethod, ProtocolType, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
         ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
@@ -719,6 +723,7 @@ class TestExecuteDelayedTask:
         mock_task.id = task_id
         mock_task.workspace_id = uuid4()
         mock_task.name = "Test Delayed Task"
+        mock_task.protocol_type = ProtocolType.HTTP
         mock_task.url = "https://api.example.com/callback"
         mock_task.method = HttpMethod.POST
         mock_task.headers = {"Content-Type": "application/json"}
@@ -762,7 +767,7 @@ class TestExecuteDelayedTask:
     @pytest.mark.asyncio
     async def test_task_already_running(self, mock_db_context):
         """Test delayed task that is already running."""
-        from app.models.cron_task import HttpMethod, TaskStatus
+        from app.models.cron_task import HttpMethod, ProtocolType, TaskStatus
         from app.workers.tasks import execute_delayed_task
 
         ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
@@ -772,6 +777,7 @@ class TestExecuteDelayedTask:
         mock_task.id = task_id
         mock_task.workspace_id = uuid4()
         mock_task.name = "Test Task"
+        mock_task.protocol_type = ProtocolType.HTTP
         mock_task.url = "https://api.example.com/test"
         mock_task.method = HttpMethod.GET
         mock_task.headers = {}
@@ -920,3 +926,470 @@ class TestExecuteDelayedTask:
                     # Should mark as failed, not increment retry
                     mock_delayed_repo.mark_completed.assert_called_once()
                     mock_delayed_repo.increment_retry.assert_not_called()
+
+
+class TestExecuteIcmpTask:
+    """Tests for execute_icmp_task function."""
+
+    @pytest.mark.asyncio
+    async def test_successful_icmp_task(self):
+        """Test successful ICMP task execution."""
+        from app.workers.tasks import execute_icmp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_icmp_ping") as mock_ping:
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.packets_sent = 3
+            mock_result.packets_received = 3
+            mock_result.packet_loss = 0.0
+            mock_result.min_rtt = 1.0
+            mock_result.avg_rtt = 2.0
+            mock_result.max_rtt = 3.0
+            mock_result.duration_ms = 100.0
+            mock_result.error_message = None
+            mock_ping.return_value = mock_result
+
+            result = await execute_icmp_task(ctx, host="test.example.com", count=3, timeout_seconds=30)
+
+            assert result["success"] is True
+            assert result["packets_sent"] == 3
+            assert result["packets_received"] == 3
+            assert result["packet_loss"] == 0.0
+            assert result["min_rtt"] == 1.0
+            assert result["avg_rtt"] == 2.0
+            assert result["max_rtt"] == 3.0
+            assert result["duration_ms"] == 100
+            assert result["error"] is None
+            assert result["error_type"] is None
+
+            mock_ping.assert_called_once_with("test.example.com", 3, 30)
+
+    @pytest.mark.asyncio
+    async def test_failed_icmp_task(self):
+        """Test failed ICMP task execution."""
+        from app.workers.tasks import execute_icmp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_icmp_ping") as mock_ping:
+            mock_result = MagicMock()
+            mock_result.success = False
+            mock_result.packets_sent = 3
+            mock_result.packets_received = 0
+            mock_result.packet_loss = 100.0
+            mock_result.min_rtt = None
+            mock_result.avg_rtt = None
+            mock_result.max_rtt = None
+            mock_result.duration_ms = 30000.0
+            mock_result.error_message = "No response"
+            mock_ping.return_value = mock_result
+
+            result = await execute_icmp_task(ctx, host="unreachable.host", count=3)
+
+            assert result["success"] is False
+            assert result["packets_received"] == 0
+            assert result["packet_loss"] == 100.0
+            assert result["error"] == "No response"
+            assert result["error_type"] == "icmp_error"
+
+    @pytest.mark.asyncio
+    async def test_icmp_task_partial_loss(self):
+        """Test ICMP task with partial packet loss."""
+        from app.workers.tasks import execute_icmp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_icmp_ping") as mock_ping:
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.packets_sent = 3
+            mock_result.packets_received = 2
+            mock_result.packet_loss = 33.33
+            mock_result.min_rtt = 1.5
+            mock_result.avg_rtt = 2.5
+            mock_result.max_rtt = 3.5
+            mock_result.duration_ms = 200.0
+            mock_result.error_message = None
+            mock_ping.return_value = mock_result
+
+            result = await execute_icmp_task(ctx, host="flaky.host", count=3)
+
+            assert result["success"] is True
+            assert result["packets_received"] == 2
+            assert result["packet_loss"] == 33.33
+            assert result["error"] is None
+
+    @pytest.mark.asyncio
+    async def test_icmp_task_default_params(self):
+        """Test ICMP task with default parameters."""
+        from app.workers.tasks import execute_icmp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_icmp_ping") as mock_ping:
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.packets_sent = 3
+            mock_result.packets_received = 3
+            mock_result.packet_loss = 0.0
+            mock_result.min_rtt = 1.0
+            mock_result.avg_rtt = 2.0
+            mock_result.max_rtt = 3.0
+            mock_result.duration_ms = 100.0
+            mock_result.error_message = None
+            mock_ping.return_value = mock_result
+
+            await execute_icmp_task(ctx, host="test.com")
+
+            # Verify defaults: count=3, timeout_seconds=30
+            mock_ping.assert_called_once_with("test.com", 3, 30)
+
+
+class TestExecuteTcpTask:
+    """Tests for execute_tcp_task function."""
+
+    @pytest.mark.asyncio
+    async def test_successful_tcp_task(self):
+        """Test successful TCP task execution."""
+        from app.workers.tasks import execute_tcp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_tcp_check") as mock_tcp:
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.connection_time = 15.5
+            mock_result.duration_ms = 20.0
+            mock_result.error_message = None
+            mock_tcp.return_value = mock_result
+
+            result = await execute_tcp_task(ctx, host="example.com", port=443, timeout_seconds=30)
+
+            assert result["success"] is True
+            assert result["connection_time"] == 15.5
+            assert result["duration_ms"] == 20
+            assert result["error"] is None
+            assert result["error_type"] is None
+
+            mock_tcp.assert_called_once_with("example.com", 443, 30)
+
+    @pytest.mark.asyncio
+    async def test_failed_tcp_task_refused(self):
+        """Test TCP task with connection refused."""
+        from app.workers.tasks import execute_tcp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_tcp_check") as mock_tcp:
+            mock_result = MagicMock()
+            mock_result.success = False
+            mock_result.connection_time = None
+            mock_result.duration_ms = 50.0
+            mock_result.error_message = "Connection refused (port closed)"
+            mock_tcp.return_value = mock_result
+
+            result = await execute_tcp_task(ctx, host="example.com", port=12345)
+
+            assert result["success"] is False
+            assert result["connection_time"] is None
+            assert result["error"] == "Connection refused (port closed)"
+            assert result["error_type"] == "tcp_error"
+
+    @pytest.mark.asyncio
+    async def test_failed_tcp_task_timeout(self):
+        """Test TCP task with connection timeout."""
+        from app.workers.tasks import execute_tcp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_tcp_check") as mock_tcp:
+            mock_result = MagicMock()
+            mock_result.success = False
+            mock_result.connection_time = None
+            mock_result.duration_ms = 30000.0
+            mock_result.error_message = "Connection timeout"
+            mock_tcp.return_value = mock_result
+
+            result = await execute_tcp_task(ctx, host="slow.host.com", port=443, timeout_seconds=30)
+
+            assert result["success"] is False
+            assert result["error"] == "Connection timeout"
+            assert result["error_type"] == "tcp_error"
+
+    @pytest.mark.asyncio
+    async def test_tcp_task_default_params(self):
+        """Test TCP task with default parameters."""
+        from app.workers.tasks import execute_tcp_task
+
+        ctx = {}
+
+        with patch("app.workers.tasks.execute_tcp_check") as mock_tcp:
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.connection_time = 10.0
+            mock_result.duration_ms = 15.0
+            mock_result.error_message = None
+            mock_tcp.return_value = mock_result
+
+            await execute_tcp_task(ctx, host="example.com", port=80)
+
+            # Verify default timeout_seconds=30
+            mock_tcp.assert_called_once_with("example.com", 80, 30)
+
+
+class TestCronTaskWithProtocols:
+    """Tests for execute_cron_task with different protocol types."""
+
+    @pytest.fixture
+    def mock_db_context(self):
+        """Create mock database context."""
+        mock_db = AsyncMock()
+        mock_db_factory = MagicMock()
+        mock_db_factory.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_db_factory.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_redis = AsyncMock()
+        mock_redis.enqueue_job = AsyncMock(return_value=None)
+        return {"db_factory": mock_db_factory, "db": mock_db, "redis": mock_redis}
+
+    @pytest.mark.asyncio
+    async def test_cron_task_icmp_protocol(self, mock_db_context):
+        """Test cron task execution with ICMP protocol."""
+        from app.models.cron_task import ProtocolType
+        from app.workers.tasks import execute_cron_task
+
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
+
+        task_id = uuid4()
+        mock_task = MagicMock()
+        mock_task.id = task_id
+        mock_task.workspace_id = uuid4()
+        mock_task.name = "ICMP Test Task"
+        mock_task.protocol_type = ProtocolType.ICMP
+        mock_task.host = "ping.example.com"
+        mock_task.icmp_count = 5
+        mock_task.timeout_seconds = 30
+        mock_task.is_active = True
+        mock_task.is_paused = False
+        mock_task.schedule = "*/5 * * * *"
+        mock_task.timezone = "UTC"
+        mock_task.retry_count = 0
+        mock_task.last_status = None
+        mock_task.overlap_policy = MagicMock()
+        mock_task.overlap_policy.value = "allow"
+
+        mock_execution = MagicMock()
+        mock_execution.id = uuid4()
+
+        with patch("app.workers.tasks.CronTaskRepository") as mock_cron_repo_class:
+            with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
+                with patch("app.workers.tasks.execute_icmp_task") as mock_execute_icmp:
+                    mock_cron_repo = AsyncMock()
+                    mock_cron_repo.get_by_id.return_value = mock_task
+                    mock_cron_repo_class.return_value = mock_cron_repo
+
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
+
+                    mock_execute_icmp.return_value = {
+                        "success": True,
+                        "packets_sent": 5,
+                        "packets_received": 5,
+                        "packet_loss": 0.0,
+                        "min_rtt": 1.0,
+                        "avg_rtt": 2.0,
+                        "max_rtt": 3.0,
+                        "duration_ms": 500,
+                        "error": None,
+                        "error_type": None,
+                    }
+
+                    result = await execute_cron_task(ctx, task_id=str(task_id))
+
+                    assert result["success"] is True
+                    mock_execute_icmp.assert_called_once_with(
+                        ctx,
+                        host="ping.example.com",
+                        count=5,
+                        timeout_seconds=30,
+                    )
+                    mock_exec_repo.complete_icmp_execution.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cron_task_tcp_protocol(self, mock_db_context):
+        """Test cron task execution with TCP protocol."""
+        from app.models.cron_task import ProtocolType
+        from app.workers.tasks import execute_cron_task
+
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
+
+        task_id = uuid4()
+        mock_task = MagicMock()
+        mock_task.id = task_id
+        mock_task.workspace_id = uuid4()
+        mock_task.name = "TCP Test Task"
+        mock_task.protocol_type = ProtocolType.TCP
+        mock_task.host = "db.example.com"
+        mock_task.port = 5432
+        mock_task.timeout_seconds = 30
+        mock_task.is_active = True
+        mock_task.is_paused = False
+        mock_task.schedule = "*/5 * * * *"
+        mock_task.timezone = "UTC"
+        mock_task.retry_count = 0
+        mock_task.last_status = None
+        mock_task.overlap_policy = MagicMock()
+        mock_task.overlap_policy.value = "allow"
+
+        mock_execution = MagicMock()
+        mock_execution.id = uuid4()
+
+        with patch("app.workers.tasks.CronTaskRepository") as mock_cron_repo_class:
+            with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
+                with patch("app.workers.tasks.execute_tcp_task") as mock_execute_tcp:
+                    mock_cron_repo = AsyncMock()
+                    mock_cron_repo.get_by_id.return_value = mock_task
+                    mock_cron_repo_class.return_value = mock_cron_repo
+
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
+
+                    mock_execute_tcp.return_value = {
+                        "success": True,
+                        "connection_time": 15.5,
+                        "duration_ms": 20,
+                        "error": None,
+                        "error_type": None,
+                    }
+
+                    result = await execute_cron_task(ctx, task_id=str(task_id))
+
+                    assert result["success"] is True
+                    mock_execute_tcp.assert_called_once_with(
+                        ctx,
+                        host="db.example.com",
+                        port=5432,
+                        timeout_seconds=30,
+                    )
+                    mock_exec_repo.complete_tcp_execution.assert_called_once()
+
+
+class TestDelayedTaskWithProtocols:
+    """Tests for execute_delayed_task with different protocol types."""
+
+    @pytest.fixture
+    def mock_db_context(self):
+        """Create mock database context."""
+        mock_db = AsyncMock()
+        mock_db_factory = MagicMock()
+        mock_db_factory.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_db_factory.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_redis = AsyncMock()
+        mock_redis.enqueue_job = AsyncMock(return_value=None)
+        return {"db_factory": mock_db_factory, "db": mock_db, "redis": mock_redis}
+
+    @pytest.mark.asyncio
+    async def test_delayed_task_icmp_protocol(self, mock_db_context):
+        """Test delayed task execution with ICMP protocol."""
+        from app.models.cron_task import ProtocolType, TaskStatus
+        from app.workers.tasks import execute_delayed_task
+
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
+
+        task_id = uuid4()
+        mock_task = MagicMock()
+        mock_task.id = task_id
+        mock_task.workspace_id = uuid4()
+        mock_task.name = "ICMP Delayed Task"
+        mock_task.protocol_type = ProtocolType.ICMP
+        mock_task.host = "ping.example.com"
+        mock_task.icmp_count = 3
+        mock_task.timeout_seconds = 30
+        mock_task.status = TaskStatus.PENDING
+        mock_task.retry_count = 0
+        mock_task.callback_url = None
+
+        mock_execution = MagicMock()
+        mock_execution.id = uuid4()
+
+        with patch("app.workers.tasks.DelayedTaskRepository") as mock_delayed_repo_class:
+            with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
+                with patch("app.workers.tasks.execute_icmp_task") as mock_execute_icmp:
+                    mock_delayed_repo = AsyncMock()
+                    mock_delayed_repo.get_by_id.return_value = mock_task
+                    mock_delayed_repo_class.return_value = mock_delayed_repo
+
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
+
+                    mock_execute_icmp.return_value = {
+                        "success": True,
+                        "packets_sent": 3,
+                        "packets_received": 3,
+                        "packet_loss": 0.0,
+                        "min_rtt": 1.0,
+                        "avg_rtt": 2.0,
+                        "max_rtt": 3.0,
+                        "duration_ms": 300,
+                        "error": None,
+                        "error_type": None,
+                    }
+
+                    result = await execute_delayed_task(ctx, task_id=str(task_id))
+
+                    assert result["success"] is True
+                    mock_execute_icmp.assert_called_once()
+                    mock_exec_repo.complete_icmp_execution.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_delayed_task_tcp_protocol(self, mock_db_context):
+        """Test delayed task execution with TCP protocol."""
+        from app.models.cron_task import ProtocolType, TaskStatus
+        from app.workers.tasks import execute_delayed_task
+
+        ctx = {"db_factory": mock_db_context["db_factory"], "redis": mock_db_context["redis"]}
+
+        task_id = uuid4()
+        mock_task = MagicMock()
+        mock_task.id = task_id
+        mock_task.workspace_id = uuid4()
+        mock_task.name = "TCP Delayed Task"
+        mock_task.protocol_type = ProtocolType.TCP
+        mock_task.host = "api.example.com"
+        mock_task.port = 443
+        mock_task.timeout_seconds = 30
+        mock_task.status = TaskStatus.PENDING
+        mock_task.retry_count = 0
+        mock_task.callback_url = None
+
+        mock_execution = MagicMock()
+        mock_execution.id = uuid4()
+
+        with patch("app.workers.tasks.DelayedTaskRepository") as mock_delayed_repo_class:
+            with patch("app.workers.tasks.ExecutionRepository") as mock_exec_repo_class:
+                with patch("app.workers.tasks.execute_tcp_task") as mock_execute_tcp:
+                    mock_delayed_repo = AsyncMock()
+                    mock_delayed_repo.get_by_id.return_value = mock_task
+                    mock_delayed_repo_class.return_value = mock_delayed_repo
+
+                    mock_exec_repo = AsyncMock()
+                    mock_exec_repo.create_execution.return_value = mock_execution
+                    mock_exec_repo_class.return_value = mock_exec_repo
+
+                    mock_execute_tcp.return_value = {
+                        "success": True,
+                        "connection_time": 25.0,
+                        "duration_ms": 30,
+                        "error": None,
+                        "error_type": None,
+                    }
+
+                    result = await execute_delayed_task(ctx, task_id=str(task_id))
+
+                    assert result["success"] is True
+                    mock_execute_tcp.assert_called_once()
+                    mock_exec_repo.complete_tcp_execution.assert_called_once()

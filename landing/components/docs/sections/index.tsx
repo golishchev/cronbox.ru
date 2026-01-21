@@ -930,6 +930,205 @@ export function SSLMonitorsSection() {
   )
 }
 
+export function IcmpTcpSection() {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ICMP/TCP мониторинг</h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-300">
+        ICMP (Ping) и TCP мониторинг позволяют проверять доступность серверов и сетевых устройств,
+        а также отслеживать открытость портов. Эти проверки можно настроить как регулярные cron-задачи
+        или одноразовые отложенные задачи.
+      </p>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Типы протоколов</h3>
+
+      <div className="mt-4 space-y-4">
+        <div className="rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/20 p-4">
+          <h4 className="font-semibold text-cyan-800 dark:text-cyan-200">ICMP (Ping)</h4>
+          <p className="mt-1 text-sm text-cyan-700 dark:text-cyan-300">
+            Проверяет доступность хоста с помощью ICMP echo-запросов. Измеряет время отклика (RTT),
+            потерю пакетов и джиттер. Идеально для мониторинга серверов и сетевого оборудования.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/20 p-4">
+          <h4 className="font-semibold text-cyan-800 dark:text-cyan-200">TCP</h4>
+          <p className="mt-1 text-sm text-cyan-700 dark:text-cyan-300">
+            Проверяет открытость TCP-порта на хосте. Позволяет мониторить базы данных (MySQL 3306,
+            PostgreSQL 5432), почтовые серверы (SMTP 25/587), веб-серверы (HTTP 80, HTTPS 443) и другие сервисы.
+          </p>
+        </div>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Создание ICMP-задачи</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/workspaces/{workspace_id}/cron-tasks \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Ping сервера",
+    "protocol_type": "icmp",
+    "host": "server.example.com",
+    "icmp_count": 5,
+    "schedule": "*/5 * * * *",
+    "timeout_seconds": 30,
+    "notify_on_failure": true,
+    "notify_on_recovery": true
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Создание TCP-задачи</h3>
+
+      <CodeBlock
+        code={`curl -X POST https://api.cronbox.ru/v1/workspaces/{workspace_id}/cron-tasks \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Проверка PostgreSQL",
+    "protocol_type": "tcp",
+    "host": "db.example.com",
+    "port": 5432,
+    "schedule": "*/10 * * * *",
+    "timeout_seconds": 10,
+    "notify_on_failure": true
+  }'`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Параметры</h3>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Параметр</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Тип</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Описание</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">protocol_type</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">string</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">&quot;http&quot;, &quot;icmp&quot; или &quot;tcp&quot;</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">host</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">string</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Хост для проверки (для ICMP/TCP)</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">port</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">TCP-порт (1-65535, только для TCP)</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">icmp_count</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">integer</td>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Количество ICMP-пакетов (1-10, по умолчанию 3)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Результаты ICMP</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        После выполнения ICMP-проверки вы получите следующие метрики:
+      </p>
+
+      <CodeBlock
+        language="json"
+        code={`{
+  "id": "exec_123",
+  "status": "success",
+  "protocol_type": "icmp",
+  "target_host": "server.example.com",
+  "icmp_packets_sent": 5,
+  "icmp_packets_received": 5,
+  "icmp_packet_loss": 0.0,
+  "icmp_min_rtt": 12.34,
+  "icmp_avg_rtt": 15.67,
+  "icmp_max_rtt": 18.91,
+  "duration_ms": 156
+}`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Результаты TCP</h3>
+      <p className="mt-2 text-gray-600 dark:text-gray-300">
+        Результаты TCP-проверки содержат время подключения:
+      </p>
+
+      <CodeBlock
+        language="json"
+        code={`{
+  "id": "exec_456",
+  "status": "success",
+  "protocol_type": "tcp",
+  "target_host": "db.example.com",
+  "target_port": 5432,
+  "tcp_connection_time": 23.45,
+  "duration_ms": 45
+}`}
+      />
+
+      <h3 className="mt-8 text-xl font-semibold text-gray-900 dark:text-white">Популярные порты для мониторинга</h3>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Сервис</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Порт</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">HTTP</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">80</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">HTTPS</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">443</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">MySQL</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">3306</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">PostgreSQL</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">5432</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">MongoDB</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">27017</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">Redis</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">6379</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">SMTP</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">25, 587</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">SSH</td>
+              <td className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-300">22</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          <strong>Совет:</strong> ICMP и TCP проверки работают с cron-задачами и отложенными задачами.
+          Используйте параметр <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">protocol_type</code> при
+          создании задачи для выбора типа проверки.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function OverlapPreventionSection() {
   return (
     <div>
@@ -1110,6 +1309,7 @@ export const sectionComponents: Record<string, () => ReactNode> = {
   'task-chains': TaskChainsSection,
   heartbeats: HeartbeatsSection,
   'ssl-monitors': SSLMonitorsSection,
+  'icmp-tcp': IcmpTcpSection,
   'overlap-prevention': OverlapPreventionSection,
   executions: ExecutionsSection,
   notifications: NotificationsSection,

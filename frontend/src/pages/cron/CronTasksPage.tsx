@@ -30,6 +30,9 @@ import {
   Edit,
   Loader2,
   Copy,
+  Globe,
+  Radio,
+  Plug,
 } from 'lucide-react'
 import { CronTaskForm } from '@/components/cron/CronTaskForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -258,8 +261,25 @@ export function CronTasksPage({ onNavigate: _ }: CronTasksPageProps) {
                   <TableCell>
                     <div>
                       <p className="font-medium">{task.name}</p>
-                      <p className="text-sm text-muted-foreground truncate max-w-[300px]">
-                        {task.url}
+                      <p className="text-sm text-muted-foreground truncate max-w-[300px] flex items-center gap-1">
+                        {task.protocol_type === 'http' && (
+                          <>
+                            <Globe className="h-3 w-3 flex-shrink-0" />
+                            {task.url}
+                          </>
+                        )}
+                        {task.protocol_type === 'icmp' && (
+                          <>
+                            <Radio className="h-3 w-3 flex-shrink-0" />
+                            {task.host}
+                          </>
+                        )}
+                        {task.protocol_type === 'tcp' && (
+                          <>
+                            <Plug className="h-3 w-3 flex-shrink-0" />
+                            {task.host}:{task.port}
+                          </>
+                        )}
                       </p>
                     </div>
                   </TableCell>

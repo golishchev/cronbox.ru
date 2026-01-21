@@ -90,23 +90,19 @@ async def create_delayed_task(
             detail="execute_at must be in the future",
         )
 
+    # Convert schema to dict, automatically including all fields
+    # mode="json" ensures HttpUrl and enums are serialized to primitives
+    task_data = data.model_dump(mode="json")
+
+    # Override execute_at with timezone-naive version
+    task_data["execute_at"] = execute_at
+
+    # Add system fields
+    task_data["workspace_id"] = workspace.id
+    task_data["status"] = TaskStatus.PENDING
+
     # Create task
-    task = await delayed_repo.create(
-        workspace_id=workspace.id,
-        idempotency_key=data.idempotency_key,
-        name=data.name,
-        tags=data.tags,
-        url=str(data.url),
-        method=data.method,
-        headers=data.headers,
-        body=data.body,
-        execute_at=execute_at,
-        timeout_seconds=data.timeout_seconds,
-        retry_count=data.retry_count,
-        retry_delay_seconds=data.retry_delay_seconds,
-        callback_url=str(data.callback_url) if data.callback_url else None,
-        status=TaskStatus.PENDING,
-    )
+    task = await delayed_repo.create(**task_data)
 
     # Increment workspace counter
     await workspace_repo.increment_delayed_tasks_count(workspace)

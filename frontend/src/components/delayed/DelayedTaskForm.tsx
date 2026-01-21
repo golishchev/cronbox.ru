@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
-import type { CreateDelayedTaskRequest, UpdateDelayedTaskRequest, DelayedTask, HttpMethod } from '@/types'
+import { Loader2, Globe, Radio, Plug } from 'lucide-react'
+import type { CreateDelayedTaskRequest, UpdateDelayedTaskRequest, DelayedTask, HttpMethod, ProtocolType } from '@/types'
 
 interface DelayedTaskFormProps {
   workspaceId: string
@@ -58,15 +58,24 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
   const { t } = useTranslation()
   const isEditMode = !!task
 
+  // Protocol type
+  const [protocolType, setProtocolType] = useState<ProtocolType>('http')
+
   const [name, setName] = useState('')
+  // HTTP fields
   const [url, setUrl] = useState('')
   const [method, setMethod] = useState<HttpMethod>('GET')
+  const [headers, setHeaders] = useState('{}')
+  const [body, setBody] = useState('')
+  // ICMP/TCP fields
+  const [host, setHost] = useState('')
+  const [port, setPort] = useState<number | ''>(443)
+  const [icmpCount, setIcmpCount] = useState<number | ''>(3)
+  // Schedule
   const [executeAt, setExecuteAt] = useState(getDefaultDateTime())
   const [timeoutSeconds, setTimeoutSeconds] = useState<number | ''>(30)
   const [retryCount, setRetryCount] = useState<number | ''>(0)
   const [retryDelaySeconds, setRetryDelaySeconds] = useState<number | ''>(60)
-  const [headers, setHeaders] = useState('{}')
-  const [body, setBody] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState('')
   const [callbackUrl, setCallbackUrl] = useState('')
   const [tags, setTags] = useState('')
@@ -77,15 +86,22 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
   // Initialize form with task data in edit mode
   useEffect(() => {
     if (task) {
+      setProtocolType(task.protocol_type)
       setName(task.name || '')
-      setUrl(task.url)
+      // HTTP fields
+      setUrl(task.url || '')
       setMethod(task.method)
+      setHeaders(JSON.stringify(task.headers, null, 2))
+      setBody(task.body || '')
+      // ICMP/TCP fields
+      setHost(task.host || '')
+      setPort(task.port ?? 443)
+      setIcmpCount(task.icmp_count ?? 3)
+      // Schedule
       setExecuteAt(formatDateTimeLocal(new Date(task.execute_at)))
       setTimeoutSeconds(task.timeout_seconds)
       setRetryCount(task.retry_count)
       setRetryDelaySeconds(task.retry_delay_seconds)
-      setHeaders(JSON.stringify(task.headers, null, 2))
-      setBody(task.body || '')
       setIdempotencyKey(task.idempotency_key || '')
       setCallbackUrl(task.callback_url || '')
       setTags(task.tags.join(', '))
@@ -103,10 +119,6 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
     setError('')
 
     // Validate
-    if (!url.trim()) {
-      setError(t('taskForm.urlRequired'))
-      return
-    }
     if (!executeAt) {
       setError(t('taskForm.executeAtRequired'))
       return
@@ -119,12 +131,32 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
       return
     }
 
+    // Protocol-specific validation
+    if (protocolType === 'http') {
+      if (!url.trim()) {
+        setError(t('taskForm.urlRequired'))
+        return
+      }
+    } else {
+      // ICMP or TCP
+      if (!host.trim()) {
+        setError(t('taskForm.hostRequired'))
+        return
+      }
+      if (protocolType === 'tcp' && (port === '' || port < 1 || port > 65535)) {
+        setError(t('taskForm.portRequired'))
+        return
+      }
+    }
+
     let parsedHeaders: Record<string, string> = {}
-    try {
-      parsedHeaders = headers.trim() ? JSON.parse(headers) : {}
-    } catch {
-      setError(t('taskForm.invalidHeadersJson'))
-      return
+    if (protocolType === 'http') {
+      try {
+        parsedHeaders = headers.trim() ? JSON.parse(headers) : {}
+      } catch {
+        setError(t('taskForm.invalidHeadersJson'))
+        return
+      }
     }
 
     setIsLoading(true)
@@ -132,33 +164,53 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
     try {
       if (isEditMode && task) {
         const data: UpdateDelayedTaskRequest = {
-          url: url.trim(),
-          method,
+          protocol_type: protocolType,
+          // HTTP fields (only for http protocol)
+          ...(protocolType === 'http' ? {
+            url: url.trim(),
+            method,
+            headers: parsedHeaders,
+            body: body.trim() || undefined,
+          } : {}),
+          // ICMP/TCP fields
+          ...(protocolType !== 'http' ? {
+            host: host.trim(),
+            ...(protocolType === 'tcp' ? { port: port || 443 } : {}),
+            ...(protocolType === 'icmp' ? { icmp_count: icmpCount || 3 } : {}),
+          } : {}),
           execute_at: new Date(executeAt).toISOString(),
           name: name.trim() || undefined,
           timeout_seconds: timeoutSeconds || 30,
           retry_count: retryCount || 0,
           retry_delay_seconds: retryDelaySeconds || 60,
-          headers: parsedHeaders,
-          body: body.trim() || undefined,
           callback_url: callbackUrl.trim() || undefined,
-          tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          tags: tags.trim() ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         }
         await updateDelayedTask(workspaceId, task.id, data)
       } else {
         const data: CreateDelayedTaskRequest = {
-          url: url.trim(),
-          method,
+          protocol_type: protocolType,
+          // HTTP fields (only for http protocol)
+          ...(protocolType === 'http' ? {
+            url: url.trim(),
+            method,
+            headers: parsedHeaders,
+            body: body.trim() || undefined,
+          } : {}),
+          // ICMP/TCP fields
+          ...(protocolType !== 'http' ? {
+            host: host.trim(),
+            ...(protocolType === 'tcp' ? { port: port || 443 } : {}),
+            ...(protocolType === 'icmp' ? { icmp_count: icmpCount || 3 } : {}),
+          } : {}),
           execute_at: new Date(executeAt).toISOString(),
           name: name.trim() || undefined,
           timeout_seconds: timeoutSeconds || 30,
           retry_count: retryCount || 0,
           retry_delay_seconds: retryDelaySeconds || 60,
-          headers: parsedHeaders,
-          body: body.trim() || undefined,
           idempotency_key: idempotencyKey.trim() || undefined,
           callback_url: callbackUrl.trim() || undefined,
-          tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+          tags: tags.trim() ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : undefined,
         }
         await createDelayedTask(workspaceId, data)
       }
@@ -178,6 +230,54 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
         </div>
       )}
 
+      {/* Protocol Type Selector */}
+      <div className="space-y-2">
+        <Label>{t('taskForm.protocolType')}</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setProtocolType('http')}
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+              protocolType === 'http'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <Globe className="h-5 w-5" />
+            <span className="font-medium">{t('taskForm.protocolHttp')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProtocolType('icmp')}
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+              protocolType === 'icmp'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <Radio className="h-5 w-5" />
+            <span className="font-medium">{t('taskForm.protocolIcmp')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setProtocolType('tcp')}
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 p-3 transition-colors ${
+              protocolType === 'tcp'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <Plug className="h-5 w-5" />
+            <span className="font-medium">{t('taskForm.protocolTcp')}</span>
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {protocolType === 'http' && t('taskForm.protocolHttpDescription')}
+          {protocolType === 'icmp' && t('taskForm.protocolIcmpDescription')}
+          {protocolType === 'tcp' && t('taskForm.protocolTcpDescription')}
+        </p>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">{t('taskForm.nameOptional')}</Label>
@@ -189,32 +289,89 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="method">{t('taskForm.method')}</Label>
-          <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {HTTP_METHODS.map((m) => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {protocolType === 'http' && (
+          <div className="space-y-2">
+            <Label htmlFor="method">{t('taskForm.method')}</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {HTTP_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="url">{t('taskForm.url')} *</Label>
-        <Input
-          id="url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder={t('taskForm.urlPlaceholder')}
-          required
-        />
-      </div>
+      {/* HTTP-specific: URL */}
+      {protocolType === 'http' && (
+        <div className="space-y-2">
+          <Label htmlFor="url">{t('taskForm.url')} *</Label>
+          <Input
+            id="url"
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t('taskForm.urlPlaceholder')}
+            required
+          />
+        </div>
+      )}
+
+      {/* ICMP/TCP: Host and Port */}
+      {protocolType !== 'http' && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="host">{t('taskForm.host')} *</Label>
+            <Input
+              id="host"
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              placeholder={t('taskForm.hostPlaceholder')}
+              required
+            />
+          </div>
+
+          {protocolType === 'tcp' && (
+            <div className="space-y-2">
+              <Label htmlFor="port">{t('taskForm.port')} *</Label>
+              <Input
+                id="port"
+                type="number"
+                min={1}
+                max={65535}
+                value={port}
+                onChange={(e) => setPort(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (port === '' || port < 1) setPort(443)
+                }}
+                placeholder="443"
+              />
+            </div>
+          )}
+
+          {protocolType === 'icmp' && (
+            <div className="space-y-2">
+              <Label htmlFor="icmpCount">{t('taskForm.icmpCount')}</Label>
+              <Input
+                id="icmpCount"
+                type="number"
+                min={1}
+                max={10}
+                value={icmpCount}
+                onChange={(e) => setIcmpCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onBlur={() => {
+                  if (icmpCount === '' || icmpCount < 1) setIcmpCount(3)
+                }}
+              />
+              <p className="text-xs text-muted-foreground">{t('taskForm.icmpCountDescription')}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="executeAt">{t('taskForm.executeAt')} *</Label>
@@ -292,28 +449,33 @@ export function DelayedTaskForm({ workspaceId, task, onSuccess, onCancel }: Dela
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="headers">{t('taskForm.headers')} (JSON)</Label>
-        <textarea
-          id="headers"
-          value={headers}
-          onChange={(e) => setHeaders(e.target.value)}
-          placeholder={t('taskForm.headersPlaceholder')}
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-        />
-      </div>
+      {/* HTTP-specific: Headers and Body */}
+      {protocolType === 'http' && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="headers">{t('taskForm.headers')} (JSON)</Label>
+            <textarea
+              id="headers"
+              value={headers}
+              onChange={(e) => setHeaders(e.target.value)}
+              placeholder={t('taskForm.headersPlaceholder')}
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+            />
+          </div>
 
-      {(method === 'POST' || method === 'PUT' || method === 'PATCH') && (
-        <div className="space-y-2">
-          <Label htmlFor="body">{t('taskForm.body')}</Label>
-          <textarea
-            id="body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder='{"key": "value"}'
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-          />
-        </div>
+          {(method === 'POST' || method === 'PUT' || method === 'PATCH') && (
+            <div className="space-y-2">
+              <Label htmlFor="body">{t('taskForm.body')}</Label>
+              <textarea
+                id="body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder='{"key": "value"}'
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+              />
+            </div>
+          )}
+        </>
       )}
 
       <div className="space-y-4 border-t pt-4">

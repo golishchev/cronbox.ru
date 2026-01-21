@@ -38,6 +38,7 @@ describe('DelayedTasksPage', () => {
     id: 'task-1',
     workspace_id: 'workspace-1',
     name: 'Test Delayed Task',
+    protocol_type: 'http' as const,
     url: 'https://example.com/webhook',
     method: 'POST' as const,
     execute_at: futureDate.toISOString(),
