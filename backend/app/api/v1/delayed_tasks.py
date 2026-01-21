@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserPlan
+from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserLanguage, UserPlan
 from app.db.repositories.delayed_tasks import DelayedTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.models.cron_task import TaskStatus
@@ -15,6 +15,7 @@ from app.schemas.delayed_task import (
     DelayedTaskUpdate,
     RescheduleDelayedTaskRequest,
 )
+from app.services.i18n import t
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/delayed", tags=["Delayed Tasks"])
 
@@ -58,6 +59,7 @@ async def create_delayed_task(
     data: DelayedTaskCreate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Create a new delayed task.
@@ -78,7 +80,7 @@ async def create_delayed_task(
     if workspace.delayed_tasks_this_month >= user_plan.max_delayed_tasks_per_month:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Monthly delayed task limit reached. Your plan allows {user_plan.max_delayed_tasks_per_month} delayed task(s) per month",
+            detail=t("errors.delayed_task_limit", lang, max_tasks=user_plan.max_delayed_tasks_per_month),
         )
 
     # Validate execute_at is in the future
@@ -88,6 +90,13 @@ async def create_delayed_task(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="execute_at must be in the future",
+        )
+
+    # Check retry feature
+    if data.retry_count and data.retry_count > 0 and not user_plan.retry_on_failure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.retry_not_available", lang),
         )
 
     # Convert schema to dict, automatically including all fields
@@ -135,6 +144,8 @@ async def update_delayed_task(
     task_id: UUID,
     data: DelayedTaskUpdate,
     workspace: CurrentWorkspace,
+    user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Update a pending delayed task.
@@ -148,13 +159,20 @@ async def update_delayed_task(
     if task is None or task.workspace_id != workspace.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Delayed task not found",
+            detail=t("errors.delayed_task_not_found", lang),
         )
 
     if task.status != TaskStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot update task with status '{task.status.value}'. Only pending tasks can be updated.",
+        )
+
+    # Check retry feature if being updated
+    if data.retry_count is not None and data.retry_count > 0 and not user_plan.retry_on_failure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.retry_not_available", lang),
         )
 
     # Validate execute_at is in the future if provided

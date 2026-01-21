@@ -636,7 +636,9 @@ class TestChainPlanLimits:
             },
         )
         assert response.status_code == 403
-        assert "limit" in response.json()["detail"].lower()
+        # Check for limit message in any language (en: "limit", ru: "лимит")
+        detail = response.json()["detail"].lower()
+        assert "limit" in detail or "лимит" in detail
 
     async def test_step_limit_exceeded(self, authenticated_client: AsyncClient, workspace):
         """Test that step limit per chain is enforced."""
@@ -658,7 +660,9 @@ class TestChainPlanLimits:
             },
         )
         assert response.status_code == 403
-        assert "step" in response.json()["detail"].lower()
+        # Check for step limit message in any language (en: "step", ru: "шаг")
+        detail = response.json()["detail"].lower()
+        assert "step" in detail or "шаг" in detail
 
     async def test_cron_interval_too_frequent(self, authenticated_client: AsyncClient, workspace):
         """Test that cron interval limit is enforced."""
@@ -679,7 +683,9 @@ class TestChainPlanLimits:
             },
         )
         assert response.status_code == 403
-        assert "interval" in response.json()["detail"].lower()
+        # Check for interval message in any language (en: "interval", ru: "интервал")
+        detail = response.json()["detail"].lower()
+        assert "interval" in detail or "интервал" in detail
 
 
 class TestChainRateLimiting:
@@ -718,7 +724,9 @@ class TestChainRateLimiting:
         # Immediate second run should fail (rate limited)
         response2 = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/chains/{chain_id}/run")
         assert response2.status_code == 429
-        assert "interval" in response2.json()["detail"].lower()
+        # Check for rate limit message in any language (en: "rate limited", ru: "лимит запусков")
+        detail = response2.json()["detail"].lower()
+        assert "rate" in detail or "limit" in detail or "лимит" in detail
 
 
 class TestChainExecutions:

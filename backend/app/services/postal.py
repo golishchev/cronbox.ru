@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 from datetime import datetime, timezone
+from html import escape
 from uuid import UUID
 
 import httpx
@@ -350,7 +351,14 @@ class PostalService:
         task_url: str | None = None,
     ) -> EmailLog | None:
         """Send a task failure notification email."""
-        subject = f"[CronBox] Task Failed: {task_name}"
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+        safe_workspace_name = escape(workspace_name)
+        safe_task_url = escape(task_url) if task_url else None
+        safe_error_message = escape(error_message[:500]) if error_message else None
+
+        subject = f"[CronBox] Task Failed: {safe_task_name}"
 
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -358,19 +366,19 @@ class PostalService:
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Workspace</td>
-                    <td style="padding: 8px 0;"><strong>{workspace_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_workspace_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Task</td>
-                    <td style="padding: 8px 0;"><strong>{task_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_task_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Type</td>
-                    <td style="padding: 8px 0;">{task_type}</td>
+                    <td style="padding: 8px 0;">{safe_task_type}</td>
                 </tr>
-                {f'<tr><td style="padding: 8px 0; color: #666;">URL</td><td style="padding: 8px 0;">{task_url}</td></tr>' if task_url else ""}
+                {f'<tr><td style="padding: 8px 0; color: #666;">URL</td><td style="padding: 8px 0;">{safe_task_url}</td></tr>' if safe_task_url else ""}
             </table>
-            {f'<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 4px; color: #991b1b;"><strong>Error:</strong> {error_message[:500] if error_message else "Unknown error"}</div>' if error_message else ""}
+            {f'<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 4px; color: #991b1b;"><strong>Error:</strong> {safe_error_message}</div>' if safe_error_message else ""}
             <p style="margin-top: 24px; color: #666; font-size: 12px;">
                 This is an automated notification from CronBox.
             </p>
@@ -414,7 +422,12 @@ This is an automated notification from CronBox.
         workspace_id: UUID,
     ) -> EmailLog | None:
         """Send a task recovery notification email."""
-        subject = f"[CronBox] Task Recovered: {task_name}"
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+        safe_workspace_name = escape(workspace_name)
+
+        subject = f"[CronBox] Task Recovered: {safe_task_name}"
 
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -422,15 +435,15 @@ This is an automated notification from CronBox.
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Workspace</td>
-                    <td style="padding: 8px 0;"><strong>{workspace_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_workspace_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Task</td>
-                    <td style="padding: 8px 0;"><strong>{task_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_task_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Type</td>
-                    <td style="padding: 8px 0;">{task_type}</td>
+                    <td style="padding: 8px 0;">{safe_task_type}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Status</td>
@@ -480,7 +493,12 @@ This is an automated notification from CronBox.
         duration_ms: int | None = None,
     ) -> EmailLog | None:
         """Send a task success notification email."""
-        subject = f"[CronBox] Task Succeeded: {task_name}"
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+        safe_workspace_name = escape(workspace_name)
+
+        subject = f"[CronBox] Task Succeeded: {safe_task_name}"
 
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -488,15 +506,15 @@ This is an automated notification from CronBox.
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Workspace</td>
-                    <td style="padding: 8px 0;"><strong>{workspace_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_workspace_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Task</td>
-                    <td style="padding: 8px 0;"><strong>{task_name}</strong></td>
+                    <td style="padding: 8px 0;"><strong>{safe_task_name}</strong></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; color: #666;">Type</td>
-                    <td style="padding: 8px 0;">{task_type}</td>
+                    <td style="padding: 8px 0;">{safe_task_type}</td>
                 </tr>
                 {f'<tr><td style="padding: 8px 0; color: #666;">Duration</td><td style="padding: 8px 0;">{duration_ms}ms</td></tr>' if duration_ms else ""}
             </table>

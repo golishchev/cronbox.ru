@@ -33,7 +33,7 @@ class TestNotificationSettings:
         assert "webhook_enabled" in data
 
     async def test_update_email_notifications(self, authenticated_client: AsyncClient, workspace):
-        """Test updating email notification settings."""
+        """Test that email notifications are blocked on Free plan."""
         response = await authenticated_client.patch(
             f"/v1/workspaces/{workspace['id']}/notifications",
             json={
@@ -41,13 +41,11 @@ class TestNotificationSettings:
                 "email_addresses": ["notify@example.com"],
             },
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["email_enabled"] is True
-        assert "notify@example.com" in data["email_addresses"]
+        # Free plan doesn't allow email notifications
+        assert response.status_code == 403
 
     async def test_update_telegram_notifications(self, authenticated_client: AsyncClient, workspace):
-        """Test updating Telegram notification settings."""
+        """Test that Telegram notifications are blocked on Free plan."""
         response = await authenticated_client.patch(
             f"/v1/workspaces/{workspace['id']}/notifications",
             json={
@@ -55,13 +53,11 @@ class TestNotificationSettings:
                 "telegram_chat_ids": ["123456789"],
             },
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["telegram_enabled"] is True
-        assert "123456789" in data["telegram_chat_ids"]
+        # Free plan doesn't allow Telegram notifications
+        assert response.status_code == 403
 
     async def test_update_webhook_notifications(self, authenticated_client: AsyncClient, workspace):
-        """Test updating webhook notification settings."""
+        """Test that webhook notifications are blocked on Free plan."""
         response = await authenticated_client.patch(
             f"/v1/workspaces/{workspace['id']}/notifications",
             json={
@@ -70,10 +66,20 @@ class TestNotificationSettings:
                 "webhook_secret": "secret123",
             },
         )
+        # Free plan doesn't allow webhook notifications
+        assert response.status_code == 403
+
+    async def test_update_email_addresses_without_enabling(self, authenticated_client: AsyncClient, workspace):
+        """Test updating email addresses without enabling email notifications (should work)."""
+        response = await authenticated_client.patch(
+            f"/v1/workspaces/{workspace['id']}/notifications",
+            json={
+                "email_addresses": ["notify@example.com"],
+            },
+        )
         assert response.status_code == 200
         data = response.json()
-        assert data["webhook_enabled"] is True
-        assert data["webhook_url"] == "https://example.com/webhooks/cronbox"
+        assert "notify@example.com" in data["email_addresses"]
 
     async def test_update_notification_events(self, authenticated_client: AsyncClient, workspace):
         """Test updating which events trigger notifications."""
@@ -111,74 +117,34 @@ class TestNotificationSettings:
 class TestTestNotifications:
     """Tests for sending test notifications."""
 
-    async def test_send_test_email(self, authenticated_client: AsyncClient, workspace):
-        """Test sending a test email notification."""
-        # First enable email
-        await authenticated_client.patch(
-            f"/v1/workspaces/{workspace['id']}/notifications",
-            json={
-                "email_enabled": True,
-                "email_addresses": ["test@example.com"],
-            },
-        )
-
+    async def test_send_test_email_disabled(self, authenticated_client: AsyncClient, workspace):
+        """Test sending a test email notification when disabled fails."""
+        # Email is not enabled on Free plan
         response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/notifications/test",
             json={"channel": "email"},
         )
-        # Should succeed or fail gracefully if email not configured
-        assert response.status_code in [200, 400, 500, 503]
+        # Should fail because email is not enabled
+        assert response.status_code == 400
 
-    async def test_send_test_telegram(self, authenticated_client: AsyncClient, workspace):
-        """Test sending a test Telegram notification."""
-        # First enable Telegram
-        await authenticated_client.patch(
-            f"/v1/workspaces/{workspace['id']}/notifications",
-            json={
-                "telegram_enabled": True,
-                "telegram_chat_ids": ["123456789"],
-            },
-        )
-
+    async def test_send_test_telegram_disabled(self, authenticated_client: AsyncClient, workspace):
+        """Test sending a test Telegram notification when disabled fails."""
+        # Telegram is not enabled on Free plan
         response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/notifications/test",
             json={"channel": "telegram"},
         )
-        # Should succeed or fail gracefully if Telegram not configured
-        assert response.status_code in [200, 400, 500, 503]
+        # Should fail because Telegram is not enabled
+        assert response.status_code == 400
 
-    async def test_send_test_webhook(self, authenticated_client: AsyncClient, workspace):
-        """Test sending a test webhook notification."""
-        # First enable webhook
-        await authenticated_client.patch(
-            f"/v1/workspaces/{workspace['id']}/notifications",
-            json={
-                "webhook_enabled": True,
-                "webhook_url": "https://httpbin.org/post",
-            },
-        )
-
+    async def test_send_test_webhook_disabled(self, authenticated_client: AsyncClient, workspace):
+        """Test sending a test webhook notification when disabled fails."""
+        # Webhook is not enabled on Free plan
         response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/notifications/test",
             json={"channel": "webhook"},
         )
-        # Should succeed or fail gracefully (500 for network errors)
-        assert response.status_code in [200, 400, 500, 503]
-
-    async def test_send_test_disabled_channel(self, authenticated_client: AsyncClient, workspace):
-        """Test sending test to disabled channel fails."""
-        # Disable all channels
-        await authenticated_client.patch(
-            f"/v1/workspaces/{workspace['id']}/notifications",
-            json={
-                "email_enabled": False,
-            },
-        )
-
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/notifications/test",
-            json={"channel": "email"},
-        )
+        # Should fail because webhook is not enabled
         assert response.status_code == 400
 
     async def test_notifications_unauthorized(self, client: AsyncClient):

@@ -157,6 +157,7 @@ class TestCreateTaskChain:
                 data=data,
                 workspace=mock_workspace,
                 user_plan=mock_plan,
+                lang="en",
                 db=mock_db,
             )
 
@@ -200,6 +201,7 @@ class TestCreateTaskChain:
                     data=data,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
@@ -241,11 +243,12 @@ class TestCreateTaskChain:
                     data=data,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
             assert exc_info.value.status_code == 403
-            assert "Too many steps" in exc_info.value.detail
+            assert "steps limit" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
     async def test_create_cron_chain_no_schedule(self):
@@ -281,6 +284,7 @@ class TestCreateTaskChain:
                     data=data,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
@@ -321,6 +325,7 @@ class TestCreateTaskChain:
                     data=data,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
@@ -361,6 +366,7 @@ class TestCreateTaskChain:
                     data=data,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
@@ -472,6 +478,7 @@ class TestRunTaskChain:
                     chain_id=uuid4(),
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
@@ -504,11 +511,14 @@ class TestRunTaskChain:
                     chain_id=mock_chain.id,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
             assert exc_info.value.status_code == 400
-            assert "inactive" in exc_info.value.detail.lower()
+            # Check for inactive message in any language (en: "inactive", ru: "неактив")
+            detail = exc_info.value.detail.lower()
+            assert "inactive" in detail or "неактив" in detail
 
     @pytest.mark.asyncio
     async def test_run_chain_without_steps(self):
@@ -538,11 +548,14 @@ class TestRunTaskChain:
                     chain_id=mock_chain.id,
                     workspace=mock_workspace,
                     user_plan=mock_plan,
+                    lang="en",
                     db=mock_db,
                 )
 
             assert exc_info.value.status_code == 400
-            assert "no steps" in exc_info.value.detail.lower()
+            # Check for no steps message in any language (en: "no steps", ru: "без шагов")
+            detail = exc_info.value.detail.lower()
+            assert "no steps" in detail or "без шагов" in detail
 
 
 class TestCopyTaskChain:

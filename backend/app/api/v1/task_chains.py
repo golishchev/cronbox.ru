@@ -7,7 +7,7 @@ import pytz
 from croniter import croniter
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserPlan
+from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserLanguage, UserPlan
 from app.db.repositories.chain_executions import ChainExecutionRepository
 from app.db.repositories.task_chains import ChainStepRepository, TaskChainRepository
 from app.db.repositories.workspaces import WorkspaceRepository
@@ -28,6 +28,7 @@ from app.schemas.task_chain import (
     TaskChainResponse,
     TaskChainUpdate,
 )
+from app.services.i18n import t
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/chains", tags=["Task Chains"])
 
@@ -98,6 +99,7 @@ async def create_task_chain(
     data: TaskChainCreate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Create a new task chain with optional steps."""
@@ -109,22 +111,30 @@ async def create_task_chain(
     if user_plan.max_task_chains == 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Task Chains are not available on your plan. Please upgrade.",
+            detail=t("errors.task_chains_not_available", lang),
         )
 
     current_count = await chain_repo.count_by_workspace(workspace.id)
     if current_count >= user_plan.max_task_chains:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Task chain limit reached. Your plan allows {user_plan.max_task_chains} chain(s)",
+            detail=t("errors.task_chain_limit", lang, max_chains=user_plan.max_task_chains),
         )
 
     # Check step count limit
     if len(data.steps) > user_plan.max_chain_steps:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Too many steps. Your plan allows {user_plan.max_chain_steps} step(s) per chain",
+            detail=t("errors.chain_steps_limit", lang, max_steps=user_plan.max_chain_steps),
         )
+
+    # Check if any step uses variable substitution (extract_variables)
+    for step in data.steps:
+        if step.extract_variables and not user_plan.chain_variable_substitution:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=t("errors.chain_variable_substitution_not_available", lang),
+            )
 
     # Validate cron schedule if trigger type is cron
     next_run_at = None
@@ -138,7 +148,7 @@ async def create_task_chain(
         if interval_minutes < user_plan.min_chain_interval_minutes:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Chain interval too frequent. Your plan requires minimum {user_plan.min_chain_interval_minutes} minute(s) between runs",
+                detail=t("errors.chain_interval_too_frequent", lang, min_interval=user_plan.min_chain_interval_minutes),
             )
         next_run_at = calculate_next_run(data.schedule, data.timezone)
 
@@ -242,6 +252,7 @@ async def update_task_chain(
     data: TaskChainUpdate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Update a task chain."""
@@ -268,7 +279,7 @@ async def update_task_chain(
             if interval_minutes < user_plan.min_chain_interval_minutes:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Chain interval too frequent. Your plan requires minimum {user_plan.min_chain_interval_minutes} minute(s) between runs",
+                    detail=t("errors.chain_interval_too_frequent", lang, min_interval=user_plan.min_chain_interval_minutes),
                 )
             update_data["next_run_at"] = calculate_next_run(schedule, timezone)
     elif trigger_type == TriggerType.DELAYED:
@@ -318,6 +329,7 @@ async def run_task_chain(
     chain_id: UUID,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
     data: ChainRunRequest | None = None,
 ):
@@ -328,19 +340,19 @@ async def run_task_chain(
     if chain is None or chain.workspace_id != workspace.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task chain not found",
+            detail=t("errors.task_chain_not_found", lang),
         )
 
     if not chain.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot run inactive chain",
+            detail=t("errors.cannot_run_inactive_chain", lang),
         )
 
     if not chain.steps:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot run chain with no steps",
+            detail=t("errors.cannot_run_chain_no_steps", lang),
         )
 
     # Check rate limit based on plan
@@ -355,7 +367,7 @@ async def run_task_chain(
         if time_since_last_run < min_interval:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Chain interval too frequent. Your plan requires minimum {user_plan.min_chain_interval_minutes} minute(s) between runs",
+                detail=t("errors.chain_run_rate_limited", lang, min_interval=user_plan.min_chain_interval_minutes),
             )
 
     # Update last_run_at to prevent rapid re-runs (update before enqueue to prevent race)
@@ -521,6 +533,7 @@ async def create_chain_step(
     data: ChainStepCreate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Add a step to a task chain."""
@@ -539,7 +552,14 @@ async def create_chain_step(
     if current_count >= user_plan.max_chain_steps:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Step limit reached. Your plan allows {user_plan.max_chain_steps} step(s) per chain",
+            detail=t("errors.chain_steps_limit", lang, max_steps=user_plan.max_chain_steps),
+        )
+
+    # Check variable substitution feature
+    if data.extract_variables and not user_plan.chain_variable_substitution:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.chain_variable_substitution_not_available", lang),
         )
 
     # Get max step order and append at end if step_order not specified correctly
@@ -611,6 +631,8 @@ async def update_chain_step(
     step_id: UUID,
     data: ChainStepUpdate,
     workspace: ActiveSubscriptionWorkspace,
+    user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Update a chain step."""
@@ -632,6 +654,14 @@ async def update_chain_step(
         )
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # Check variable substitution feature if being updated
+    if "extract_variables" in update_data and update_data["extract_variables"]:
+        if not user_plan.chain_variable_substitution:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=t("errors.chain_variable_substitution_not_available", lang),
+            )
 
     # Convert HttpUrl to string if present
     if "url" in update_data and update_data["url"] is not None:

@@ -1,11 +1,13 @@
 """Notification settings API endpoints."""
 
+from html import escape
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db, get_workspace
+from app.api.deps import get_current_user, get_db, get_user_plan, get_workspace
+from app.models.plan import Plan
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.notification_settings import (
@@ -14,7 +16,7 @@ from app.schemas.notification_settings import (
     TestNotificationRequest,
 )
 from app.services.email import email_service
-from app.services.i18n import get_i18n
+from app.services.i18n import get_i18n, t
 from app.services.notifications import notification_service
 from app.services.telegram import telegram_service
 
@@ -35,12 +37,36 @@ async def get_notification_settings(
 async def update_notification_settings(
     workspace: Annotated[Workspace, Depends(get_workspace)],
     data: NotificationSettingsUpdate,
+    user_plan: Annotated[Plan, Depends(get_user_plan)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Update notification settings for a workspace."""
+    lang = current_user.preferred_language or "en"
+
+    # Check plan limits for notification features
+    update_data = data.model_dump(exclude_unset=True)
+
+    if update_data.get("telegram_enabled") and not user_plan.telegram_notifications:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.telegram_notifications_not_available", lang),
+        )
+
+    if update_data.get("email_enabled") and not user_plan.email_notifications:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.email_notifications_not_available", lang),
+        )
+
+    if update_data.get("webhook_enabled") and not user_plan.webhook_callbacks:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.webhook_notifications_not_available", lang),
+        )
+
     settings = await notification_service.get_or_create_settings(db, workspace.id)
 
-    update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(settings, field, value)
 
@@ -73,9 +99,11 @@ async def send_test_notification(
             )
 
         success = False
+        # Escape workspace name to prevent HTML injection in Telegram messages
+        safe_workspace_name = escape(workspace.name)
         telegram_text = (
             f"<b>{i18n.t('notifications.test.telegram_title')}</b>\n\n"
-            f"{i18n.t('notifications.test.telegram_body', workspace_name=workspace.name)}"
+            f"{i18n.t('notifications.test.telegram_body', workspace_name=safe_workspace_name)}"
         )
         for chat_id in settings.telegram_chat_ids:
             result = await telegram_service.send_message(
@@ -98,13 +126,15 @@ async def send_test_notification(
                 detail="Email notifications not configured",
             )
 
+        # Escape workspace name to prevent HTML injection in emails
+        safe_workspace_name = escape(workspace.name)
         success = await email_service.send_email(
             to=settings.email_addresses,
-            subject=i18n.t("notifications.test.email_subject", workspace_name=workspace.name),
+            subject=i18n.t("notifications.test.email_subject", workspace_name=safe_workspace_name),
             html=f"""
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>{i18n.t("notifications.test.email_title")}</h2>
-                <p>{i18n.t("notifications.test.email_body", workspace_name=workspace.name)}</p>
+                <p>{i18n.t("notifications.test.email_body", workspace_name=safe_workspace_name)}</p>
                 <p>{i18n.t("notifications.test.email_success")}</p>
             </div>
             """,

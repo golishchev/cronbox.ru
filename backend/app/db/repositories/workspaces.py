@@ -114,3 +114,21 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_all_workspace_ids_grouped_by_owner(self) -> list[tuple[UUID, list[UUID]]]:
+        """Get all workspace IDs grouped by owner_id for cleanup operations.
+
+        Returns list of (owner_id, [workspace_ids]) tuples.
+        """
+        stmt = select(Workspace.owner_id, Workspace.id).order_by(Workspace.owner_id)
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        # Group by owner_id
+        grouped: dict[UUID, list[UUID]] = {}
+        for owner_id, workspace_id in rows:
+            if owner_id not in grouped:
+                grouped[owner_id] = []
+            grouped[owner_id].append(workspace_id)
+
+        return list(grouped.items())

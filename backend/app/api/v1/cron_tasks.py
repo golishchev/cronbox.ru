@@ -5,7 +5,7 @@ import pytz
 from croniter import croniter
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserPlan
+from app.api.deps import DB, ActiveSubscriptionWorkspace, CurrentWorkspace, UserLanguage, UserPlan
 from app.db.repositories.cron_tasks import CronTaskRepository
 from app.db.repositories.workspaces import WorkspaceRepository
 from app.schemas.cron_task import (
@@ -15,6 +15,7 @@ from app.schemas.cron_task import (
     CronTaskUpdate,
     PaginationMeta,
 )
+from app.services.i18n import t
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/cron", tags=["Cron Tasks"])
 
@@ -85,6 +86,7 @@ async def create_cron_task(
     data: CronTaskCreate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Create a new cron task."""
@@ -96,7 +98,7 @@ async def create_cron_task(
     if current_count >= user_plan.max_cron_tasks:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cron task limit reached. Your plan allows {user_plan.max_cron_tasks} cron task(s)",
+            detail=t("errors.cron_task_limit", lang, max_tasks=user_plan.max_cron_tasks),
         )
 
     # Check minimum interval
@@ -104,7 +106,21 @@ async def create_cron_task(
     if interval_minutes < user_plan.min_cron_interval_minutes:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+            detail=t("errors.cron_interval_too_frequent", lang, min_interval=user_plan.min_cron_interval_minutes),
+        )
+
+    # Check retry feature
+    if data.retry_count and data.retry_count > 0 and not user_plan.retry_on_failure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.retry_not_available", lang),
+        )
+
+    # Check overlap prevention feature
+    if data.overlap_policy and data.overlap_policy != "allow" and not user_plan.overlap_prevention_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.overlap_prevention_not_available", lang),
         )
 
     # Calculate next run time
@@ -155,6 +171,7 @@ async def update_cron_task(
     data: CronTaskUpdate,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Update a cron task."""
@@ -164,10 +181,26 @@ async def update_cron_task(
     if task is None or task.workspace_id != workspace.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cron task not found",
+            detail=t("errors.cron_task_not_found", lang),
         )
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # Check retry feature if being updated
+    if "retry_count" in update_data and update_data["retry_count"] and update_data["retry_count"] > 0:
+        if not user_plan.retry_on_failure:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=t("errors.retry_not_available", lang),
+            )
+
+    # Check overlap prevention feature if being updated
+    if "overlap_policy" in update_data and update_data["overlap_policy"] and update_data["overlap_policy"] != "allow":
+        if not user_plan.overlap_prevention_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=t("errors.overlap_prevention_not_available", lang),
+            )
 
     # If schedule or timezone changed, recalculate next_run_at and validate interval
     if "schedule" in update_data or "timezone" in update_data:
@@ -180,7 +213,7 @@ async def update_cron_task(
         if interval_minutes < user_plan.min_cron_interval_minutes:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+                detail=t("errors.cron_interval_too_frequent", lang, min_interval=user_plan.min_cron_interval_minutes),
             )
 
     # Convert HttpUrl to string if present
@@ -342,6 +375,7 @@ async def copy_cron_task(
     task_id: UUID,
     workspace: ActiveSubscriptionWorkspace,
     user_plan: UserPlan,
+    lang: UserLanguage,
     db: DB,
 ):
     """Create a copy of an existing cron task.
@@ -357,7 +391,7 @@ async def copy_cron_task(
     if original_task is None or original_task.workspace_id != workspace.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cron task not found",
+            detail=t("errors.cron_task_not_found", lang),
         )
 
     # Check plan limits
@@ -365,7 +399,7 @@ async def copy_cron_task(
     if current_count >= user_plan.max_cron_tasks:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cron task limit reached. Your plan allows {user_plan.max_cron_tasks} cron task(s)",
+            detail=t("errors.cron_task_limit", lang, max_tasks=user_plan.max_cron_tasks),
         )
 
     # Check minimum interval
@@ -373,7 +407,23 @@ async def copy_cron_task(
     if interval_minutes < user_plan.min_cron_interval_minutes:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Cron interval too frequent. Your plan requires minimum {user_plan.min_cron_interval_minutes} minute(s) between runs",
+            detail=t("errors.cron_interval_too_frequent", lang, min_interval=user_plan.min_cron_interval_minutes),
+        )
+
+    # Check retry feature
+    if original_task.retry_count and original_task.retry_count > 0 and not user_plan.retry_on_failure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.cannot_copy_task_with_retry", lang),
+        )
+
+    # Check overlap prevention feature
+    from app.models.cron_task import OverlapPolicy
+
+    if original_task.overlap_policy and original_task.overlap_policy != OverlapPolicy.ALLOW and not user_plan.overlap_prevention_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.cannot_copy_task_with_overlap", lang),
         )
 
     # Calculate next run time

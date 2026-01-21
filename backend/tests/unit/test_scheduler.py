@@ -411,3 +411,145 @@ class TestSubscriptionChecks:
                     mock_billing.get_subscriptions_for_renewal.assert_called_once()
                     mock_billing.check_expired_subscriptions.assert_called_once()
                     assert mock_billing.get_expiring_subscriptions.call_count == 2  # 7 days and 1 day
+
+
+class TestCleanupOldExecutions:
+    """Tests for old execution history cleanup."""
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_executions_stops_when_not_running(self):
+        """Test cleanup stops when scheduler not running."""
+        scheduler = TaskScheduler()
+        scheduler.running = False
+
+        # Should complete immediately
+        await scheduler._cleanup_old_executions()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_executions_deletes_based_on_plan(self):
+        """Test cleanup deletes executions based on plan retention days."""
+        scheduler = TaskScheduler()
+        scheduler.running = True
+
+        owner_id = uuid4()
+        workspace_id = uuid4()
+
+        # Mock plan with 7 days retention
+        mock_plan = MagicMock()
+        mock_plan.max_execution_history_days = 7
+
+        # Mock workspace repository
+        mock_workspace_repo = AsyncMock()
+        mock_workspace_repo.get_all_workspace_ids_grouped_by_owner.return_value = [
+            (owner_id, [workspace_id])
+        ]
+
+        # Mock execution repository
+        mock_execution_repo = AsyncMock()
+        mock_execution_repo.cleanup_old_executions.return_value = 5
+
+        # Mock chain execution repository
+        mock_chain_repo = AsyncMock()
+        mock_chain_repo.delete_old_executions.return_value = 3
+
+        async def stop_scheduler(*args, **kwargs):
+            scheduler.running = False
+
+        with patch("app.workers.scheduler.async_session_factory") as mock_factory:
+            mock_session = AsyncMock()
+            mock_factory.return_value.__aenter__.return_value = mock_session
+
+            with patch(
+                "app.db.repositories.workspaces.WorkspaceRepository",
+                return_value=mock_workspace_repo,
+            ):
+                with patch(
+                    "app.db.repositories.executions.ExecutionRepository",
+                    return_value=mock_execution_repo,
+                ):
+                    with patch(
+                        "app.db.repositories.chain_executions.ChainExecutionRepository",
+                        return_value=mock_chain_repo,
+                    ):
+                        with patch(
+                            "app.services.billing.billing_service"
+                        ) as mock_billing:
+                            mock_billing.get_user_plan = AsyncMock(return_value=mock_plan)
+
+                            with patch("asyncio.sleep", side_effect=stop_scheduler):
+                                await scheduler._cleanup_old_executions()
+
+        # Should have cleaned up executions
+        mock_execution_repo.cleanup_old_executions.assert_called_once()
+        mock_chain_repo.delete_old_executions.assert_called_once_with(workspace_id, 7)
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_executions_handles_error(self):
+        """Test cleanup handles errors gracefully."""
+        scheduler = TaskScheduler()
+        scheduler.running = True
+
+        async def stop_scheduler(*args, **kwargs):
+            scheduler.running = False
+
+        with patch("app.workers.scheduler.async_session_factory") as mock_factory:
+            mock_factory.return_value.__aenter__.side_effect = Exception("DB error")
+
+            with patch("asyncio.sleep", side_effect=stop_scheduler):
+                # Should not raise
+                await scheduler._cleanup_old_executions()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_executions_multiple_workspaces(self):
+        """Test cleanup handles multiple workspaces for same owner."""
+        scheduler = TaskScheduler()
+        scheduler.running = True
+
+        owner_id = uuid4()
+        workspace_id_1 = uuid4()
+        workspace_id_2 = uuid4()
+
+        mock_plan = MagicMock()
+        mock_plan.max_execution_history_days = 30
+
+        mock_workspace_repo = AsyncMock()
+        mock_workspace_repo.get_all_workspace_ids_grouped_by_owner.return_value = [
+            (owner_id, [workspace_id_1, workspace_id_2])
+        ]
+
+        mock_execution_repo = AsyncMock()
+        mock_execution_repo.cleanup_old_executions.return_value = 10
+
+        mock_chain_repo = AsyncMock()
+        mock_chain_repo.delete_old_executions.return_value = 5
+
+        async def stop_scheduler(*args, **kwargs):
+            scheduler.running = False
+
+        with patch("app.workers.scheduler.async_session_factory") as mock_factory:
+            mock_session = AsyncMock()
+            mock_factory.return_value.__aenter__.return_value = mock_session
+
+            with patch(
+                "app.db.repositories.workspaces.WorkspaceRepository",
+                return_value=mock_workspace_repo,
+            ):
+                with patch(
+                    "app.db.repositories.executions.ExecutionRepository",
+                    return_value=mock_execution_repo,
+                ):
+                    with patch(
+                        "app.db.repositories.chain_executions.ChainExecutionRepository",
+                        return_value=mock_chain_repo,
+                    ):
+                        with patch(
+                            "app.services.billing.billing_service"
+                        ) as mock_billing:
+                            mock_billing.get_user_plan = AsyncMock(return_value=mock_plan)
+
+                            with patch("asyncio.sleep", side_effect=stop_scheduler):
+                                await scheduler._cleanup_old_executions()
+
+        # Should have called cleanup for both workspaces
+        assert mock_execution_repo.cleanup_old_executions.call_count == 2
+        assert mock_chain_repo.delete_old_executions.call_count == 2

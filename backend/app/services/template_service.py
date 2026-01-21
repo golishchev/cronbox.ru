@@ -1,5 +1,6 @@
 """Template service for multilingual notification templates."""
 
+from html import escape
 from uuid import UUID
 
 import structlog
@@ -365,13 +366,19 @@ class TemplateService:
         """
         Render template with variables using str.format().
         Returns (subject, body). Subject is None for Telegram.
+        All string variables are HTML-escaped to prevent injection attacks.
         """
         if template is None:
             return None, ""
 
+        # Escape all string variables to prevent HTML injection
+        safe_variables = {
+            k: escape(str(v)) if isinstance(v, str) else v for k, v in variables.items()
+        }
+
         # Render body
         try:
-            body = template.body.format(**variables)
+            body = template.body.format(**safe_variables)
         except KeyError as e:
             logger.warning(
                 "Missing variable in template",
@@ -384,7 +391,7 @@ class TemplateService:
         subject = None
         if template.subject:
             try:
-                subject = template.subject.format(**variables)
+                subject = template.subject.format(**safe_variables)
             except KeyError as e:
                 logger.warning(
                     "Missing variable in template subject",

@@ -118,6 +118,22 @@
     "worker_not_found": "Worker not found",
     "worker_limit_reached": "Worker limit reached. Your plan allows {max_workers} worker(s)",
     "execution_not_found": "Execution not found",
-    "account_disabled": "Account is disabled"
+    "account_disabled": "Account is disabled",
+    "retry_not_available": "Retry on failure is not available on your plan. Please upgrade to use this feature.",
+    "overlap_prevention_not_available": "Overlap prevention is not available on your plan. Please upgrade to use this feature.",
+    "cannot_copy_task_with_retry": "Cannot copy task with retry settings. Retry on failure is not available on your plan.",
+    "cannot_copy_task_with_overlap": "Cannot copy task with overlap prevention settings. This feature is not available on your plan.",
+    "telegram_notifications_not_available": "Telegram notifications are not available on your plan. Please upgrade to use this feature.",
+    "email_notifications_not_available": "Email notifications are not available on your plan. Please upgrade to use this feature.",
+    "webhook_notifications_not_available": "Webhook notifications are not available on your plan. Please upgrade to use this feature.",
+    "chain_variable_substitution_not_available": "Variable substitution in chains is not available on your plan. Please upgrade to use this feature.",
+    "task_chain_limit": "Task chain limit reached. Your plan allows {max_chains} chain(s)",
+    "task_chains_not_available": "Task chains are not available on your plan. Please upgrade to use this feature.",
+    "chain_steps_limit": "Chain steps limit reached. Your plan allows {max_steps} step(s) per chain",
+    "chain_interval_too_frequent": "Chain interval too frequent. Your plan requires minimum {min_interval} minute(s) between runs",
+    "task_chain_not_found": "Task chain not found",
+    "cannot_run_inactive_chain": "Cannot run inactive chain",
+    "cannot_run_chain_no_steps": "Cannot run chain with no steps",
+    "chain_run_rate_limited": "Chain run rate limited. Your plan requires minimum {min_interval} minute(s) between runs"
   }
 }

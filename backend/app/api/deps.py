@@ -204,6 +204,13 @@ async def require_active_subscription(
     )
 
 
+async def get_user_language(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> str:
+    """Get current user's preferred language."""
+    return current_user.preferred_language or "en"
+
+
 # Type aliases for dependency injection
 CurrentUser = Annotated[User, Depends(get_current_user)]
 VerifiedUser = Annotated[User, Depends(get_verified_user)]
@@ -212,4 +219,5 @@ CurrentWorkspace = Annotated[Workspace, Depends(get_workspace)]
 ActiveSubscriptionWorkspace = Annotated[Workspace, Depends(require_active_subscription)]
 CurrentWorker = Annotated[Worker, Depends(get_current_worker)]
 UserPlan = Annotated[Plan, Depends(get_user_plan)]
+UserLanguage = Annotated[str, Depends(get_user_language)]
 DB = Annotated[AsyncSession, Depends(get_db)]

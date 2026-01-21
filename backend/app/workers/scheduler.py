@@ -56,6 +56,7 @@ class TaskScheduler:
             self._check_subscriptions(),
             self._check_pending_payments(),
             self._cleanup_stale_instances(),
+            self._cleanup_old_executions(),
             self._process_task_queue(),
         )
 
@@ -614,6 +615,72 @@ class TaskScheduler:
                 logger.error("Error cleaning up stale instances", error=str(e))
 
             await asyncio.sleep(300)  # Every 5 minutes
+
+    async def _cleanup_old_executions(self):
+        """Cleanup old execution history based on plan limits every hour."""
+        from datetime import timedelta
+
+        from app.db.repositories.chain_executions import ChainExecutionRepository
+        from app.db.repositories.executions import ExecutionRepository
+        from app.db.repositories.workspaces import WorkspaceRepository
+        from app.services.billing import billing_service
+
+        while self.running:
+            try:
+                async with async_session_factory() as db:
+                    workspace_repo = WorkspaceRepository(db)
+                    execution_repo = ExecutionRepository(db)
+                    chain_execution_repo = ChainExecutionRepository(db)
+
+                    # Get all workspaces grouped by owner
+                    owner_workspaces = await workspace_repo.get_all_workspace_ids_grouped_by_owner()
+
+                    total_deleted = 0
+                    total_chain_deleted = 0
+
+                    for owner_id, workspace_ids in owner_workspaces:
+                        try:
+                            # Get owner's plan
+                            plan = await billing_service.get_user_plan(db, owner_id)
+                            retention_days = plan.max_execution_history_days
+
+                            # Calculate cutoff date
+                            cutoff = datetime.utcnow() - timedelta(days=retention_days)
+
+                            # Delete old executions for each workspace
+                            for workspace_id in workspace_ids:
+                                deleted = await execution_repo.cleanup_old_executions(
+                                    workspace_id, cutoff
+                                )
+                                total_deleted += deleted
+
+                                chain_deleted = await chain_execution_repo.delete_old_executions(
+                                    workspace_id, retention_days
+                                )
+                                total_chain_deleted += chain_deleted
+
+                        except Exception as e:
+                            logger.error(
+                                "Error cleaning up executions for owner",
+                                owner_id=str(owner_id),
+                                error=str(e),
+                            )
+                            continue
+
+                    await db.commit()
+
+                    if total_deleted > 0 or total_chain_deleted > 0:
+                        logger.info(
+                            "Cleaned up old executions",
+                            executions_deleted=total_deleted,
+                            chain_executions_deleted=total_chain_deleted,
+                        )
+
+            except Exception as e:
+                logger.error("Error in execution cleanup job", error=str(e))
+
+            # Run every hour
+            await asyncio.sleep(3600)
 
     async def _process_task_queue(self):
         """Process queued tasks when slots become available every 10 seconds."""

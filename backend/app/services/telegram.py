@@ -1,5 +1,7 @@
 """Telegram notification service."""
 
+from html import escape
+
 import httpx
 import structlog
 
@@ -56,14 +58,20 @@ class TelegramService:
         workspace_name: str,
     ) -> bool:
         """Send a task failure notification."""
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_workspace_name = escape(workspace_name)
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+
         text = (
             f"<b>Task Failed</b>\n\n"
-            f"<b>Workspace:</b> {workspace_name}\n"
-            f"<b>Task:</b> {task_name}\n"
-            f"<b>Type:</b> {task_type}\n"
+            f"<b>Workspace:</b> {safe_workspace_name}\n"
+            f"<b>Task:</b> {safe_task_name}\n"
+            f"<b>Type:</b> {safe_task_type}\n"
         )
         if error_message:
-            text += f"<b>Error:</b> {error_message[:500]}\n"
+            safe_error_message = escape(error_message[:500])
+            text += f"<b>Error:</b> {safe_error_message}\n"
 
         return await self.send_message(chat_id, text)
 
@@ -75,11 +83,16 @@ class TelegramService:
         workspace_name: str,
     ) -> bool:
         """Send a task recovery notification."""
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_workspace_name = escape(workspace_name)
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+
         text = (
             f"<b>Task Recovered</b>\n\n"
-            f"<b>Workspace:</b> {workspace_name}\n"
-            f"<b>Task:</b> {task_name}\n"
-            f"<b>Type:</b> {task_type}\n"
+            f"<b>Workspace:</b> {safe_workspace_name}\n"
+            f"<b>Task:</b> {safe_task_name}\n"
+            f"<b>Type:</b> {safe_task_type}\n"
             f"<b>Status:</b> Back to normal"
         )
         return await self.send_message(chat_id, text)
@@ -93,11 +106,16 @@ class TelegramService:
         duration_ms: int | None,
     ) -> bool:
         """Send a task success notification."""
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_workspace_name = escape(workspace_name)
+        safe_task_name = escape(task_name)
+        safe_task_type = escape(task_type)
+
         text = (
             f"<b>Task Succeeded</b>\n\n"
-            f"<b>Workspace:</b> {workspace_name}\n"
-            f"<b>Task:</b> {task_name}\n"
-            f"<b>Type:</b> {task_type}\n"
+            f"<b>Workspace:</b> {safe_workspace_name}\n"
+            f"<b>Task:</b> {safe_task_name}\n"
+            f"<b>Type:</b> {safe_task_type}\n"
         )
         if duration_ms:
             text += f"<b>Duration:</b> {duration_ms}ms\n"
@@ -112,11 +130,15 @@ class TelegramService:
         expiration_date: str,
     ) -> bool:
         """Send a subscription expiring notification."""
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_workspace_name = escape(workspace_name)
+        safe_expiration_date = escape(expiration_date)
+
         text = (
             f"<b>Subscription Expiring Soon</b>\n\n"
-            f"<b>Workspace:</b> {workspace_name}\n"
+            f"<b>Workspace:</b> {safe_workspace_name}\n"
             f"<b>Expires in:</b> {days_remaining} day(s)\n"
-            f"<b>Expiration date:</b> {expiration_date}\n\n"
+            f"<b>Expiration date:</b> {safe_expiration_date}\n\n"
             f"Renew your subscription to avoid service interruption."
         )
         return await self.send_message(chat_id, text)
@@ -128,9 +150,12 @@ class TelegramService:
         tasks_paused: int,
     ) -> bool:
         """Send a subscription expired notification."""
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_workspace_name = escape(workspace_name)
+
         text = (
             f"<b>Subscription Expired</b>\n\n"
-            f"<b>Workspace:</b> {workspace_name}\n"
+            f"<b>Workspace:</b> {safe_workspace_name}\n"
             f"Your subscription has expired and workspace has been downgraded to the free plan.\n"
         )
         if tasks_paused > 0:
@@ -151,11 +176,16 @@ class TelegramService:
             logger.debug("Admin Telegram ID not configured, skipping notification")
             return False
 
+        # Escape user-controlled inputs to prevent HTML injection
+        safe_user_email = escape(user_email)
+        safe_user_name = escape(user_name)
+        safe_registration_method = escape(registration_method)
+
         text = (
             f"<b>New User Registered</b>\n\n"
-            f"<b>Email:</b> {user_email}\n"
-            f"<b>Name:</b> {user_name}\n"
-            f"<b>Method:</b> {registration_method}"
+            f"<b>Email:</b> {safe_user_email}\n"
+            f"<b>Name:</b> {safe_user_name}\n"
+            f"<b>Method:</b> {safe_registration_method}"
         )
         return await self.send_message(admin_chat_id, text)
 

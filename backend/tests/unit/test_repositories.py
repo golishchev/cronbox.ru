@@ -567,6 +567,59 @@ class TestWorkspaceRepository:
 
         assert exists is False
 
+    @pytest.mark.asyncio
+    async def test_get_all_workspace_ids_grouped_by_owner(self):
+        """Test getting all workspace IDs grouped by owner."""
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        mock_db = AsyncMock()
+        repo = WorkspaceRepository(mock_db)
+
+        owner_id_1 = uuid4()
+        owner_id_2 = uuid4()
+        workspace_id_1 = uuid4()
+        workspace_id_2 = uuid4()
+        workspace_id_3 = uuid4()
+
+        # Mock result: owner_1 has 2 workspaces, owner_2 has 1
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
+            (owner_id_1, workspace_id_1),
+            (owner_id_1, workspace_id_2),
+            (owner_id_2, workspace_id_3),
+        ]
+        mock_db.execute.return_value = mock_result
+
+        result = await repo.get_all_workspace_ids_grouped_by_owner()
+
+        assert len(result) == 2
+        # Find owner_1's entry
+        owner_1_entry = next(r for r in result if r[0] == owner_id_1)
+        assert len(owner_1_entry[1]) == 2
+        assert workspace_id_1 in owner_1_entry[1]
+        assert workspace_id_2 in owner_1_entry[1]
+
+        # Find owner_2's entry
+        owner_2_entry = next(r for r in result if r[0] == owner_id_2)
+        assert len(owner_2_entry[1]) == 1
+        assert workspace_id_3 in owner_2_entry[1]
+
+    @pytest.mark.asyncio
+    async def test_get_all_workspace_ids_grouped_by_owner_empty(self):
+        """Test getting workspaces when none exist."""
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        mock_db = AsyncMock()
+        repo = WorkspaceRepository(mock_db)
+
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db.execute.return_value = mock_result
+
+        result = await repo.get_all_workspace_ids_grouped_by_owner()
+
+        assert len(result) == 0
+
 
 class TestUserRepository:
     """Tests for UserRepository."""
