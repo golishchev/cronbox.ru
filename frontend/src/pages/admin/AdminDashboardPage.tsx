@@ -122,7 +122,7 @@ export function AdminDashboardPage({ onNavigate }: AdminDashboardPageProps) {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.active_subscriptions}</div>
+              <div className="text-2xl font-bold">{stats.paid_subscriptions}</div>
               <p className="text-xs text-muted-foreground">
                 {t('admin.paidPlans')}
               </p>

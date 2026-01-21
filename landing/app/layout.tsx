@@ -82,12 +82,21 @@ export const metadata: Metadata = {
     title: 'CronBox — Платформа мониторинга и автоматизации',
     description:
       'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'CronBox — Платформа мониторинга и автоматизации',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'CronBox — Платформа мониторинга и автоматизации',
     description:
       'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
+    images: ['/opengraph-image'],
   },
   robots: {
     index: true,

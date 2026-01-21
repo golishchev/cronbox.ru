@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Тарифы CronBox',
-    description: 'Простые и прозрачные тарифы для планирования HTTP-запросов',
+    description: 'Выберите подходящий тариф для мониторинга и автоматизации. Бесплатный план для старта.',
     url: 'https://cronbox.ru/pricing',
   },
 }
