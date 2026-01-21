@@ -396,3 +396,297 @@ class TestTaskStatus:
         assert "running" in statuses
         assert "success" in statuses
         assert "failed" in statuses
+
+
+class TestProtocolType:
+    """Tests for ProtocolType enum and protocol-aware schema validation."""
+
+    def test_all_protocol_types(self):
+        """Test all protocol types are defined."""
+        from app.models.cron_task import ProtocolType
+
+        protocol_types = [p.value for p in ProtocolType]
+
+        assert "http" in protocol_types
+        assert "icmp" in protocol_types
+        assert "tcp" in protocol_types
+
+    def test_default_protocol_is_http(self):
+        """Test default protocol type is HTTP."""
+        task = CronTaskCreate(
+            name="Test Task",
+            url="https://api.example.com",
+            schedule="* * * * *",
+        )
+
+        from app.models.cron_task import ProtocolType
+
+        assert task.protocol_type == ProtocolType.HTTP
+
+    def test_http_protocol_requires_url(self):
+        """Test HTTP protocol requires URL."""
+        from app.models.cron_task import ProtocolType
+
+        with pytest.raises(ValidationError) as exc:
+            CronTaskCreate(
+                name="Test Task",
+                protocol_type=ProtocolType.HTTP,
+                schedule="* * * * *",
+            )
+        assert "url is required for HTTP protocol" in str(exc.value)
+
+    def test_icmp_protocol_requires_host(self):
+        """Test ICMP protocol requires host."""
+        from app.models.cron_task import ProtocolType
+
+        with pytest.raises(ValidationError) as exc:
+            CronTaskCreate(
+                name="Test Task",
+                protocol_type=ProtocolType.ICMP,
+                schedule="* * * * *",
+            )
+        assert "host is required for ICMP protocol" in str(exc.value)
+
+    def test_tcp_protocol_requires_host_and_port(self):
+        """Test TCP protocol requires host and port."""
+        from app.models.cron_task import ProtocolType
+
+        # Missing host
+        with pytest.raises(ValidationError) as exc:
+            CronTaskCreate(
+                name="Test Task",
+                protocol_type=ProtocolType.TCP,
+                port=443,
+                schedule="* * * * *",
+            )
+        assert "host is required for TCP protocol" in str(exc.value)
+
+        # Missing port
+        with pytest.raises(ValidationError) as exc:
+            CronTaskCreate(
+                name="Test Task",
+                protocol_type=ProtocolType.TCP,
+                host="example.com",
+                schedule="* * * * *",
+            )
+        assert "port is required for TCP protocol" in str(exc.value)
+
+    def test_valid_icmp_task(self):
+        """Test creating valid ICMP task."""
+        from app.models.cron_task import ProtocolType
+
+        task = CronTaskCreate(
+            name="Ping Test",
+            protocol_type=ProtocolType.ICMP,
+            host="example.com",
+            icmp_count=5,
+            schedule="*/5 * * * *",
+        )
+
+        assert task.protocol_type == ProtocolType.ICMP
+        assert task.host == "example.com"
+        assert task.icmp_count == 5
+
+    def test_valid_tcp_task(self):
+        """Test creating valid TCP task."""
+        from app.models.cron_task import ProtocolType
+
+        task = CronTaskCreate(
+            name="Port Check",
+            protocol_type=ProtocolType.TCP,
+            host="db.example.com",
+            port=5432,
+            schedule="*/5 * * * *",
+        )
+
+        assert task.protocol_type == ProtocolType.TCP
+        assert task.host == "db.example.com"
+        assert task.port == 5432
+
+    def test_icmp_count_bounds(self):
+        """Test icmp_count bounds validation."""
+        from app.models.cron_task import ProtocolType
+
+        # Valid min
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.ICMP,
+            host="example.com",
+            icmp_count=1,
+            schedule="* * * * *",
+        )
+        assert task.icmp_count == 1
+
+        # Valid max
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.ICMP,
+            host="example.com",
+            icmp_count=10,
+            schedule="* * * * *",
+        )
+        assert task.icmp_count == 10
+
+        # Invalid below min
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.ICMP,
+                host="example.com",
+                icmp_count=0,
+                schedule="* * * * *",
+            )
+
+        # Invalid above max
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.ICMP,
+                host="example.com",
+                icmp_count=11,
+                schedule="* * * * *",
+            )
+
+    def test_port_bounds(self):
+        """Test port bounds validation."""
+        from app.models.cron_task import ProtocolType
+
+        # Valid min
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.TCP,
+            host="example.com",
+            port=1,
+            schedule="* * * * *",
+        )
+        assert task.port == 1
+
+        # Valid max
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.TCP,
+            host="example.com",
+            port=65535,
+            schedule="* * * * *",
+        )
+        assert task.port == 65535
+
+        # Invalid below min
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.TCP,
+                host="example.com",
+                port=0,
+                schedule="* * * * *",
+            )
+
+        # Invalid above max
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.TCP,
+                host="example.com",
+                port=65536,
+                schedule="* * * * *",
+            )
+
+    def test_host_validation(self):
+        """Test host field validation."""
+        from app.models.cron_task import ProtocolType
+
+        # Empty host is rejected
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.ICMP,
+                host="",
+                schedule="* * * * *",
+            )
+
+        # Whitespace-only host is rejected
+        with pytest.raises(ValidationError):
+            CronTaskCreate(
+                name="Test",
+                protocol_type=ProtocolType.ICMP,
+                host="   ",
+                schedule="* * * * *",
+            )
+
+    def test_host_whitespace_stripped(self):
+        """Test that host whitespace is stripped."""
+        from app.models.cron_task import ProtocolType
+
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.ICMP,
+            host="  example.com  ",
+            schedule="* * * * *",
+        )
+        assert task.host == "example.com"
+
+    def test_icmp_default_count(self):
+        """Test ICMP default count value."""
+        from app.models.cron_task import ProtocolType
+
+        task = CronTaskCreate(
+            name="Test",
+            protocol_type=ProtocolType.ICMP,
+            host="example.com",
+            schedule="* * * * *",
+        )
+        assert task.icmp_count == 3  # default
+
+    def test_update_protocol_type(self):
+        """Test updating protocol type in CronTaskUpdate."""
+        from app.models.cron_task import ProtocolType
+
+        # Update to ICMP
+        update = CronTaskUpdate(
+            protocol_type=ProtocolType.ICMP,
+            host="ping.example.com",
+        )
+        assert update.protocol_type == ProtocolType.ICMP
+        assert update.host == "ping.example.com"
+
+        # Update to TCP
+        update = CronTaskUpdate(
+            protocol_type=ProtocolType.TCP,
+            host="db.example.com",
+            port=3306,
+        )
+        assert update.protocol_type == ProtocolType.TCP
+        assert update.port == 3306
+
+    def test_common_tcp_ports(self):
+        """Test common TCP port values."""
+        from app.models.cron_task import ProtocolType
+
+        common_ports = [22, 80, 443, 3306, 5432, 6379, 27017]
+
+        for port in common_ports:
+            task = CronTaskCreate(
+                name=f"Port {port} Check",
+                protocol_type=ProtocolType.TCP,
+                host="example.com",
+                port=port,
+                schedule="* * * * *",
+            )
+            assert task.port == port
+
+    def test_http_task_can_have_host_and_port(self):
+        """Test HTTP task can optionally have host and port without affecting HTTP behavior."""
+        from app.models.cron_task import ProtocolType
+
+        # HTTP task with extra fields (shouldn't fail)
+        task = CronTaskCreate(
+            name="Test HTTP",
+            protocol_type=ProtocolType.HTTP,
+            url="https://api.example.com",
+            host="optional.host.com",  # ignored for HTTP
+            port=8080,  # ignored for HTTP
+            schedule="* * * * *",
+        )
+
+        assert task.protocol_type == ProtocolType.HTTP
+        assert str(task.url) == "https://api.example.com/"

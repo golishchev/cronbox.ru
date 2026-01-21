@@ -45,6 +45,8 @@ def create_mock_execution(**kwargs):
 
 def create_mock_execution_orm(**kwargs):
     """Create a mock execution ORM object (for get_by_id)."""
+    from app.models.cron_task import ProtocolType
+
     mock = MagicMock()
     mock.id = kwargs.get("id", uuid4())
     mock.workspace_id = kwargs.get("workspace_id", uuid4())
@@ -55,6 +57,9 @@ def create_mock_execution_orm(**kwargs):
     mock.started_at = kwargs.get("started_at", datetime.now(timezone.utc))
     mock.finished_at = kwargs.get("finished_at", datetime.now(timezone.utc))
     mock.duration_ms = kwargs.get("duration_ms", 100)
+    # Protocol type (default HTTP for backwards compatibility)
+    mock.protocol_type = kwargs.get("protocol_type", ProtocolType.HTTP)
+    # HTTP fields
     mock.request_url = kwargs.get("request_url", "https://example.com/api")
     mock.request_method = kwargs.get("request_method", "GET")
     mock.request_headers = kwargs.get("request_headers", {})
@@ -63,11 +68,23 @@ def create_mock_execution_orm(**kwargs):
     mock.response_headers = kwargs.get("response_headers", {})
     mock.response_body = kwargs.get("response_body", '{"ok": true}')
     mock.response_size_bytes = kwargs.get("response_size_bytes", None)
+    # ICMP/TCP fields
+    mock.target_host = kwargs.get("target_host", None)
+    mock.target_port = kwargs.get("target_port", None)
+    mock.icmp_packets_sent = kwargs.get("icmp_packets_sent", None)
+    mock.icmp_packets_received = kwargs.get("icmp_packets_received", None)
+    mock.icmp_packet_loss = kwargs.get("icmp_packet_loss", None)
+    mock.icmp_min_rtt = kwargs.get("icmp_min_rtt", None)
+    mock.icmp_avg_rtt = kwargs.get("icmp_avg_rtt", None)
+    mock.icmp_max_rtt = kwargs.get("icmp_max_rtt", None)
+    mock.tcp_connection_time = kwargs.get("tcp_connection_time", None)
+    # Error fields
     mock.error = kwargs.get("error", None)
     mock.error_message = kwargs.get("error_message", None)
     mock.error_type = kwargs.get("error_type", None)
     mock.retry_attempt = kwargs.get("retry_attempt", 0)
     mock.created_at = kwargs.get("created_at", datetime.now(timezone.utc))
+    # Chain execution fields
     mock.total_steps = kwargs.get("total_steps", None)
     mock.completed_steps = kwargs.get("completed_steps", None)
     mock.failed_steps = kwargs.get("failed_steps", None)
