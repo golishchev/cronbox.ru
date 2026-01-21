@@ -28,6 +28,7 @@ from app.schemas.user import UserLogin, UserResponse, UserUpdate
 from app.services.auth import TELEGRAM_LINK_EXPIRE, AuthService
 from app.services.email import email_service
 from app.services.i18n import t
+from app.services.telegram import telegram_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -81,6 +82,14 @@ async def register(data: RegisterRequest, db: DB, background_tasks: BackgroundTa
         )
 
     background_tasks.add_task(send_verification_email)
+
+    # Notify admin about new registration
+    background_tasks.add_task(
+        telegram_service.send_new_user_notification,
+        user_email=user.email,
+        user_name=user.name,
+        registration_method="email",
+    )
 
     return RegisterResponse(
         user=UserResponse.model_validate(user),
@@ -138,17 +147,26 @@ async def request_otp(
 
 
 @router.post("/otp/verify", response_model=LoginResponse)
-async def verify_otp(data: OTPVerify, db: DB):
+async def verify_otp(data: OTPVerify, db: DB, background_tasks: BackgroundTasks):
     """Verify OTP code and login.
 
     If the user doesn't exist, a new account will be created automatically.
     Email will be marked as verified.
     """
     auth_service = AuthService(db)
-    user, tokens = await auth_service.verify_otp(
+    user, tokens, is_new_user = await auth_service.verify_otp(
         email=data.email,
         code=data.code,
     )
+
+    # Notify admin about new registration via OTP
+    if is_new_user:
+        background_tasks.add_task(
+            telegram_service.send_new_user_notification,
+            user_email=user.email,
+            user_name=user.name,
+            registration_method="OTP",
+        )
 
     return LoginResponse(
         user=UserResponse.model_validate(user),

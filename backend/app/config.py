@@ -57,6 +57,7 @@ class Settings(BaseSettings):
 
     # Telegram
     telegram_bot_token: str = ""
+    admin_telegram_id: int | None = None  # Admin chat ID for system notifications
 
     # Email (SMTP fallback)
     smtp_host: str = "smtp.yandex.ru"

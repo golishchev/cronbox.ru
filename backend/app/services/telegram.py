@@ -139,6 +139,26 @@ class TelegramService:
 
         return await self.send_message(chat_id, text)
 
+    async def send_new_user_notification(
+        self,
+        user_email: str,
+        user_name: str,
+        registration_method: str = "email",
+    ) -> bool:
+        """Send notification to admin about new user registration."""
+        admin_chat_id = settings.admin_telegram_id
+        if not admin_chat_id:
+            logger.debug("Admin Telegram ID not configured, skipping notification")
+            return False
+
+        text = (
+            f"<b>New User Registered</b>\n\n"
+            f"<b>Email:</b> {user_email}\n"
+            f"<b>Name:</b> {user_name}\n"
+            f"<b>Method:</b> {registration_method}"
+        )
+        return await self.send_message(admin_chat_id, text)
+
 
 # Global instance
 telegram_service = TelegramService()

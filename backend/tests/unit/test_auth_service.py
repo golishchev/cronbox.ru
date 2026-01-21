@@ -665,3 +665,130 @@ class TestAuthServiceTelegram:
             await service.unlink_telegram(mock_user)
 
         assert "No Telegram" in str(exc_info.value.detail)
+
+
+class TestAuthServiceOTP:
+    """Tests for OTP verification."""
+
+    @pytest.mark.asyncio
+    async def test_verify_otp_new_user(self):
+        """Test OTP verification creates new user and returns is_new_user=True."""
+        mock_db = AsyncMock()
+        service = AuthService(mock_db)
+
+        new_user = MagicMock()
+        new_user.id = uuid4()
+        new_user.email = "new@example.com"
+        new_user.email_verified = False
+        new_user.is_active = True
+
+        # Mock redis to return different values for different keys
+        async def mock_get(key):
+            if "otp:attempts:" in key:
+                return None  # No previous attempts
+            if "otp:" in key:
+                return "123456"  # OTP code
+            return None
+
+        with patch("app.services.auth.redis_client") as mock_redis:
+            mock_redis.get = AsyncMock(side_effect=mock_get)
+            mock_redis.delete = AsyncMock()
+            mock_redis.incr = AsyncMock()
+            mock_redis.expire = AsyncMock()
+
+            with patch.object(service.user_repo, "get_by_email", return_value=None):
+                with patch.object(service.user_repo, "create_user", return_value=new_user):
+                    with patch.object(service.user_repo, "verify_email", return_value=new_user):
+                        with patch.object(service, "_update_last_login", return_value=None):
+                            user, tokens, is_new_user = await service.verify_otp(
+                                email="new@example.com",
+                                code="123456",
+                            )
+
+                            assert user == new_user
+                            assert is_new_user is True
+                            assert tokens.access_token is not None
+
+    @pytest.mark.asyncio
+    async def test_verify_otp_existing_user(self):
+        """Test OTP verification for existing user returns is_new_user=False."""
+        mock_db = AsyncMock()
+        service = AuthService(mock_db)
+
+        existing_user = MagicMock()
+        existing_user.id = uuid4()
+        existing_user.email = "existing@example.com"
+        existing_user.email_verified = True
+        existing_user.is_active = True
+
+        async def mock_get(key):
+            if "otp:attempts:" in key:
+                return None  # No previous attempts
+            if "otp:" in key:
+                return "123456"  # OTP code
+            return None
+
+        with patch("app.services.auth.redis_client") as mock_redis:
+            mock_redis.get = AsyncMock(side_effect=mock_get)
+            mock_redis.delete = AsyncMock()
+
+            with patch.object(service.user_repo, "get_by_email", return_value=existing_user):
+                with patch.object(service, "_update_last_login", return_value=None):
+                    user, tokens, is_new_user = await service.verify_otp(
+                        email="existing@example.com",
+                        code="123456",
+                    )
+
+                    assert user == existing_user
+                    assert is_new_user is False
+                    assert tokens.access_token is not None
+
+    @pytest.mark.asyncio
+    async def test_verify_otp_invalid_code(self):
+        """Test OTP verification with invalid code."""
+        mock_db = AsyncMock()
+        service = AuthService(mock_db)
+
+        async def mock_get(key):
+            if "otp:attempts:" in key:
+                return "0"  # No previous attempts
+            if "otp:" in key:
+                return "654321"  # Different OTP code
+            return None
+
+        with patch("app.services.auth.redis_client") as mock_redis:
+            mock_redis.get = AsyncMock(side_effect=mock_get)
+            mock_redis.incr = AsyncMock()
+            mock_redis.expire = AsyncMock()
+
+            with pytest.raises(UnauthorizedError) as exc_info:
+                await service.verify_otp(
+                    email="test@example.com",
+                    code="123456",
+                )
+
+            assert "Invalid code" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_verify_otp_expired_code(self):
+        """Test OTP verification with expired code."""
+        mock_db = AsyncMock()
+        service = AuthService(mock_db)
+
+        async def mock_get(key):
+            if "otp:attempts:" in key:
+                return None  # No previous attempts
+            if "otp:" in key:
+                return None  # No stored OTP (expired)
+            return None
+
+        with patch("app.services.auth.redis_client") as mock_redis:
+            mock_redis.get = AsyncMock(side_effect=mock_get)
+
+            with pytest.raises(UnauthorizedError) as exc_info:
+                await service.verify_otp(
+                    email="test@example.com",
+                    code="123456",
+                )
+
+            assert "Invalid or expired" in str(exc_info.value.detail)

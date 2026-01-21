@@ -353,11 +353,11 @@ class AuthService:
         logger.info("OTP code generated", email=email_lower)
         return code, expire_seconds, user
 
-    async def verify_otp(self, email: str, code: str) -> tuple[User, TokenResponse]:
+    async def verify_otp(self, email: str, code: str) -> tuple[User, TokenResponse, bool]:
         """
         Verify OTP code and login/register user.
 
-        Returns user and tokens on success.
+        Returns (user, tokens, is_new_user) tuple on success.
         Raises UnauthorizedError on invalid/expired code.
         """
         email_lower = email.lower()
@@ -400,6 +400,7 @@ class AuthService:
 
         # Get or create user
         user = await self.user_repo.get_by_email(email_lower)
+        is_new_user = False
 
         if not user:
             # Create new user (passwordless registration)
@@ -415,6 +416,7 @@ class AuthService:
                 password_hash=password_hash,
                 name=name,
             )
+            is_new_user = True
             logger.info("New user created via OTP", user_id=str(user.id))
 
         if not user.is_active:
@@ -431,7 +433,7 @@ class AuthService:
         tokens = self._create_tokens(user)
 
         logger.info("User logged in via OTP", user_id=str(user.id))
-        return user, tokens
+        return user, tokens, is_new_user
 
     def _create_tokens(self, user: User) -> TokenResponse:
         """Create access and refresh tokens for user."""
