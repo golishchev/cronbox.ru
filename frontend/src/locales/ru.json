@@ -980,6 +980,7 @@
     "delayedTasks": "Отложенные задачи",
     "taskChains": "Цепочки задач",
     "heartbeats": "Heartbeat-мониторы",
+    "sslMonitors": "SSL-мониторы",
     "until": "до",
     "executionsToday": "Выполнений сегодня",
     "thisWeek": "за эту неделю",

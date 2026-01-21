@@ -16,6 +16,7 @@ from app.models import (
     Heartbeat,
     Payment,
     Plan,
+    SSLMonitor,
     Subscription,
     TaskChain,
     User,
@@ -60,6 +61,8 @@ class AdminStatsResponse(BaseModel):
     active_task_chains: int
     total_heartbeats: int
     active_heartbeats: int
+    total_ssl_monitors: int
+    active_ssl_monitors: int
     total_executions: int
     executions_today: int
     executions_this_week: int
@@ -86,6 +89,7 @@ class UserListItem(BaseModel):
     delayed_tasks_count: int
     task_chains_count: int
     heartbeats_count: int
+    ssl_monitors_count: int
     executions_count: int
     plan_name: str
     subscription_ends_at: datetime | None
@@ -179,6 +183,12 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         select(func.count(Heartbeat.id)).where(Heartbeat.status != "paused")
     )
 
+    # SSL monitor stats (active = not paused)
+    total_ssl_monitors = await db.scalar(select(func.count(SSLMonitor.id)))
+    active_ssl_monitors = await db.scalar(
+        select(func.count(SSLMonitor.id)).where(SSLMonitor.is_paused.is_(False))
+    )
+
     # Execution stats
     total_executions = await db.scalar(select(func.count(Execution.id)))
     executions_today = await db.scalar(select(func.count(Execution.id)).where(Execution.started_at >= today))
@@ -243,6 +253,8 @@ async def get_admin_stats(admin: AdminUser, db: DB):
         active_task_chains=active_chains or 0,
         total_heartbeats=total_heartbeats or 0,
         active_heartbeats=active_heartbeats or 0,
+        total_ssl_monitors=total_ssl_monitors or 0,
+        active_ssl_monitors=active_ssl_monitors or 0,
         total_executions=total_executions or 0,
         executions_today=executions_today or 0,
         executions_this_week=executions_this_week or 0,
@@ -296,6 +308,9 @@ async def list_users(
         heartbeats_count = await db.scalar(
             select(func.count(Heartbeat.id)).join(Workspace).where(Workspace.owner_id == user.id)
         )
+        ssl_monitors_count = await db.scalar(
+            select(func.count(SSLMonitor.id)).join(Workspace).where(Workspace.owner_id == user.id)
+        )
         executions_count = await db.scalar(
             select(func.count(Execution.id)).join(Workspace).where(Workspace.owner_id == user.id)
         )
@@ -329,6 +344,7 @@ async def list_users(
                 delayed_tasks_count=delayed_tasks_count or 0,
                 task_chains_count=task_chains_count or 0,
                 heartbeats_count=heartbeats_count or 0,
+                ssl_monitors_count=ssl_monitors_count or 0,
                 executions_count=executions_count or 0,
                 plan_name=plan_name,
                 subscription_ends_at=subscription_ends_at,
@@ -363,6 +379,9 @@ async def get_user(admin: AdminUser, db: DB, user_id: str):
     heartbeats_count = await db.scalar(
         select(func.count(Heartbeat.id)).join(Workspace).where(Workspace.owner_id == user.id)
     )
+    ssl_monitors_count = await db.scalar(
+        select(func.count(SSLMonitor.id)).join(Workspace).where(Workspace.owner_id == user.id)
+    )
     executions_count = await db.scalar(
         select(func.count(Execution.id)).join(Workspace).where(Workspace.owner_id == user.id)
     )
@@ -395,6 +414,7 @@ async def get_user(admin: AdminUser, db: DB, user_id: str):
         delayed_tasks_count=delayed_tasks_count or 0,
         task_chains_count=task_chains_count or 0,
         heartbeats_count=heartbeats_count or 0,
+        ssl_monitors_count=ssl_monitors_count or 0,
         executions_count=executions_count or 0,
         plan_name=plan_name,
         subscription_ends_at=subscription_ends_at,

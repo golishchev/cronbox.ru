@@ -234,7 +234,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
 
       {/* Users Table */}
       {isLoading ? (
-        <TableSkeleton rows={10} columns={13} />
+        <TableSkeleton rows={10} columns={14} />
       ) : users.length === 0 ? (
         <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
           <Users className="h-16 w-16 text-muted-foreground" />
@@ -258,6 +258,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                   <TableHead>{t('admin.delayedTasks')}</TableHead>
                   <TableHead>{t('admin.taskChains')}</TableHead>
                   <TableHead>{t('admin.heartbeats')}</TableHead>
+                  <TableHead>{t('admin.sslMonitors')}</TableHead>
                   <TableHead>{t('nav.executions')}</TableHead>
                   <TableHead>{t('admin.created')}</TableHead>
                   <TableHead>{t('admin.lastLogin')}</TableHead>
@@ -320,6 +321,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                     <TableCell>{user.delayed_tasks_count}</TableCell>
                     <TableCell>{user.task_chains_count}</TableCell>
                     <TableCell>{user.heartbeats_count}</TableCell>
+                    <TableCell>{user.ssl_monitors_count}</TableCell>
                     <TableCell>{user.executions_count}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}

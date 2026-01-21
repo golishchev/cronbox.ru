@@ -13,6 +13,8 @@ export interface AdminStats {
   active_task_chains: number
   total_heartbeats: number
   active_heartbeats: number
+  total_ssl_monitors: number
+  active_ssl_monitors: number
   total_executions: number
   executions_today: number
   executions_this_week: number
@@ -37,6 +39,7 @@ export interface AdminUser {
   delayed_tasks_count: number
   task_chains_count: number
   heartbeats_count: number
+  ssl_monitors_count: number
   plan_name: string
   subscription_ends_at: string | null
   executions_count: number

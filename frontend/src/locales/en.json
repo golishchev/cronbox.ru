@@ -853,6 +853,7 @@
     "delayedTasks": "Delayed Tasks",
     "taskChains": "Task Chains",
     "heartbeats": "Heartbeat Monitors",
+    "sslMonitors": "SSL Monitors",
     "until": "until",
     "executionsToday": "Executions Today",
     "thisWeek": "this week",
