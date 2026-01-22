@@ -752,7 +752,7 @@ export function HeartbeatsSection() {
         <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
           <h4 className="font-semibold text-red-800 dark:text-red-200">late</h4>
           <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-            Пинг не получен в ожидаемое время — возможна проблема
+            Пинг не получен в ожидаемое время - возможна проблема
           </p>
         </div>
       </div>
@@ -881,14 +881,14 @@ export function SSLMonitorsSection() {
         <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4">
           <h4 className="font-semibold text-yellow-800 dark:text-yellow-200">expiring_soon</h4>
           <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-            Сертификат истекает в течение 30 дней — пора обновить
+            Сертификат истекает в течение 30 дней - пора обновить
           </p>
         </div>
 
         <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
           <h4 className="font-semibold text-red-800 dark:text-red-200">expired</h4>
           <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-            Сертификат истёк — требуется срочное обновление
+            Сертификат истёк - требуется срочное обновление
           </p>
         </div>
 

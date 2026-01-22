@@ -453,10 +453,10 @@ export function CronBuilder() {
           <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
             <p className="font-medium text-gray-900 dark:text-white mb-2">Специальные символы:</p>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">*</code> — любое значение</li>
-              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">,</code> — список значений (1,3,5)</li>
-              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">-</code> — диапазон (1-5)</li>
-              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">/</code> — шаг (*/15 = каждые 15)</li>
+              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">*</code> - любое значение</li>
+              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">,</code> - список значений (1,3,5)</li>
+              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">-</code> - диапазон (1-5)</li>
+              <li><code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">/</code> - шаг (*/15 = каждые 15)</li>
             </ul>
           </div>
         </div>

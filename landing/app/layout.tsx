@@ -31,11 +31,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://cronbox.ru'),
   title: {
-    default: 'CronBox — Платформа мониторинга и автоматизации',
+    default: 'CronBox - Платформа мониторинга и автоматизации',
     template: '%s | CronBox',
   },
   description:
-    'CronBox — платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация, цепочки запросов.',
+    'CronBox - платформа мониторинга и автоматизации для разработчиков. Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация, цепочки запросов.',
   keywords: [
     'мониторинг',
     'heartbeat',
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
     locale: 'ru_RU',
     url: 'https://cronbox.ru',
     siteName: 'CronBox',
-    title: 'CronBox — Платформа мониторинга и автоматизации',
+    title: 'CronBox - Платформа мониторинга и автоматизации',
     description:
       'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
     images: [
@@ -87,13 +87,13 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'CronBox — Платформа мониторинга и автоматизации',
+        alt: 'CronBox - Платформа мониторинга и автоматизации',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CronBox — Платформа мониторинга и автоматизации',
+    title: 'CronBox - Платформа мониторинга и автоматизации',
     description:
       'Heartbeat-мониторинг cron-задач, SSL-алерты, HTTP-автоматизация. Узнайте первым, когда что-то пойдёт не так.',
     images: ['/opengraph-image'],

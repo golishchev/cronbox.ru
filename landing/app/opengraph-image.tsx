@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
 
-export const alt = 'CronBox — Платформа мониторинга и автоматизации'
+export const alt = 'CronBox - Платформа мониторинга и автоматизации'
 export const size = {
   width: 1200,
   height: 630,

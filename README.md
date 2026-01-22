@@ -246,7 +246,7 @@ Proprietary. Все права защищены.
   cd backend && uv run python scripts/seed_loadtest_users.py --cleanup
 
   Скрипт создаст 5 пользователей:
-  - loadtest1@example.com — loadtest5@example.com
+  - loadtest1@example.com - loadtest5@example.com
   - Пароль: LoadTest123!
   - Email уже верифицирован
   - У каждого создан workspace
