@@ -328,6 +328,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         skip: int = 0,
         limit: int = 100,
         task_type: str | None = None,
+        task_id: UUID | None = None,
         status: TaskStatus | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -344,6 +345,8 @@ class ExecutionRepository(BaseRepository[Execution]):
 
             if task_type in ("cron", "delayed"):
                 stmt = stmt.where(Execution.task_type == task_type)
+            if task_id is not None:
+                stmt = stmt.where(Execution.task_id == task_id)
             if status is not None:
                 stmt = stmt.where(Execution.status == status)
             if start_date is not None:
@@ -388,6 +391,9 @@ class ExecutionRepository(BaseRepository[Execution]):
                 .where(ChainExecution.workspace_id == workspace_id)
                 .order_by(ChainExecution.started_at.desc())
             )
+
+            if task_id is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.chain_id == task_id)
 
             # Map TaskStatus to ChainStatus for filtering
             if status is not None:
@@ -454,6 +460,9 @@ class ExecutionRepository(BaseRepository[Execution]):
                 .order_by(HeartbeatPing.created_at.desc())
             )
 
+            if task_id is not None:
+                heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.heartbeat_id == task_id)
+
             # Heartbeat pings are always "success" - they represent received pings
             if status is not None and status != TaskStatus.SUCCESS:
                 pass  # Skip heartbeat pings if filtering for non-success status
@@ -517,6 +526,7 @@ class ExecutionRepository(BaseRepository[Execution]):
         self,
         workspace_id: UUID,
         task_type: str | None = None,
+        task_id: UUID | None = None,
         status: TaskStatus | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -530,6 +540,8 @@ class ExecutionRepository(BaseRepository[Execution]):
 
             if task_type in ("cron", "delayed"):
                 stmt = stmt.where(Execution.task_type == task_type)
+            if task_id is not None:
+                stmt = stmt.where(Execution.task_id == task_id)
             if status is not None:
                 stmt = stmt.where(Execution.status == status)
             if start_date is not None:
@@ -545,6 +557,9 @@ class ExecutionRepository(BaseRepository[Execution]):
             chain_stmt = (
                 select(func.count()).select_from(ChainExecution).where(ChainExecution.workspace_id == workspace_id)
             )
+
+            if task_id is not None:
+                chain_stmt = chain_stmt.where(ChainExecution.chain_id == task_id)
 
             if status is not None:
                 chain_status_map = {
@@ -574,6 +589,9 @@ class ExecutionRepository(BaseRepository[Execution]):
                     .join(Heartbeat, HeartbeatPing.heartbeat_id == Heartbeat.id)
                     .where(Heartbeat.workspace_id == workspace_id)
                 )
+
+                if task_id is not None:
+                    heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.heartbeat_id == task_id)
 
                 if start_date is not None:
                     heartbeat_stmt = heartbeat_stmt.where(HeartbeatPing.created_at >= start_date)

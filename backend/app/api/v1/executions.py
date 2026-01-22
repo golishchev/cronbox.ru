@@ -44,6 +44,7 @@ async def list_executions(
         skip=skip,
         limit=limit,
         task_type=task_type,
+        task_id=task_id,
         status=status,
         start_date=start_date,
         end_date=end_date,
@@ -51,6 +52,7 @@ async def list_executions(
     total = await exec_repo.count_unified_executions(
         workspace_id=workspace.id,
         task_type=task_type,
+        task_id=task_id,
         status=status,
         start_date=start_date,
         end_date=end_date,
