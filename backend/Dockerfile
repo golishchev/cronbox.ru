@@ -15,6 +15,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     UV_NO_DEV=1
 
+# Install system dependencies (ping for ICMP monitoring)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends iputils-ping && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install uv package manager
 RUN pip install --no-cache-dir uv
 
