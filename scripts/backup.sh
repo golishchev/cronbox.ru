@@ -30,6 +30,11 @@ RETENTION_DAYS="${RETENTION_DAYS:-7}"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-cronbox-postgres}"
 UPLOADS_VOLUME="${UPLOADS_VOLUME:-cronbox_uploads_data}"
 
+# Database credentials
+POSTGRES_USER="${POSTGRES_USER:-cronbox}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
+POSTGRES_DB="${POSTGRES_DB:-cronbox}"
+
 # ==========================================
 # Functions
 # ==========================================
@@ -162,7 +167,7 @@ main() {
     # Backup PostgreSQL
     # ==========================================
     log "Backing up PostgreSQL database..."
-    if docker exec "$POSTGRES_CONTAINER" pg_dump -U cronbox cronbox 2>/dev/null | gzip > "$db_file"; then
+    if docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$POSTGRES_CONTAINER" pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" 2>/dev/null | gzip > "$db_file"; then
         # Get file size (works on both Linux and macOS)
         if [ -f "$db_file" ]; then
             db_size=$(stat -c%s "$db_file" 2>/dev/null || stat -f%z "$db_file" 2>/dev/null || echo 0)

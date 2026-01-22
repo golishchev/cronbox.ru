@@ -14,6 +14,11 @@ BACKUP_DIR="${BACKUP_DIR:-/opt/cronbox/backups}"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-cronbox-postgres}"
 UPLOADS_VOLUME="${UPLOADS_VOLUME:-cronbox_uploads_data}"
 
+# Database credentials
+POSTGRES_USER="${POSTGRES_USER:-cronbox}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
+POSTGRES_DB="${POSTGRES_DB:-cronbox}"
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
@@ -24,11 +29,14 @@ error() {
 
 # List available backups
 list_backups() {
+    local has_any=0
+
     echo "Available database backups:"
     echo "----------------------------------------"
     local count=0
     for f in $(ls -t "$BACKUP_DIR"/db_*.sql.gz 2>/dev/null); do
         count=$((count + 1))
+        has_any=1
         local size
         size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo 0)
         local date
@@ -37,8 +45,7 @@ list_backups() {
     done
 
     if [ "$count" -eq 0 ]; then
-        echo "No backups found in $BACKUP_DIR"
-        return 1
+        echo "No database backups found"
     fi
 
     echo ""
@@ -47,13 +54,22 @@ list_backups() {
     count=0
     for f in $(ls -t "$BACKUP_DIR"/uploads_*.tar.gz 2>/dev/null); do
         count=$((count + 1))
+        has_any=1
         local size
         size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo 0)
-        printf "%2d. %s (%s)\n" "$count" "$(basename "$f")" "$(numfmt --to=iec-i --suffix=B "$size" 2>/dev/null || echo "${size}B")"
+        local date
+        date=$(basename "$f" | sed 's/uploads_\([0-9]*\)_\([0-9]*\).*/\1 \2/' | sed 's/\(....\)\(..\)\(..\) \(..\)\(..\)\(..\)/\1-\2-\3 \4:\5:\6/')
+        printf "%2d. %s (%s) - %s\n" "$count" "$(basename "$f")" "$(numfmt --to=iec-i --suffix=B "$size" 2>/dev/null || echo "${size}B")" "$date"
     done
 
     if [ "$count" -eq 0 ]; then
         echo "No uploads backups found"
+    fi
+
+    if [ "$has_any" -eq 0 ]; then
+        echo ""
+        echo "No backups found in $BACKUP_DIR"
+        return 1
     fi
 }
 
@@ -85,13 +101,13 @@ restore_database() {
     docker stop cronbox-api cronbox-worker cronbox-scheduler cronbox-bot 2>/dev/null || true
 
     log "Dropping existing database..."
-    docker exec "$POSTGRES_CONTAINER" dropdb -U cronbox --if-exists cronbox || true
+    docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$POSTGRES_CONTAINER" dropdb -U "$POSTGRES_USER" --if-exists "$POSTGRES_DB" || true
 
     log "Creating fresh database..."
-    docker exec "$POSTGRES_CONTAINER" createdb -U cronbox cronbox
+    docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$POSTGRES_CONTAINER" createdb -U "$POSTGRES_USER" "$POSTGRES_DB"
 
     log "Restoring from backup..."
-    gunzip -c "$backup_file" | docker exec -i "$POSTGRES_CONTAINER" psql -U cronbox cronbox
+    gunzip -c "$backup_file" | docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" "$POSTGRES_DB"
 
     log "Starting services..."
     docker start cronbox-api cronbox-worker cronbox-scheduler cronbox-bot 2>/dev/null || true
