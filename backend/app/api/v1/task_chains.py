@@ -153,6 +153,7 @@ async def create_task_chain(
         next_run_at = calculate_next_run(data.schedule, data.timezone)
 
     # Validate delayed trigger
+    execute_at_naive = None
     if data.trigger_type == TriggerType.DELAYED:
         if not data.execute_at:
             raise HTTPException(
@@ -162,13 +163,16 @@ async def create_task_chain(
         from datetime import timezone as dt_tz
 
         now = datetime.now(dt_tz.utc)
+        # Ensure execute_at is timezone-aware for comparison
         execute_at = data.execute_at if data.execute_at.tzinfo else data.execute_at.replace(tzinfo=dt_tz.utc)
         if execute_at <= now:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="execute_at must be in the future",
             )
-        next_run_at = data.execute_at
+        # Convert to naive UTC for storage (database uses TIMESTAMP WITHOUT TIME ZONE)
+        execute_at_naive = execute_at.astimezone(dt_tz.utc).replace(tzinfo=None)
+        next_run_at = execute_at_naive
 
     # Create chain
     chain = await chain_repo.create(
@@ -180,7 +184,7 @@ async def create_task_chain(
         trigger_type=data.trigger_type,
         schedule=data.schedule,
         timezone=data.timezone,
-        execute_at=data.execute_at,
+        execute_at=execute_at_naive,
         stop_on_failure=data.stop_on_failure,
         timeout_seconds=data.timeout_seconds,
         notify_on_failure=data.notify_on_failure,
@@ -293,7 +297,10 @@ async def update_task_chain(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="execute_at must be in the future",
                 )
-            update_data["next_run_at"] = execute_at
+            # Convert to naive UTC for storage (database uses TIMESTAMP WITHOUT TIME ZONE)
+            execute_at_naive = exec_at_aware.astimezone(dt_tz.utc).replace(tzinfo=None)
+            update_data["execute_at"] = execute_at_naive
+            update_data["next_run_at"] = execute_at_naive
 
     if update_data:
         chain = await chain_repo.update(chain, **update_data)
