@@ -392,6 +392,7 @@ async def run_task_chain(
             "execute_chain",
             chain_id=str(chain_id),
             initial_variables=data.initial_variables if data else {},
+            manual_run=True,
         )
         await redis.close()
     except Exception as e:

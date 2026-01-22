@@ -298,6 +298,7 @@ async def run_cron_task(
             "execute_cron_task",
             task_id=str(task_id),
             retry_attempt=0,
+            manual_run=True,
         )
         await redis.close()
 

@@ -265,11 +265,17 @@ async def execute_cron_task(
     *,
     task_id: str,
     retry_attempt: int = 0,
+    manual_run: bool = False,
 ) -> dict:
     """Execute a cron task by ID.
 
     Creates an execution record, performs the HTTP request,
     updates the task status, and schedules retries if needed.
+
+    Args:
+        task_id: The ID of the task to execute
+        retry_attempt: Current retry attempt number
+        manual_run: If True, allows execution of paused tasks (for manual trigger)
     """
     db_factory = ctx["db_factory"]
 
@@ -283,9 +289,15 @@ async def execute_cron_task(
             logger.warning("Cron task not found", task_id=task_id)
             return {"success": False, "error": "Task not found"}
 
-        if not task.is_active or task.is_paused:
-            logger.info("Task is not active or paused", task_id=task_id)
+        # For manual runs, allow paused tasks but still require active
+        # For scheduled runs, reject both inactive and paused tasks
+        if not task.is_active:
+            logger.info("Task is not active", task_id=task_id)
             return {"success": False, "error": "Task not active"}
+
+        if task.is_paused and not manual_run:
+            logger.info("Task is paused (scheduled run)", task_id=task_id)
+            return {"success": False, "error": "Task is paused"}
 
         # Save previous status for recovery detection
         previous_status = task.last_status
@@ -793,11 +805,17 @@ async def execute_chain(
     *,
     chain_id: str,
     initial_variables: dict | None = None,
+    manual_run: bool = False,
 ) -> dict:
     """Execute a task chain by ID.
 
     Creates chain and step execution records, performs HTTP requests
     for each step with variable substitution, and handles conditions.
+
+    Args:
+        chain_id: The ID of the chain to execute
+        initial_variables: Optional variables to pass to the chain
+        manual_run: If True, allows execution of paused chains (for manual trigger)
     """
     from uuid import UUID
 
@@ -833,9 +851,15 @@ async def execute_chain(
             logger.warning("Chain not found", chain_id=chain_id)
             return {"success": False, "error": "Chain not found"}
 
-        if not chain.is_active or chain.is_paused:
-            logger.info("Chain is not active or paused", chain_id=chain_id)
+        # For manual runs, allow paused chains but still require active
+        # For scheduled runs, reject both inactive and paused chains
+        if not chain.is_active:
+            logger.info("Chain is not active", chain_id=chain_id)
             return {"success": False, "error": "Chain not active"}
+
+        if chain.is_paused and not manual_run:
+            logger.info("Chain is paused (scheduled run)", chain_id=chain_id)
+            return {"success": False, "error": "Chain is paused"}
 
         if not chain.steps:
             logger.info("Chain has no steps", chain_id=chain_id)

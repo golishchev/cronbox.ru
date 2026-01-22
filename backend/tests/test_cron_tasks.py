@@ -205,8 +205,79 @@ class TestCronTasks:
         get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/cron/{task_id}")
         assert get_response.status_code == 404
 
+    async def test_run_cron_task(self, authenticated_client: AsyncClient, workspace):
+        """Test manually running a cron task."""
+        # Create task
+        create_response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/cron",
+            json={
+                "name": "Run Test Task",
+                "url": "https://httpbin.org/post",
+                "method": "POST",
+                "schedule": "0 0 * * *",
+            },
+        )
+        task_id = create_response.json()["id"]
+
+        # Run task
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/run")
+        assert response.status_code == 202
+        data = response.json()
+        assert data["message"] == "Task queued for execution"
+        assert data["task_id"] == task_id
+
+    async def test_run_paused_cron_task(self, authenticated_client: AsyncClient, workspace):
+        """Test manually running a paused cron task (should work)."""
+        # Create task
+        create_response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/cron",
+            json={
+                "name": "Paused Run Test Task",
+                "url": "https://httpbin.org/post",
+                "method": "POST",
+                "schedule": "0 0 * * *",
+            },
+        )
+        task_id = create_response.json()["id"]
+
+        # Pause task
+        pause_response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/pause")
+        assert pause_response.status_code == 200
+        assert pause_response.json()["is_paused"] is True
+
+        # Run paused task - should still work for manual runs
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/run")
+        assert response.status_code == 202
+        data = response.json()
+        assert data["message"] == "Task queued for execution"
+        assert data["task_id"] == task_id
+
+    async def test_run_inactive_cron_task(self, authenticated_client: AsyncClient, workspace):
+        """Test manually running an inactive cron task (should fail)."""
+        # Create task
+        create_response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/cron",
+            json={
+                "name": "Inactive Run Test Task",
+                "url": "https://httpbin.org/post",
+                "method": "POST",
+                "schedule": "0 0 * * *",
+            },
+        )
+        task_id = create_response.json()["id"]
+
+        # Deactivate task
+        await authenticated_client.patch(
+            f"/v1/workspaces/{workspace['id']}/cron/{task_id}",
+            json={"is_active": False},
+        )
+
+        # Try to run inactive task - should fail
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/cron/{task_id}/run")
+        assert response.status_code == 400
+
     async def test_trigger_cron_task(self, authenticated_client: AsyncClient, workspace):
-        """Test triggering a cron task manually."""
+        """Test triggering a cron task manually (legacy endpoint)."""
         # Create task
         create_response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/cron",
