@@ -60,6 +60,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Rocket,
 } from 'lucide-react'
 import { ChainStepForm } from '@/components/chains/ChainStepForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -472,7 +473,7 @@ export function ChainDetailPage({ chainId, onNavigate }: ChainDetailPageProps) {
             {actionLoading === 'run' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Play className="mr-2 h-4 w-4" />
+              <Rocket className="mr-2 h-4 w-4" />
             )}
             {t('chains.runNow')}
           </Button>

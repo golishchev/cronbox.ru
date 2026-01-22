@@ -204,6 +204,22 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
     return planPrice < getCurrentPlanPrice()
   }
 
+  // Calculate average yearly discount across paid plans
+  const getYearlyDiscount = () => {
+    const paidPlans = plans.filter(p => p.price_monthly > 0)
+    if (paidPlans.length === 0) return 0
+
+    const totalDiscount = paidPlans.reduce((sum, plan) => {
+      const monthlyTotal = plan.price_monthly * 12
+      const discount = monthlyTotal > 0 ? ((monthlyTotal - plan.price_yearly) / monthlyTotal) * 100 : 0
+      return sum + discount
+    }, 0)
+
+    return Math.round(totalDiscount / paidPlans.length)
+  }
+
+  const yearlyDiscount = getYearlyDiscount()
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -313,7 +329,7 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            {t('billing.yearly')} <span className="text-green-600 ml-1">{t('billing.yearlyDiscount')}</span>
+            {t('billing.yearly')} {yearlyDiscount > 0 && <span className="text-green-600 ml-1">-{yearlyDiscount}%</span>}
           </button>
         </div>
       </div>

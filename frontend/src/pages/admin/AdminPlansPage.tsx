@@ -37,7 +37,7 @@ import {
   CreditCard,
   ChevronLeft,
   Plus,
-  Pencil,
+  Edit,
   Trash2,
   Loader2,
   Check,
@@ -74,6 +74,9 @@ const defaultPlanData: CreatePlanRequest = {
   min_heartbeat_interval_minutes: 5,
   // SSL Monitors
   max_ssl_monitors: 0,
+  // Process Monitors
+  max_process_monitors: 0,
+  min_process_monitor_interval_minutes: 5,
   // Overlap prevention
   overlap_prevention_enabled: false,
   max_queue_size: 10,
@@ -152,6 +155,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       min_heartbeat_interval_minutes: plan.min_heartbeat_interval_minutes,
       // SSL Monitors
       max_ssl_monitors: plan.max_ssl_monitors,
+      // Process Monitors
+      max_process_monitors: plan.max_process_monitors,
+      min_process_monitor_interval_minutes: plan.min_process_monitor_interval_minutes,
       // Overlap prevention
       overlap_prevention_enabled: plan.overlap_prevention_enabled,
       max_queue_size: plan.max_queue_size,
@@ -340,7 +346,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                         size="icon"
                         onClick={() => handleOpenEdit(plan)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -715,6 +721,46 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     onChange={(e) => {
                       const val = parseInt(e.target.value)
                       setFormData({ ...formData, max_ssl_monitors: isNaN(val) ? 0 : val })
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Process Monitors */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">{t('admin.plans.processMonitors')}</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_process_monitors" className="text-sm">{t('admin.plans.maxProcessMonitors')}</Label>
+                  <Input
+                    id="max_process_monitors"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={formData.max_process_monitors || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      setFormData({ ...formData, max_process_monitors: isNaN(val) ? 0 : val })
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="min_process_monitor_interval" className="text-sm">{t('admin.plans.minProcessMonitorInterval')}</Label>
+                  <Input
+                    id="min_process_monitor_interval"
+                    type="number"
+                    min={1}
+                    placeholder="5"
+                    value={formData.min_process_monitor_interval_minutes || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      setFormData({ ...formData, min_process_monitor_interval_minutes: isNaN(val) ? 0 : val })
+                    }}
+                    onBlur={() => {
+                      if (!formData.min_process_monitor_interval_minutes || formData.min_process_monitor_interval_minutes < 1) {
+                        setFormData({ ...formData, min_process_monitor_interval_minutes: 1 })
+                      }
                     }}
                   />
                 </div>

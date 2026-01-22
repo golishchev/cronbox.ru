@@ -41,6 +41,14 @@ tags_metadata = [
         "description": "Public ping endpoint for heartbeat monitors. Simple GET/POST to register a heartbeat.",
     },
     {
+        "name": "Process Monitors",
+        "description": "Process monitoring with paired START/END signals. Track long-running processes like backups, ETL jobs, and deployments.",
+    },
+    {
+        "name": "Process Ping",
+        "description": "Public ping endpoints for process monitors. Signal process start and end without authentication.",
+    },
+    {
         "name": "Executions",
         "description": "Task execution history. View logs, status, and results of task executions.",
     },
@@ -173,11 +181,12 @@ async def root():
 
 
 # Import and include routers
-from app.api.router import api_router, ping_router
+from app.api.router import api_router, ping_router, process_ping_router
 
 app.include_router(api_router, prefix=settings.api_prefix)
-# Public ping endpoint at root level (no /v1 prefix for simplicity)
+# Public ping endpoints at root level (no /v1 prefix for simplicity)
 app.include_router(ping_router)
+app.include_router(process_ping_router)
 
 # Mount static files for uploads (avatars, etc.)
 UPLOADS_DIR = Path(__file__).parent.parent / "uploads"

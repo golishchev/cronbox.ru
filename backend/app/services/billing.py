@@ -117,6 +117,9 @@ class BillingService:
                         "min_heartbeat_interval_minutes": p.min_heartbeat_interval_minutes,
                         # SSL monitor limits
                         "max_ssl_monitors": p.max_ssl_monitors,
+                        # Process monitor limits
+                        "max_process_monitors": p.max_process_monitors,
+                        "min_process_monitor_interval_minutes": p.min_process_monitor_interval_minutes,
                         # Overlap prevention settings
                         "overlap_prevention_enabled": p.overlap_prevention_enabled,
                         "max_queue_size": p.max_queue_size,

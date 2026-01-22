@@ -89,6 +89,13 @@
     "recovery": "Монитор '{name}' восстановился и снова работает",
     "never": "никогда"
   },
+  "process_monitor": {
+    "missed_start": "Монитор '{name}' не получил сигнал старта. Ожидалось в: {expected_time}",
+    "missed_end": "Монитор '{name}' запущен, но не завершился за {timeout}. Старт: {start_time}",
+    "recovery": "Монитор '{name}' восстановился",
+    "success": "Монитор '{name}' завершился за {duration}",
+    "unknown_time": "неизвестно"
+  },
   "errors": {
     "cron_task_limit": "Достигнут лимит cron-задач. Ваш тариф позволяет {max_tasks} задач(у/и)",
     "cron_interval_too_frequent": "Слишком частый интервал cron. Ваш тариф требует минимум {min_interval} минут(у/ы) между запусками",
@@ -134,6 +141,13 @@
     "task_chain_not_found": "Цепочка задач не найдена",
     "cannot_run_inactive_chain": "Невозможно запустить неактивную цепочку",
     "cannot_run_chain_no_steps": "Невозможно запустить цепочку без шагов",
-    "chain_run_rate_limited": "Превышен лимит запусков. Ваш тариф требует минимум {min_interval} минут(у/ы) между запусками"
+    "chain_run_rate_limited": "Превышен лимит запусков. Ваш тариф требует минимум {min_interval} минут(у/ы) между запусками",
+    "process_monitor_limit": "Достигнут лимит мониторов процессов. Ваш тариф позволяет {max_monitors} монитор(ов)",
+    "process_monitor_interval_too_short": "Слишком короткий интервал. Ваш тариф требует минимум {min_interval} минут(у/ы)",
+    "process_monitor_not_found": "Монитор процессов не найден",
+    "process_monitor_already_paused": "Монитор процессов уже приостановлен",
+    "process_monitor_not_paused": "Монитор процессов не приостановлен",
+    "process_monitor_already_running": "Процесс уже запущен. Невозможно принять повторный сигнал старта.",
+    "process_monitor_not_running": "Процесс не запущен. Невозможно принять сигнал окончания."
   }
 }

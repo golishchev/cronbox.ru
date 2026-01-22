@@ -45,6 +45,10 @@ class Plan(Base, UUIDMixin, TimestampMixin):
     # SSL monitor limits
     max_ssl_monitors: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Process monitor limits
+    max_process_monitors: Mapped[int] = mapped_column(Integer, default=0)
+    min_process_monitor_interval_minutes: Mapped[int] = mapped_column(Integer, default=5)
+
     # Overlap prevention settings
     overlap_prevention_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     max_queue_size: Mapped[int] = mapped_column(Integer, default=10)

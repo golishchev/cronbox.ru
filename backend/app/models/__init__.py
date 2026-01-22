@@ -10,6 +10,13 @@ from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationChannel, NotificationTemplate
 from app.models.payment import Payment, PaymentStatus
 from app.models.plan import Plan
+from app.models.process_monitor import (
+    ProcessMonitor,
+    ProcessMonitorEvent,
+    ProcessMonitorEventType,
+    ProcessMonitorStatus,
+    ScheduleType,
+)
 from app.models.ssl_monitor import SSLMonitor, SSLMonitorStatus
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.task_chain import ChainStatus, ChainStep, TaskChain, TriggerType
@@ -55,4 +62,9 @@ __all__ = [
     "TaskQueue",
     "SSLMonitor",
     "SSLMonitorStatus",
+    "ProcessMonitor",
+    "ProcessMonitorEvent",
+    "ProcessMonitorStatus",
+    "ProcessMonitorEventType",
+    "ScheduleType",
 ]

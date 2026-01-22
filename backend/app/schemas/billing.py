@@ -45,6 +45,10 @@ class PlanResponse(BaseModel):
     # SSL monitor limits
     max_ssl_monitors: int
 
+    # Process monitor limits
+    max_process_monitors: int
+    min_process_monitor_interval_minutes: int
+
     # Overlap prevention settings
     overlap_prevention_enabled: bool
     max_queue_size: int

@@ -146,10 +146,10 @@ describe('AdminPlansPage', () => {
     })
 
     const editButtons = screen.getAllByRole('button', { name: '' })
-    // Find the pencil icon button
-    const pencilButton = editButtons.find(btn => btn.querySelector('svg.lucide-pencil'))
-    if (pencilButton) {
-      await user.click(pencilButton)
+    // Find the edit icon button
+    const editButton = editButtons.find(btn => btn.querySelector('svg.lucide-square-pen'))
+    if (editButton) {
+      await user.click(editButton)
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
       })

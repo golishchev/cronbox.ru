@@ -44,7 +44,7 @@ import { TableSkeleton } from '@/components/ui/skeleton'
 import {
   Bell,
   ChevronLeft,
-  Pencil,
+  Edit,
   RotateCcw,
   Eye,
   Loader2,
@@ -397,7 +397,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
                         onClick={() => handleOpenEdit(template)}
                         title={t('common.edit')}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"

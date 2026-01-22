@@ -12,6 +12,7 @@ import {
   Link2,
   Heart,
   Building2,
+  Activity,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -31,6 +32,7 @@ const mainNav: NavItem[] = [
   { titleKey: 'nav.delayedTasks', route: 'delayed', icon: Calendar },
   { titleKey: 'nav.chains', route: 'chains', icon: Link2 },
   { titleKey: 'nav.heartbeats', route: 'heartbeats', icon: Heart },
+  { titleKey: 'nav.processMonitors', route: 'process-monitors', icon: Activity },
   { titleKey: 'nav.ssl', route: 'ssl', icon: ShieldCheck },
   { titleKey: 'nav.executions', route: 'executions', icon: History },
 ]

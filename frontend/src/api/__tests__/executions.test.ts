@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getExecutions, getExecution, getExecutionStats } from '../executions'
+import { getExecutions, getExecution, getExecutionStats, getLatestExecution } from '../executions'
 import { apiClient } from '../client'
 import { mockExecution } from '@/test/mocks/data'
 
@@ -137,6 +137,85 @@ describe('executions API', () => {
       await getExecutionStats(workspaceId, 30)
 
       expect(apiClient.get).toHaveBeenCalledWith('/workspaces/workspace-1/executions/stats?days=30')
+    })
+  })
+
+  describe('getLatestExecution', () => {
+    const taskId = 'task-123'
+
+    it('should return latest execution when executions exist', async () => {
+      const detailedExecution = {
+        ...mockExecution,
+        request_headers: { 'Content-Type': 'application/json' },
+        response_headers: {},
+      }
+
+      // First call to getExecutions returns list with one execution
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          executions: [mockExecution],
+          pagination: { page: 1, limit: 1, total: 1, total_pages: 1 },
+        },
+      })
+
+      // Second call to getExecution returns detailed execution
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: detailedExecution,
+      })
+
+      const result = await getLatestExecution(workspaceId, taskId)
+
+      expect(apiClient.get).toHaveBeenNthCalledWith(1, '/workspaces/workspace-1/executions?page=1&limit=1&task_id=task-123')
+      expect(apiClient.get).toHaveBeenNthCalledWith(2, '/workspaces/workspace-1/executions/execution-1')
+      expect(result).toEqual(detailedExecution)
+    })
+
+    it('should return null when no executions exist', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          executions: [],
+          pagination: { page: 1, limit: 1, total: 0, total_pages: 0 },
+        },
+      })
+
+      const result = await getLatestExecution(workspaceId, taskId)
+
+      expect(apiClient.get).toHaveBeenCalledWith('/workspaces/workspace-1/executions?page=1&limit=1&task_id=task-123')
+      expect(result).toBeNull()
+    })
+
+    it('should include task_type filter when provided', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          executions: [mockExecution],
+          pagination: { page: 1, limit: 1, total: 1, total_pages: 1 },
+        },
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: mockExecution,
+      })
+
+      await getLatestExecution(workspaceId, taskId, 'cron')
+
+      expect(apiClient.get).toHaveBeenNthCalledWith(1, '/workspaces/workspace-1/executions?page=1&limit=1&task_type=cron&task_id=task-123')
+    })
+
+    it('should pass task_type to getExecution when provided', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          executions: [mockExecution],
+          pagination: { page: 1, limit: 1, total: 1, total_pages: 1 },
+        },
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: mockExecution,
+      })
+
+      await getLatestExecution(workspaceId, taskId, 'delayed')
+
+      expect(apiClient.get).toHaveBeenNthCalledWith(2, '/workspaces/workspace-1/executions/execution-1?execution_type=delayed')
     })
   })
 })

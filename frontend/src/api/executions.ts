@@ -75,3 +75,24 @@ export async function getDailyExecutionStats(
   )
   return response.data.stats
 }
+
+export async function getLatestExecution(
+  workspaceId: string,
+  taskId: string,
+  taskType?: ExecutionTaskType
+): Promise<ExecutionDetail | null> {
+  const filters: ExecutionFilters = {
+    task_id: taskId,
+    limit: 1,
+    page: 1,
+  }
+  if (taskType) {
+    filters.task_type = taskType
+  }
+  const response = await getExecutions(workspaceId, filters)
+  if (response.executions.length === 0) {
+    return null
+  }
+  const execution = response.executions[0]
+  return await getExecution(workspaceId, execution.id, taskType)
+}

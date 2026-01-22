@@ -509,6 +509,90 @@ export interface UpdateSSLMonitorRequest {
   notify_on_error?: boolean
 }
 
+// Process Monitor types
+export type ProcessMonitorStatus = 'waiting_start' | 'running' | 'completed' | 'missed_start' | 'missed_end' | 'paused'
+export type ScheduleType = 'cron' | 'interval' | 'exact_time'
+export type ProcessMonitorEventType = 'start' | 'end' | 'timeout' | 'missed'
+
+export interface ProcessMonitor {
+  id: string
+  workspace_id: string
+  name: string
+  description: string | null
+  start_token: string
+  end_token: string
+  start_url: string
+  end_url: string
+  schedule_type: ScheduleType
+  schedule_cron: string | null
+  schedule_interval: number | null  // seconds
+  schedule_exact_time: string | null  // "HH:MM"
+  timezone: string
+  start_grace_period: number  // seconds
+  end_timeout: number  // seconds
+  status: ProcessMonitorStatus
+  is_paused: boolean
+  last_start_at: string | null
+  last_end_at: string | null
+  last_duration_ms: number | null
+  next_expected_start: string | null
+  start_deadline: string | null
+  end_deadline: string | null
+  current_run_id: string | null
+  consecutive_successes: number
+  consecutive_failures: number
+  notify_on_missed_start: boolean
+  notify_on_missed_end: boolean
+  notify_on_recovery: boolean
+  notify_on_success: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateProcessMonitorRequest {
+  name: string
+  description?: string
+  schedule_type?: ScheduleType
+  schedule_cron?: string
+  schedule_interval?: string  // e.g., '1h', '30m'
+  schedule_exact_time?: string  // e.g., '17:00'
+  timezone?: string
+  start_grace_period?: string  // e.g., '5m'
+  end_timeout?: string  // e.g., '1h'
+  notify_on_missed_start?: boolean
+  notify_on_missed_end?: boolean
+  notify_on_recovery?: boolean
+  notify_on_success?: boolean
+}
+
+export interface UpdateProcessMonitorRequest {
+  name?: string
+  description?: string
+  schedule_type?: ScheduleType
+  schedule_cron?: string
+  schedule_interval?: string
+  schedule_exact_time?: string
+  timezone?: string
+  start_grace_period?: string
+  end_timeout?: string
+  notify_on_missed_start?: boolean
+  notify_on_missed_end?: boolean
+  notify_on_recovery?: boolean
+  notify_on_success?: boolean
+}
+
+export interface ProcessMonitorEvent {
+  id: string
+  monitor_id: string
+  event_type: ProcessMonitorEventType
+  run_id: string
+  duration_ms: number | null
+  status_message: string | null
+  payload: Record<string, unknown> | null
+  source_ip: string | null
+  created_at: string
+}
+
 // API Error
 export interface ApiError {
   detail: string

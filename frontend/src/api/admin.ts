@@ -154,6 +154,9 @@ export interface AdminPlan {
   min_heartbeat_interval_minutes: number
   // SSL Monitors limits
   max_ssl_monitors: number
+  // Process Monitors limits
+  max_process_monitors: number
+  min_process_monitor_interval_minutes: number
   // Overlap prevention settings
   overlap_prevention_enabled: boolean
   max_queue_size: number
@@ -195,6 +198,9 @@ export interface CreatePlanRequest {
   min_heartbeat_interval_minutes?: number
   // SSL Monitors limits
   max_ssl_monitors?: number
+  // Process Monitors limits
+  max_process_monitors?: number
+  min_process_monitor_interval_minutes?: number
   // Overlap prevention settings
   overlap_prevention_enabled?: boolean
   max_queue_size?: number
@@ -228,6 +234,9 @@ export interface UpdatePlanRequest {
   min_heartbeat_interval_minutes?: number
   // SSL Monitors limits
   max_ssl_monitors?: number
+  // Process Monitors limits
+  max_process_monitors?: number
+  min_process_monitor_interval_minutes?: number
   // Overlap prevention settings
   overlap_prevention_enabled?: boolean
   max_queue_size?: number

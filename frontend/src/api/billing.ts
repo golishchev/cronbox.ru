@@ -20,6 +20,8 @@ export interface Plan {
   max_task_chains: number
   max_heartbeats: number
   max_ssl_monitors: number
+  max_process_monitors: number
+  min_process_monitor_interval_minutes: number
   overlap_prevention_enabled: boolean
   max_queue_size: number
 }

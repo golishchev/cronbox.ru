@@ -52,6 +52,7 @@ class TaskScheduler:
             self._poll_task_chains(),
             self._poll_heartbeats(),
             self._poll_ssl_monitors(),
+            self._poll_process_monitors(),
             self._update_next_run_times(),
             self._check_subscriptions(),
             self._check_pending_payments(),
@@ -121,6 +122,31 @@ class TaskScheduler:
             dead_count = await heartbeat_service.check_dead_heartbeats(db)
             if dead_count > 0:
                 logger.info(f"Marked {dead_count} heartbeat(s) as dead")
+
+    async def _poll_process_monitors(self):
+        """Poll for process monitors with missed starts/ends every 30 seconds."""
+        while self.running:
+            try:
+                await self._process_process_monitor_checks()
+            except Exception as e:
+                logger.error("Error processing process monitor checks", error=str(e))
+
+            await asyncio.sleep(30)
+
+    async def _process_process_monitor_checks(self):
+        """Check for process monitors with missed starts and missed ends."""
+        from app.services.process_monitor import process_monitor_service
+
+        async with async_session_factory() as db:
+            # Check for missed starts (past start deadline)
+            missed_starts = await process_monitor_service.check_missed_starts(db)
+            if missed_starts > 0:
+                logger.info(f"Marked {missed_starts} process monitor(s) as missed start")
+
+            # Check for missed ends (past end deadline while running)
+            missed_ends = await process_monitor_service.check_missed_ends(db)
+            if missed_ends > 0:
+                logger.info(f"Marked {missed_ends} process monitor(s) as missed end (timeout)")
 
     async def _poll_ssl_monitors(self):
         """Poll for SSL monitors due for check every 5 minutes."""

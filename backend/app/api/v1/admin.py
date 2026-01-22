@@ -753,6 +753,9 @@ class PlanListItem(BaseModel):
     min_heartbeat_interval_minutes: int
     # SSL monitor limits
     max_ssl_monitors: int
+    # Process monitor limits
+    max_process_monitors: int
+    min_process_monitor_interval_minutes: int
     # Overlap prevention settings
     overlap_prevention_enabled: bool
     max_queue_size: int
@@ -801,6 +804,9 @@ class CreatePlanRequest(BaseModel):
     min_heartbeat_interval_minutes: int = Field(default=5, ge=1)
     # SSL monitor limits
     max_ssl_monitors: int = Field(default=0, ge=0)
+    # Process monitor limits
+    max_process_monitors: int = Field(default=0, ge=0)
+    min_process_monitor_interval_minutes: int = Field(default=5, ge=1)
     # Overlap prevention settings
     overlap_prevention_enabled: bool = False
     max_queue_size: int = Field(default=10, ge=0)
@@ -836,6 +842,9 @@ class UpdatePlanRequest(BaseModel):
     min_heartbeat_interval_minutes: int | None = Field(default=None, ge=1)
     # SSL monitor limits
     max_ssl_monitors: int | None = Field(default=None, ge=0)
+    # Process monitor limits
+    max_process_monitors: int | None = Field(default=None, ge=0)
+    min_process_monitor_interval_minutes: int | None = Field(default=None, ge=1)
     # Overlap prevention settings
     overlap_prevention_enabled: bool | None = None
     max_queue_size: int | None = Field(default=None, ge=0)
@@ -885,6 +894,8 @@ async def list_plans(admin: AdminUser, db: DB):
                 max_heartbeats=plan.max_heartbeats,
                 min_heartbeat_interval_minutes=plan.min_heartbeat_interval_minutes,
                 max_ssl_monitors=plan.max_ssl_monitors,
+                max_process_monitors=plan.max_process_monitors,
+                min_process_monitor_interval_minutes=plan.min_process_monitor_interval_minutes,
                 overlap_prevention_enabled=plan.overlap_prevention_enabled,
                 max_queue_size=plan.max_queue_size,
                 is_active=plan.is_active,
@@ -938,6 +949,8 @@ async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
         max_heartbeats=plan.max_heartbeats,
         min_heartbeat_interval_minutes=plan.min_heartbeat_interval_minutes,
         max_ssl_monitors=plan.max_ssl_monitors,
+        max_process_monitors=plan.max_process_monitors,
+        min_process_monitor_interval_minutes=plan.min_process_monitor_interval_minutes,
         overlap_prevention_enabled=plan.overlap_prevention_enabled,
         max_queue_size=plan.max_queue_size,
         is_active=plan.is_active,
@@ -986,6 +999,8 @@ async def get_plan(admin: AdminUser, db: DB, plan_id: str):
         max_heartbeats=plan.max_heartbeats,
         min_heartbeat_interval_minutes=plan.min_heartbeat_interval_minutes,
         max_ssl_monitors=plan.max_ssl_monitors,
+        max_process_monitors=plan.max_process_monitors,
+        min_process_monitor_interval_minutes=plan.min_process_monitor_interval_minutes,
         overlap_prevention_enabled=plan.overlap_prevention_enabled,
         max_queue_size=plan.max_queue_size,
         is_active=plan.is_active,
@@ -1044,6 +1059,8 @@ async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRe
         max_heartbeats=plan.max_heartbeats,
         min_heartbeat_interval_minutes=plan.min_heartbeat_interval_minutes,
         max_ssl_monitors=plan.max_ssl_monitors,
+        max_process_monitors=plan.max_process_monitors,
+        min_process_monitor_interval_minutes=plan.min_process_monitor_interval_minutes,
         overlap_prevention_enabled=plan.overlap_prevention_enabled,
         max_queue_size=plan.max_queue_size,
         is_active=plan.is_active,

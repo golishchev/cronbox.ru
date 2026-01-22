@@ -33,6 +33,7 @@ import {
   Copy,
   Lock,
   CreditCard,
+  Rocket,
 } from 'lucide-react'
 import { ChainForm } from '@/components/chains/ChainForm'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -363,7 +364,7 @@ export function ChainsPage({ onNavigate }: ChainsPageProps) {
                         {actionLoading === chain.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Play className="h-4 w-4" />
+                          <Rocket className="h-4 w-4" />
                         )}
                       </Button>
                       <Button
