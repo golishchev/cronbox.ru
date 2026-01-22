@@ -531,7 +531,7 @@ class TestExecuteCronTask:
             result = await execute_cron_task(ctx, task_id=str(uuid4()))
 
             assert result["success"] is False
-            assert "not active" in result["error"].lower()
+            assert "paused" in result["error"].lower()
 
     @pytest.mark.asyncio
     async def test_successful_execution(self, mock_db_context):
