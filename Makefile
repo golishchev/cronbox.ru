@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list
 
 # Start all dev services (backend + frontend + landing in background)
 dev: infra
@@ -89,3 +89,18 @@ lint:
 	cd backend && uv run mypy app --ignore-missing-imports
 	cd frontend && npm run lint
 	cd landing && npm run lint
+
+# Backup database and uploads (for dev environment)
+backup:
+	@mkdir -p backups
+	@echo "Backing up database..."
+	@docker exec cronbox-postgres pg_dump -U cronbox cronbox | gzip > backups/db_$$(date +%Y%m%d_%H%M%S).sql.gz
+	@echo "Backup complete: backups/db_$$(date +%Y%m%d_%H%M%S).sql.gz"
+
+# Restore from latest backup (for dev environment)
+restore:
+	@./scripts/restore.sh --latest
+
+# List available backups
+backup-list:
+	@./scripts/restore.sh --list
