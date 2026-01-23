@@ -244,6 +244,37 @@ class TestNotificationService:
                     assert call_args[1]["event"] == "task.succeeded"
 
     @pytest.mark.asyncio
+    async def test_send_task_success_disabled(self):
+        """Test send_task_success when notify_on_success is disabled."""
+        from app.services.notifications import NotificationService
+
+        service = NotificationService()
+        mock_db = AsyncMock()
+
+        workspace_id = uuid4()
+        mock_settings = MagicMock()
+        mock_settings.notify_on_success = False
+        mock_settings.telegram_enabled = True
+        mock_settings.telegram_chat_ids = [123]
+        mock_settings.email_enabled = True
+        mock_settings.email_addresses = ["test@example.com"]
+        mock_settings.webhook_enabled = True
+        mock_settings.webhook_url = "https://webhook.example.com"
+        mock_settings.webhook_secret = None
+
+        with patch.object(service, "get_settings", return_value=mock_settings):
+            with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
+                with patch.object(service, "_send_templated_telegram") as mock_telegram:
+                    with patch.object(service, "_send_templated_email") as mock_email:
+                        with patch.object(service, "_send_webhook") as mock_webhook:
+                            await service.send_task_success(mock_db, workspace_id, "Test Task", "cron", duration_ms=150)
+
+                            # Should not send any notifications when notify_on_success is False
+                            mock_telegram.assert_not_called()
+                            mock_email.assert_not_called()
+                            mock_webhook.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_send_subscription_expiring(self):
         """Test send_subscription_expiring."""
         from app.services.notifications import NotificationService

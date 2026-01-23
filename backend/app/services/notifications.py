@@ -227,7 +227,7 @@ class NotificationService:
     ) -> None:
         """Send success notifications through all enabled channels."""
         settings = await self.get_settings(db, workspace_id)
-        if not settings:  # Only check if settings exist - monitor setting controls this
+        if not settings or not settings.notify_on_success:
             return
 
         workspace_name, language = await self._get_workspace_info(db, workspace_id)
