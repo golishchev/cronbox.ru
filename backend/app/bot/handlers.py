@@ -225,7 +225,14 @@ async def run_bot():
     await redis_client.initialize()
     logger.info("Redis initialized for bot")
 
-    logger.info("Starting Telegram bot")
+    # Delete webhook if exists (to avoid conflicts with polling)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Webhook deleted, ready for polling")
+    except Exception as e:
+        logger.warning(f"Failed to delete webhook: {e}")
+
+    logger.info("Starting Telegram bot polling")
     try:
         await dp.start_polling(bot)
     finally:
