@@ -15,6 +15,7 @@ from app.db.repositories.process_monitors import (
     ProcessMonitorRepository,
 )
 from app.models.process_monitor import (
+    ConcurrencyPolicy,
     ProcessMonitor,
     ProcessMonitorEvent,
     ProcessMonitorStatus,
@@ -30,9 +31,7 @@ logger = structlog.get_logger()
 class ProcessMonitorService:
     """Service for process monitoring operations."""
 
-    async def _get_workspace_settings(
-        self, db: AsyncSession, workspace_id: uuid.UUID
-    ) -> tuple[str, str]:
+    async def _get_workspace_settings(self, db: AsyncSession, workspace_id: uuid.UUID) -> tuple[str, str]:
         """Get workspace language and timezone."""
         result = await db.execute(
             select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
@@ -147,18 +146,37 @@ class ProcessMonitorService:
 
         # Check if monitor is in correct state
         if monitor.status == ProcessMonitorStatus.RUNNING:
-            raise ValueError("Monitor is already running. Cannot accept another start signal.")
+            if monitor.concurrency_policy == ConcurrencyPolicy.SKIP:
+                raise ValueError("Monitor is already running. Cannot accept another start signal.")
+            elif monitor.concurrency_policy == ConcurrencyPolicy.REPLACE:
+                # Create timeout event for current run
+                await event_repo.create_timeout_event(
+                    monitor_id=monitor.id,
+                    run_id=monitor.current_run_id or str(uuid.uuid4()),
+                )
+                # Send missed end notification if enabled
+                if monitor.notify_on_missed_end:
+                    try:
+                        await self._send_missed_end_notification(db, monitor)
+                    except Exception as e:
+                        logger.error(
+                            "Failed to send missed end notification",
+                            monitor_id=str(monitor.id),
+                            error=str(e),
+                        )
+                # Continue to start new run (fall through)
+                # Note: mark_running() will set status and run_id correctly
         if monitor.status == ProcessMonitorStatus.PAUSED:
             raise ValueError("Monitor is paused. Resume it first.")
 
-        # Generate new run_id
-        run_id = str(uuid.uuid4())
-
-        # Check if this is a recovery (was in failure state)
+        # Check if this is a recovery (was in failure state) BEFORE generating new run_id
         was_failed = monitor.status in (
             ProcessMonitorStatus.MISSED_START,
             ProcessMonitorStatus.MISSED_END,
         )
+
+        # Generate new run_id
+        run_id = str(uuid.uuid4())
 
         # Create start event
         event = await event_repo.create_start_event(
@@ -232,9 +250,7 @@ class ProcessMonitorService:
         if duration_ms is None and monitor.last_start_at:
             # Remove timezone info if present (PostgreSQL returns timezone-aware datetime)
             last_start_naive = (
-                monitor.last_start_at.replace(tzinfo=None)
-                if monitor.last_start_at.tzinfo
-                else monitor.last_start_at
+                monitor.last_start_at.replace(tzinfo=None) if monitor.last_start_at.tzinfo else monitor.last_start_at
             )
             duration_ms = int((now - last_start_naive).total_seconds() * 1000)
 

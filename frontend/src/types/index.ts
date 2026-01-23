@@ -513,6 +513,7 @@ export interface UpdateSSLMonitorRequest {
 export type ProcessMonitorStatus = 'waiting_start' | 'running' | 'completed' | 'missed_start' | 'missed_end' | 'paused'
 export type ScheduleType = 'cron' | 'interval' | 'exact_time'
 export type ProcessMonitorEventType = 'start' | 'end' | 'timeout' | 'missed'
+export type ConcurrencyPolicy = 'skip' | 'replace'
 
 export interface ProcessMonitor {
   id: string
@@ -545,6 +546,7 @@ export interface ProcessMonitor {
   notify_on_missed_end: boolean
   notify_on_recovery: boolean
   notify_on_success: boolean
+  concurrency_policy: ConcurrencyPolicy
   created_at: string
   updated_at: string
 }
@@ -563,6 +565,7 @@ export interface CreateProcessMonitorRequest {
   notify_on_missed_end?: boolean
   notify_on_recovery?: boolean
   notify_on_success?: boolean
+  concurrency_policy?: ConcurrencyPolicy
 }
 
 export interface UpdateProcessMonitorRequest {
@@ -579,6 +582,7 @@ export interface UpdateProcessMonitorRequest {
   notify_on_missed_end?: boolean
   notify_on_recovery?: boolean
   notify_on_success?: boolean
+  concurrency_policy?: ConcurrencyPolicy
 }
 
 export interface ProcessMonitorEvent {

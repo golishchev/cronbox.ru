@@ -5,7 +5,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from app.models.process_monitor import ProcessMonitorEventType, ProcessMonitorStatus, ScheduleType
+from app.models.process_monitor import (
+    ConcurrencyPolicy,
+    ProcessMonitorEventType,
+    ProcessMonitorStatus,
+    ScheduleType,
+)
 from app.schemas.cron_task import PaginationMeta
 
 
@@ -69,6 +74,7 @@ class ProcessMonitorBase(BaseModel):
     notify_on_missed_end: bool = True
     notify_on_recovery: bool = True
     notify_on_success: bool = False
+    concurrency_policy: ConcurrencyPolicy = ConcurrencyPolicy.SKIP
 
     @field_validator("start_grace_period", "end_timeout", "schedule_interval", mode="before")
     @classmethod
@@ -130,6 +136,7 @@ class ProcessMonitorUpdate(BaseModel):
     notify_on_missed_end: bool | None = None
     notify_on_recovery: bool | None = None
     notify_on_success: bool | None = None
+    concurrency_policy: ConcurrencyPolicy | None = None
 
     @field_validator("start_grace_period", "end_timeout", "schedule_interval", mode="before")
     @classmethod
@@ -204,6 +211,7 @@ class ProcessMonitorResponse(BaseModel):
     notify_on_missed_end: bool
     notify_on_recovery: bool
     notify_on_success: bool
+    concurrency_policy: ConcurrencyPolicy
     created_at: datetime
     updated_at: datetime
 

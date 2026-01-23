@@ -17,28 +17,35 @@ class ProcessMonitorStatus(str, enum.Enum):
     """Process monitor status."""
 
     WAITING_START = "waiting_start"  # Waiting for start signal
-    RUNNING = "running"              # Start received, waiting for end
-    COMPLETED = "completed"          # Successfully completed
-    MISSED_START = "missed_start"    # Start not received in time
-    MISSED_END = "missed_end"        # End not received within timeout
-    PAUSED = "paused"                # Monitoring paused
+    RUNNING = "running"  # Start received, waiting for end
+    COMPLETED = "completed"  # Successfully completed
+    MISSED_START = "missed_start"  # Start not received in time
+    MISSED_END = "missed_end"  # End not received within timeout
+    PAUSED = "paused"  # Monitoring paused
 
 
 class ScheduleType(str, enum.Enum):
     """Schedule type for process monitor."""
 
-    CRON = "cron"              # Cron expression (e.g., "0 17 * * *")
-    INTERVAL = "interval"      # Interval in seconds
+    CRON = "cron"  # Cron expression (e.g., "0 17 * * *")
+    INTERVAL = "interval"  # Interval in seconds
     EXACT_TIME = "exact_time"  # Exact time (e.g., "17:00")
+
+
+class ConcurrencyPolicy(str, enum.Enum):
+    """Concurrency policy for handling overlapping process runs."""
+
+    SKIP = "skip"  # Reject new start if already running (default)
+    REPLACE = "replace"  # Timeout current run, start new one
 
 
 class ProcessMonitorEventType(str, enum.Enum):
     """Process monitor event type."""
 
-    START = "start"        # Start signal received
-    END = "end"            # End signal received
-    TIMEOUT = "timeout"    # End timeout occurred
-    MISSED = "missed"      # Start not received in time
+    START = "start"  # Start signal received
+    END = "end"  # End signal received
+    TIMEOUT = "timeout"  # End timeout occurred
+    MISSED = "missed"  # Start not received in time
 
 
 class ProcessMonitor(Base, UUIDMixin, TimestampMixin):
@@ -81,6 +88,12 @@ class ProcessMonitor(Base, UUIDMixin, TimestampMixin):
     schedule_interval: Mapped[int | None] = mapped_column(Integer, nullable=True)  # seconds
     schedule_exact_time: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "17:00"
     timezone: Mapped[str] = mapped_column(String(50), default="Europe/Moscow")
+
+    # Concurrency policy
+    concurrency_policy: Mapped[ConcurrencyPolicy] = mapped_column(
+        SQLEnum(ConcurrencyPolicy, values_callable=lambda obj: [e.value for e in obj]),
+        default=ConcurrencyPolicy.SKIP,
+    )
 
     # Timeouts (in seconds)
     start_grace_period: Mapped[int] = mapped_column(Integer, default=300)  # 5 minutes

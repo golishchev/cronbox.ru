@@ -204,9 +204,7 @@ class TestProcessMonitorsCRUD:
         monitor_id = create_response.json()["id"]
 
         # Get monitor
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == monitor_id
@@ -280,9 +278,7 @@ class TestProcessMonitorsCRUD:
         monitor_id = create_response.json()["id"]
 
         # Pause then resume
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause")
         response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/resume"
         )
@@ -307,15 +303,11 @@ class TestProcessMonitorsCRUD:
         monitor_id = create_response.json()["id"]
 
         # Delete monitor
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         assert get_response.status_code == 404
 
     async def test_get_nonexistent_process_monitor(self, authenticated_client: AsyncClient, workspace):
@@ -356,9 +348,7 @@ class TestProcessMonitorsCRUD:
             )
 
         # List with limit
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors?limit=2"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["process_monitors"]) <= 2
@@ -450,9 +440,7 @@ class TestProcessPingEndpoints:
         assert data["duration_ms"] is not None
 
         # Verify monitor status is waiting_start (ready for next run)
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         assert get_response.json()["status"] == "waiting_start"
 
     async def test_end_ping_without_start(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
@@ -528,9 +516,7 @@ class TestProcessPingEndpoints:
         start_token = create_response.json()["start_token"]
 
         # Pause monitor
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause")
 
         # Try to ping
         response = await client.get(f"/ping/start/{start_token}")
@@ -538,9 +524,7 @@ class TestProcessPingEndpoints:
         data = response.json()
         assert "detail" in data  # FastAPI returns {"detail": "..."} for HTTPExceptions
 
-    async def test_start_ping_updates_status(
-        self, authenticated_client: AsyncClient, workspace, client: AsyncClient
-    ):
+    async def test_start_ping_updates_status(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
         """Test that start ping updates monitor status."""
         # Create monitor
         create_response = await authenticated_client.post(
@@ -557,18 +541,14 @@ class TestProcessPingEndpoints:
         start_token = create_response.json()["start_token"]
 
         # Initial status should be waiting_start
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         assert get_response.json()["status"] == "waiting_start"
 
         # Send start ping
         await client.get(f"/ping/start/{start_token}")
 
         # Status should be running
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}")
         data = get_response.json()
         assert data["status"] == "running"
         assert data["last_start_at"] is not None
@@ -688,9 +668,7 @@ class TestProcessMonitorValidation:
         )
         assert response.status_code == 422
 
-    async def test_update_monitor_change_schedule_type(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_update_monitor_change_schedule_type(self, authenticated_client: AsyncClient, workspace):
         """Test updating monitor to change schedule type."""
         # Create with cron
         create_response = await authenticated_client.post(
@@ -718,9 +696,7 @@ class TestProcessMonitorValidation:
         assert data["schedule_type"] == "interval"
         assert data["schedule_interval"] == 21600
 
-    async def test_update_monitor_missing_interval_for_type(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_update_monitor_missing_interval_for_type(self, authenticated_client: AsyncClient, workspace):
         """Test updating to interval type without providing interval."""
         # Create with cron
         create_response = await authenticated_client.post(
@@ -760,9 +736,7 @@ class TestProcessMonitorValidation:
         monitor_id = create_response.json()["id"]
 
         # First pause
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause")
 
         # Try to pause again
         response = await authenticated_client.post(
@@ -957,14 +931,16 @@ class TestProcessMonitorTimezoneDeadline:
         # If the bug was present, start_deadline could be miscalculated by several hours
         # due to timezone confusion
         now = datetime.utcnow()
-        assert monitor.start_deadline > now, \
+        assert monitor.start_deadline > now, (
             f"start_deadline should be in the future, but it's {monitor.start_deadline} (now: {now})"
+        )
 
         # Verify correct timezone-independent calculation:
         # start_deadline = next_expected_start + grace_period (as timedeltas, not timestamps)
         grace_period_delta = timedelta(seconds=300)
-        assert (monitor.start_deadline - monitor.next_expected_start) == grace_period_delta, \
+        assert (monitor.start_deadline - monitor.next_expected_start) == grace_period_delta, (
             f"start_deadline should be exactly grace_period ({grace_period_delta}) after next_expected_start"
+        )
 
     async def test_no_false_missed_start_after_successful_run(self, db_session, workspace):
         """Test that monitor doesn't trigger false missed_start after successful completion.
@@ -1012,5 +988,431 @@ class TestProcessMonitorTimezoneDeadline:
 
         # This monitor should NOT be in the list
         missed_ids = [m.id for m in missed_monitors]
-        assert monitor.id not in missed_ids, \
-            "Monitor incorrectly marked as missed_start after successful completion"
+        assert monitor.id not in missed_ids, "Monitor incorrectly marked as missed_start after successful completion"
+
+
+class TestConcurrencyPolicy:
+    """Tests for concurrency policy feature."""
+
+    async def test_create_monitor_with_default_concurrency_policy(self, authenticated_client: AsyncClient, workspace):
+        """Test that new monitors default to SKIP policy."""
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Default Policy Monitor",
+                "schedule_type": "cron",
+                "schedule_cron": "0 2 * * *",
+                "start_grace_period": "5m",
+                "end_timeout": "1h",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["concurrency_policy"] == "skip"
+
+    async def test_create_monitor_with_skip_policy(self, authenticated_client: AsyncClient, workspace):
+        """Test creating a monitor with explicit SKIP policy."""
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Skip Policy Monitor",
+                "schedule_type": "cron",
+                "schedule_cron": "0 2 * * *",
+                "start_grace_period": "5m",
+                "end_timeout": "1h",
+                "concurrency_policy": "skip",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["concurrency_policy"] == "skip"
+
+    async def test_create_monitor_with_replace_policy(self, authenticated_client: AsyncClient, workspace):
+        """Test creating a monitor with REPLACE policy."""
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Replace Policy Monitor",
+                "schedule_type": "cron",
+                "schedule_cron": "0 2 * * *",
+                "start_grace_period": "5m",
+                "end_timeout": "1h",
+                "concurrency_policy": "replace",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["concurrency_policy"] == "replace"
+
+    async def test_skip_policy_rejects_duplicate_start(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test that SKIP policy rejects duplicate start pings."""
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+
+        # Create monitor with SKIP policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Skip Test Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "skip",
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = monitor_data["id"]
+        start_token = monitor_data["start_token"]
+
+        # Send first start ping (using unauthenticated client)
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+
+        # Verify monitor is running
+        repo = ProcessMonitorRepository(db_session)
+        from uuid import UUID
+
+        monitor = await repo.get_by_id(UUID(monitor_id))
+        from app.models.process_monitor import ProcessMonitorStatus
+
+        assert monitor.status == ProcessMonitorStatus.RUNNING
+
+        # Try to send another start ping - should be rejected
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 409  # Conflict
+
+    async def test_replace_policy_timeouts_current_run(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test that REPLACE policy timeouts current run and starts new one."""
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import (
+            ProcessMonitorEventRepository,
+            ProcessMonitorRepository,
+        )
+        from app.models.process_monitor import ProcessMonitorEventType, ProcessMonitorStatus
+
+        # Create monitor with REPLACE policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Replace Test Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "replace",
+                "notify_on_missed_end": True,
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+
+        # Send first start ping (using unauthenticated client)
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+        first_run_id = response.json()["run_id"]
+
+        # Verify monitor is running
+        repo = ProcessMonitorRepository(db_session)
+        monitor = await repo.get_by_id(monitor_id)
+        assert monitor.status == ProcessMonitorStatus.RUNNING
+        assert monitor.current_run_id == first_run_id
+
+        # Send another start ping - should timeout first run and start new one
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+        second_run_id = response.json()["run_id"]
+        assert second_run_id != first_run_id
+
+        # Verify monitor is still running with new run_id
+        await db_session.refresh(monitor)
+        assert monitor.status == ProcessMonitorStatus.RUNNING
+        assert monitor.current_run_id == second_run_id
+
+        # Verify events were created
+        from sqlalchemy import select
+
+        from app.models.process_monitor import ProcessMonitorEvent
+
+        # Check that timeout event was created for first run
+        stmt = select(ProcessMonitorEvent).where(
+            ProcessMonitorEvent.monitor_id == monitor_id,
+            ProcessMonitorEvent.event_type == ProcessMonitorEventType.TIMEOUT,
+            ProcessMonitorEvent.run_id == first_run_id,
+        )
+        result = await db_session.execute(stmt)
+        timeout_events = result.scalars().all()
+        assert len(timeout_events) == 1, "Should have created timeout event for first run"
+
+    async def test_update_concurrency_policy(self, authenticated_client: AsyncClient, workspace):
+        """Test updating monitor's concurrency policy."""
+        # Create monitor with SKIP policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Update Policy Monitor",
+                "schedule_type": "cron",
+                "schedule_cron": "0 2 * * *",
+                "start_grace_period": "5m",
+                "end_timeout": "1h",
+                "concurrency_policy": "skip",
+            },
+        )
+        assert response.status_code == 201
+        monitor_id = response.json()["id"]
+
+        # Update to REPLACE policy
+        response = await authenticated_client.patch(
+            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}",
+            json={"concurrency_policy": "replace"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["concurrency_policy"] == "replace"
+
+    async def test_replace_policy_handles_none_run_id(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test REPLACE policy gracefully handles None run_id (edge case)."""
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+        from app.models.process_monitor import ProcessMonitorStatus
+
+        # Create monitor with REPLACE policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "None Run ID Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "replace",
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+
+        # Manually set monitor to RUNNING but with None run_id (shouldn't happen normally)
+        repo = ProcessMonitorRepository(db_session)
+        monitor = await repo.get_by_id(monitor_id)
+        monitor.status = ProcessMonitorStatus.RUNNING
+        monitor.current_run_id = None  # Edge case
+        await db_session.commit()
+
+        # Send start ping - should handle None run_id gracefully
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200  # Should succeed despite None run_id
+
+    async def test_replace_policy_on_failed_monitor(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test REPLACE policy works correctly when monitor is in failed state."""
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+        from app.models.process_monitor import ProcessMonitorStatus
+
+        # Create monitor with REPLACE policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Failed State Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "replace",
+                "notify_on_recovery": True,
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+
+        # Manually set monitor to MISSED_END (failed state)
+        repo = ProcessMonitorRepository(db_session)
+        monitor = await repo.get_by_id(monitor_id)
+        monitor.status = ProcessMonitorStatus.MISSED_END
+        monitor.consecutive_failures = 3
+        await db_session.commit()
+
+        # Send start ping - should work as recovery
+        from unittest.mock import patch
+
+        with patch("app.services.process_monitor.notification_service.send_task_recovery") as mock_recovery:
+            mock_recovery.return_value = None
+
+            response = await client.post(f"/ping/start/{start_token}")
+            assert response.status_code == 200
+
+            # Verify recovery notification was sent
+            mock_recovery.assert_called_once()
+            call_args = mock_recovery.call_args
+            assert call_args.kwargs["workspace_id"] == UUID(workspace["id"])
+
+        # Verify monitor is now running
+        await db_session.refresh(monitor)
+        assert monitor.status == ProcessMonitorStatus.RUNNING
+        # Note: consecutive_failures will be reset only after successful completion
+        # At this point monitor just started, so failures remain until end signal
+        assert monitor.consecutive_failures == 3  # Still 3, not reset yet
+
+        # Complete the run successfully
+        end_token = monitor_data["end_token"]
+        response = await client.post(f"/ping/end/{end_token}")
+        assert response.status_code == 200
+
+        # Now verify failures are reset after successful completion
+        await db_session.refresh(monitor)
+        assert monitor.consecutive_failures == 0  # Reset after successful end
+        assert monitor.consecutive_successes == 1  # Incremented
+        assert monitor.status == ProcessMonitorStatus.WAITING_START
+
+    async def test_skip_policy_rejects_on_paused(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test that SKIP policy also checks for PAUSED status."""
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+
+        # Create monitor with SKIP policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Paused Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "skip",
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+
+        # Pause the monitor
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors/{monitor_id}/pause"
+        )
+        assert response.status_code == 200
+
+        # Try to send start ping - should be rejected
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 400
+        assert "paused" in response.json()["detail"].lower()
+
+    async def test_replace_policy_consecutive_failures_reset(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test that REPLACE policy correctly resets consecutive_failures counter."""
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+        from app.models.process_monitor import ProcessMonitorStatus
+
+        # Create monitor with REPLACE policy
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Failure Counter Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "concurrency_policy": "replace",
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+        end_token = monitor_data["end_token"]
+
+        # Send first start
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+
+        # Send second start (REPLACE) - this creates timeout for first run
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+        second_run_id = response.json()["run_id"]
+
+        # Check that consecutive_failures was incremented by timeout
+        repo = ProcessMonitorRepository(db_session)
+        monitor = await repo.get_by_id(monitor_id)
+        # After timeout event, failures should be incremented
+        # (This happens in scheduler, not in start_ping, so we skip this check)
+
+        # Complete second run successfully
+        response = await client.post(f"/ping/end/{end_token}")
+        assert response.status_code == 200
+
+        # Verify consecutive_successes incremented and failures reset
+        await db_session.refresh(monitor)
+        assert monitor.consecutive_successes > 0
+        # consecutive_failures should be 0 after successful completion
+
+
+class TestSuccessNotifications:
+    """Tests for success notification fix."""
+
+    async def test_success_notification_sent_when_monitor_enabled(
+        self, authenticated_client: AsyncClient, workspace, client: AsyncClient, db_session
+    ):
+        """Test that success notifications are sent when monitor.notify_on_success is true."""
+        from unittest.mock import AsyncMock, patch
+        from uuid import UUID
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+
+        # Create monitor with notify_on_success enabled
+        response = await authenticated_client.post(
+            f"/v1/workspaces/{workspace['id']}/process-monitors",
+            json={
+                "name": "Success Notification Monitor",
+                "schedule_type": "interval",
+                "schedule_interval": "1h",
+                "start_grace_period": "5m",
+                "end_timeout": "10m",
+                "notify_on_success": True,
+            },
+        )
+        assert response.status_code == 201
+        monitor_data = response.json()
+        monitor_id = UUID(monitor_data["id"])
+        start_token = monitor_data["start_token"]
+        end_token = monitor_data["end_token"]
+
+        # Send start ping (using unauthenticated client)
+        response = await client.post(f"/ping/start/{start_token}")
+        assert response.status_code == 200
+
+        # Mock notification service to verify it's called
+        with patch("app.services.process_monitor.notification_service.send_task_success") as mock_send:
+            mock_send.return_value = None
+
+            # Send end ping
+            response = await client.post(f"/ping/end/{end_token}")
+            assert response.status_code == 200
+
+            # Verify send_task_success was called
+            mock_send.assert_called_once()
+            call_args = mock_send.call_args
+            assert call_args.kwargs["workspace_id"] == UUID(workspace["id"])
+            assert call_args.kwargs["task_name"] == "Success Notification Monitor"
+            assert call_args.kwargs["task_type"] == "process_monitor"

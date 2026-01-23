@@ -130,9 +130,7 @@ async def create_process_monitor(
     # Parse intervals
     start_grace_period_seconds = parse_interval_to_seconds(data.start_grace_period)
     end_timeout_seconds = parse_interval_to_seconds(data.end_timeout)
-    schedule_interval_seconds = (
-        parse_interval_to_seconds(data.schedule_interval) if data.schedule_interval else None
-    )
+    schedule_interval_seconds = parse_interval_to_seconds(data.schedule_interval) if data.schedule_interval else None
 
     # Create monitor
     monitor = await monitor_repo.create(
@@ -150,6 +148,7 @@ async def create_process_monitor(
         notify_on_missed_end=data.notify_on_missed_end,
         notify_on_recovery=data.notify_on_recovery,
         notify_on_success=data.notify_on_success,
+        concurrency_policy=data.concurrency_policy,
         status=ProcessMonitorStatus.WAITING_START,
     )
 
@@ -158,9 +157,7 @@ async def create_process_monitor(
     next_expected_start = process_monitor_service.calculate_next_expected_start(monitor, now)
     if next_expected_start:
         monitor.next_expected_start = next_expected_start
-        monitor.start_deadline = datetime.fromtimestamp(
-            next_expected_start.timestamp() + start_grace_period_seconds
-        )
+        monitor.start_deadline = datetime.fromtimestamp(next_expected_start.timestamp() + start_grace_period_seconds)
 
     # Update workspace counter
     await workspace_repo.update_process_monitors_count(workspace, 1)

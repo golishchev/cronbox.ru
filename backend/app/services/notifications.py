@@ -227,7 +227,7 @@ class NotificationService:
     ) -> None:
         """Send success notifications through all enabled channels."""
         settings = await self.get_settings(db, workspace_id)
-        if not settings or not settings.notify_on_success:
+        if not settings:  # Only check if settings exist - monitor setting controls this
             return
 
         workspace_name, language = await self._get_workspace_info(db, workspace_id)
@@ -625,9 +625,7 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             try:
-                await self._send_templated_telegram(
-                    db, settings.telegram_chat_ids, "ssl_expiring", language, variables
-                )
+                await self._send_templated_telegram(db, settings.telegram_chat_ids, "ssl_expiring", language, variables)
             except Exception:
                 # Template might not exist, send fallback
                 if days_until_expiry <= 0:
@@ -700,9 +698,7 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             try:
-                await self._send_templated_telegram(
-                    db, settings.telegram_chat_ids, "ssl_error", language, variables
-                )
+                await self._send_templated_telegram(db, settings.telegram_chat_ids, "ssl_error", language, variables)
             except Exception:
                 # Template might not exist, send fallback
                 message = f"SSL check failed for {domain} ({monitor_name})\nError: {error}"
@@ -771,9 +767,7 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             try:
-                await self._send_templated_telegram(
-                    db, settings.telegram_chat_ids, "ssl_invalid", language, variables
-                )
+                await self._send_templated_telegram(db, settings.telegram_chat_ids, "ssl_invalid", language, variables)
             except Exception:
                 # Template might not exist, send fallback
                 message = f"SSL certificate invalid for {domain} ({monitor_name})\n{error}"

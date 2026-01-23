@@ -144,8 +144,10 @@ async def _process_start_ping(
             detail="Process monitor is paused",
         )
 
-    # Check if already running (reject duplicate starts)
-    if monitor.status == ProcessMonitorStatus.RUNNING:
+    # Check if already running (reject duplicate starts for SKIP policy)
+    from app.models.process_monitor import ConcurrencyPolicy
+
+    if monitor.status == ProcessMonitorStatus.RUNNING and monitor.concurrency_policy == ConcurrencyPolicy.SKIP:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Process is already running. Cannot accept another start signal.",

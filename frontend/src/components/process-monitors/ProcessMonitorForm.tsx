@@ -97,6 +97,9 @@ export function ProcessMonitorForm({
   const [notifyOnSuccess, setNotifyOnSuccess] = useState(
     monitor?.notify_on_success ?? false
   )
+  const [concurrencyPolicy, setConcurrencyPolicy] = useState<'skip' | 'replace'>(
+    monitor?.concurrency_policy || 'skip'
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,6 +117,7 @@ export function ProcessMonitorForm({
         notify_on_missed_end: notifyOnMissedEnd,
         notify_on_recovery: notifyOnRecovery,
         notify_on_success: notifyOnSuccess,
+        concurrency_policy: concurrencyPolicy,
       }
 
       // Add schedule-specific field
@@ -261,6 +265,31 @@ export function ProcessMonitorForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="concurrencyPolicy">
+            {t('processMonitors.concurrencyPolicy')}
+          </Label>
+          <Select
+            value={concurrencyPolicy}
+            onValueChange={(v) => setConcurrencyPolicy(v as 'skip' | 'replace')}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="skip">
+                {t('processMonitors.concurrencyPolicySkip')}
+              </SelectItem>
+              <SelectItem value="replace">
+                {t('processMonitors.concurrencyPolicyReplace')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t('processMonitors.concurrencyPolicyHelp')}
+          </p>
         </div>
       </div>
 
