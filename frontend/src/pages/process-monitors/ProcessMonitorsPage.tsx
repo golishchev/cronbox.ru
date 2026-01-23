@@ -179,7 +179,7 @@ export function ProcessMonitorsPage({ onNavigate }: ProcessMonitorsPageProps) {
       await navigator.clipboard.writeText(url)
       toast({
         title: type === 'start' ? t('processMonitors.startUrlCopied') : t('processMonitors.endUrlCopied'),
-        description: t('processMonitors.urlCopiedDescription'),
+        description: type === 'start' ? t('processMonitors.startUrlCopiedDescription') : t('processMonitors.endUrlCopiedDescription'),
         variant: 'success',
       })
     } catch {
