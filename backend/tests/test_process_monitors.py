@@ -884,3 +884,133 @@ class TestIntervalParsing:
         assert data["schedule_interval"] == 300
         assert data["start_grace_period"] == 60
         assert data["end_timeout"] == 180
+
+
+class TestProcessMonitorTimezoneDeadline:
+    """Tests for timezone-aware deadline calculation fix."""
+
+    async def test_deadline_calculation_in_non_utc_timezone(self, db_session, workspace):
+        """Test that start_deadline is correctly calculated for monitors with non-UTC timezone.
+
+        This test verifies the fix for the timezone bug where datetime.fromtimestamp()
+        was incorrectly interpreting UTC naive datetimes as local time, causing
+        false missed_start alerts.
+        """
+        from datetime import datetime, timedelta
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+        from app.models.process_monitor import ProcessMonitor, ProcessMonitorStatus, ScheduleType
+        from app.services.process_monitor import process_monitor_service
+
+        # Create monitor with exact_time schedule (03:00 daily)
+        monitor = ProcessMonitor(
+            workspace_id=workspace["id"],
+            name="Test Monitor",
+            schedule_type=ScheduleType.EXACT_TIME,
+            schedule_exact_time="03:00",
+            timezone="Europe/Moscow",  # UTC+3
+            start_grace_period=300,  # 5 minutes
+            end_timeout=3600,  # 1 hour
+            status=ProcessMonitorStatus.WAITING_START,
+        )
+        db_session.add(monitor)
+        await db_session.commit()
+        await db_session.refresh(monitor)
+
+        # Simulate the monitor receiving START ping at 03:00:01
+        start_time = datetime(2026, 1, 24, 0, 0, 1)  # 03:00:01 Moscow = 00:00:01 UTC
+
+        await process_monitor_service.process_start_ping(
+            db=db_session,
+            monitor=monitor,
+        )
+        await db_session.refresh(monitor)
+
+        # Monitor should be running
+        assert monitor.status == ProcessMonitorStatus.RUNNING
+        assert monitor.end_deadline is not None
+
+        # Simulate END ping at 03:00:04
+        end_time = datetime(2026, 1, 24, 0, 0, 4)  # 03:00:04 Moscow = 00:00:04 UTC
+
+        await process_monitor_service.process_end_ping(
+            db=db_session,
+            monitor=monitor,
+        )
+        await db_session.refresh(monitor)
+
+        # Monitor should transition to WAITING_START for next run
+        assert monitor.status == ProcessMonitorStatus.WAITING_START
+        assert monitor.next_expected_start is not None
+        assert monitor.start_deadline is not None
+
+        # The key fix: start_deadline should be calculated correctly
+        # next_expected_start should be tomorrow at 03:00 Moscow = 00:00 UTC
+        # start_deadline should be next_expected_start + 300 seconds
+        expected_start_deadline = monitor.next_expected_start + timedelta(seconds=300)
+
+        # Verify that start_deadline matches expected calculation
+        # (not affected by timezone.fromtimestamp() bug)
+        assert monitor.start_deadline == expected_start_deadline
+
+        # Verify that start_deadline is in the future
+        # If the bug was present, start_deadline could be miscalculated by several hours
+        # due to timezone confusion
+        now = datetime.utcnow()
+        assert monitor.start_deadline > now, \
+            f"start_deadline should be in the future, but it's {monitor.start_deadline} (now: {now})"
+
+        # Verify correct timezone-independent calculation:
+        # start_deadline = next_expected_start + grace_period (as timedeltas, not timestamps)
+        grace_period_delta = timedelta(seconds=300)
+        assert (monitor.start_deadline - monitor.next_expected_start) == grace_period_delta, \
+            f"start_deadline should be exactly grace_period ({grace_period_delta}) after next_expected_start"
+
+    async def test_no_false_missed_start_after_successful_run(self, db_session, workspace):
+        """Test that monitor doesn't trigger false missed_start after successful completion.
+
+        Regression test for the bug where a monitor would incorrectly trigger missed_start
+        alerts after successfully completing, due to incorrect deadline calculation.
+        """
+        from datetime import datetime, timedelta
+
+        from app.db.repositories.process_monitors import ProcessMonitorRepository
+        from app.models.process_monitor import ProcessMonitor, ProcessMonitorStatus, ScheduleType
+        from app.services.process_monitor import process_monitor_service
+
+        # Create monitor
+        monitor = ProcessMonitor(
+            workspace_id=workspace["id"],
+            name="Test Monitor 2",
+            schedule_type=ScheduleType.EXACT_TIME,
+            schedule_exact_time="03:00",
+            timezone="Europe/Moscow",
+            start_grace_period=300,
+            end_timeout=3600,
+            status=ProcessMonitorStatus.WAITING_START,
+        )
+        db_session.add(monitor)
+        await db_session.commit()
+        await db_session.refresh(monitor)
+
+        # Simulate successful run: START → END
+        await process_monitor_service.process_start_ping(db=db_session, monitor=monitor)
+        await db_session.refresh(monitor)
+
+        await process_monitor_service.process_end_ping(db=db_session, monitor=monitor)
+        await db_session.refresh(monitor)
+
+        # Monitor should be waiting for next start
+        assert monitor.status == ProcessMonitorStatus.WAITING_START
+
+        # Now check for missed starts (this is what scheduler does every 30 seconds)
+        repo = ProcessMonitorRepository(db_session)
+        now = datetime.utcnow()
+
+        # Should NOT find this monitor as missed (start_deadline should be in the future)
+        missed_monitors = await repo.get_monitors_waiting_for_start(now, limit=100)
+
+        # This monitor should NOT be in the list
+        missed_ids = [m.id for m in missed_monitors]
+        assert monitor.id not in missed_ids, \
+            "Monitor incorrectly marked as missed_start after successful completion"

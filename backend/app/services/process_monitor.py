@@ -230,7 +230,13 @@ class ProcessMonitorService:
 
         # Calculate duration if not provided
         if duration_ms is None and monitor.last_start_at:
-            duration_ms = int((now - monitor.last_start_at).total_seconds() * 1000)
+            # Remove timezone info if present (PostgreSQL returns timezone-aware datetime)
+            last_start_naive = (
+                monitor.last_start_at.replace(tzinfo=None)
+                if monitor.last_start_at.tzinfo
+                else monitor.last_start_at
+            )
+            duration_ms = int((now - last_start_naive).total_seconds() * 1000)
 
         # Create end event
         event = await event_repo.create_end_event(

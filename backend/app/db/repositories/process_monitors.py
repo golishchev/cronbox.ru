@@ -147,11 +147,13 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         run_id: str,
     ) -> ProcessMonitor:
         """Mark monitor as running after receiving start signal."""
+        from datetime import timedelta
+
         monitor.status = ProcessMonitorStatus.RUNNING
         monitor.last_start_at = now
         monitor.current_run_id = run_id
-        # Set end deadline
-        monitor.end_deadline = datetime.fromtimestamp(now.timestamp() + monitor.end_timeout)
+        # Set end deadline (now is UTC naive datetime, so add directly)
+        monitor.end_deadline = now + timedelta(seconds=monitor.end_timeout)
         # Clear start deadline
         monitor.start_deadline = None
 
@@ -167,6 +169,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         next_expected_start: datetime | None,
     ) -> ProcessMonitor:
         """Mark monitor as completed after receiving end signal."""
+        from datetime import timedelta
+
         monitor.status = ProcessMonitorStatus.COMPLETED
         monitor.last_end_at = now
         monitor.last_duration_ms = duration_ms
@@ -178,9 +182,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         # Set next expected start and deadline
         if next_expected_start:
             monitor.next_expected_start = next_expected_start
-            monitor.start_deadline = datetime.fromtimestamp(
-                next_expected_start.timestamp() + monitor.start_grace_period
-            )
+            # next_expected_start is UTC naive datetime, so add directly
+            monitor.start_deadline = next_expected_start + timedelta(seconds=monitor.start_grace_period)
             # Transition to WAITING_START
             monitor.status = ProcessMonitorStatus.WAITING_START
 
@@ -194,6 +197,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         next_expected_start: datetime | None,
     ) -> ProcessMonitor:
         """Mark monitor as missed start."""
+        from datetime import timedelta
+
         monitor.status = ProcessMonitorStatus.MISSED_START
         monitor.consecutive_failures += 1
         monitor.consecutive_successes = 0
@@ -201,9 +206,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         # Set next expected start and deadline
         if next_expected_start:
             monitor.next_expected_start = next_expected_start
-            monitor.start_deadline = datetime.fromtimestamp(
-                next_expected_start.timestamp() + monitor.start_grace_period
-            )
+            # next_expected_start is UTC naive datetime, so add directly
+            monitor.start_deadline = next_expected_start + timedelta(seconds=monitor.start_grace_period)
             # Immediately transition to WAITING_START for next cycle
             monitor.status = ProcessMonitorStatus.WAITING_START
 
@@ -217,6 +221,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         next_expected_start: datetime | None,
     ) -> ProcessMonitor:
         """Mark monitor as missed end (timeout)."""
+        from datetime import timedelta
+
         monitor.status = ProcessMonitorStatus.MISSED_END
         monitor.consecutive_failures += 1
         monitor.consecutive_successes = 0
@@ -226,9 +232,8 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         # Set next expected start and deadline
         if next_expected_start:
             monitor.next_expected_start = next_expected_start
-            monitor.start_deadline = datetime.fromtimestamp(
-                next_expected_start.timestamp() + monitor.start_grace_period
-            )
+            # next_expected_start is UTC naive datetime, so add directly
+            monitor.start_deadline = next_expected_start + timedelta(seconds=monitor.start_grace_period)
             # Immediately transition to WAITING_START for next cycle
             monitor.status = ProcessMonitorStatus.WAITING_START
 
@@ -255,13 +260,14 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
         next_expected_start: datetime,
     ) -> ProcessMonitor:
         """Resume a paused process monitor."""
+        from datetime import timedelta
+
         monitor.is_paused = False
         monitor.status = ProcessMonitorStatus.WAITING_START
         monitor.consecutive_failures = 0
         monitor.next_expected_start = next_expected_start
-        monitor.start_deadline = datetime.fromtimestamp(
-            next_expected_start.timestamp() + monitor.start_grace_period
-        )
+        # next_expected_start is UTC naive datetime, so add directly
+        monitor.start_deadline = next_expected_start + timedelta(seconds=monitor.start_grace_period)
 
         await self.db.flush()
         await self.db.refresh(monitor)
