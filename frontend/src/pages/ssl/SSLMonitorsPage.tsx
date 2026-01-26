@@ -188,7 +188,7 @@ export function SSLMonitorsPage({ onNavigate }: SSLMonitorsPageProps) {
       invalid: 'destructive',
       error: 'destructive',
       pending: 'secondary',
-      paused: 'secondary',
+      paused: 'warning',
     }
 
     const icons: Record<SSLMonitorStatus, React.ReactNode> = {

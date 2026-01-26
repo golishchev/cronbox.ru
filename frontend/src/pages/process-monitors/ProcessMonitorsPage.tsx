@@ -197,7 +197,7 @@ export function ProcessMonitorsPage({ onNavigate }: ProcessMonitorsPageProps) {
       completed: 'success',
       missed_start: 'destructive',
       missed_end: 'destructive',
-      paused: 'secondary',
+      paused: 'warning',
     }
 
     const labels: Record<ProcessMonitorStatus, string> = {

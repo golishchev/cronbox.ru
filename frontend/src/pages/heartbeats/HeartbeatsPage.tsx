@@ -190,7 +190,7 @@ export function HeartbeatsPage({ onNavigate }: HeartbeatsPageProps) {
       waiting: 'secondary',
       late: 'warning',
       dead: 'destructive',
-      paused: 'secondary',
+      paused: 'warning',
     }
 
     const labels: Record<HeartbeatStatus, string> = {
