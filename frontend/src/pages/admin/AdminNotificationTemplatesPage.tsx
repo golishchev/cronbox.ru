@@ -50,6 +50,7 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  MessageCircle,
   Check,
   X,
 } from 'lucide-react'
@@ -67,7 +68,7 @@ const TEMPLATE_CODES = [
 ]
 
 const LANGUAGES = ['ru', 'en']
-const CHANNELS = ['EMAIL', 'TELEGRAM']
+const CHANNELS = ['EMAIL', 'TELEGRAM', 'MAX']
 
 const DEFAULT_VARIABLES: Record<string, Record<string, string>> = {
   task_failure: {
@@ -249,11 +250,19 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
   }
 
   const getChannelIcon = (channel: string) => {
-    return channel === 'EMAIL' ? (
-      <Mail className="h-4 w-4" />
-    ) : (
-      <MessageSquare className="h-4 w-4" />
-    )
+    switch (channel) {
+      case 'EMAIL': return <Mail className="h-4 w-4" />
+      case 'MAX': return <MessageCircle className="h-4 w-4" />
+      default: return <MessageSquare className="h-4 w-4" />
+    }
+  }
+
+  const getChannelLabel = (channel: string) => {
+    switch (channel) {
+      case 'EMAIL': return 'Email'
+      case 'MAX': return 'MAX'
+      default: return 'Telegram'
+    }
   }
 
   const BooleanBadge = ({ value }: { value: boolean }) =>
@@ -324,7 +333,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
               <SelectItem value="all">{t('common.all')}</SelectItem>
               {CHANNELS.map((channel) => (
                 <SelectItem key={channel} value={channel}>
-                  {channel === 'EMAIL' ? 'Email' : 'Telegram'}
+                  {getChannelLabel(channel)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -374,7 +383,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getChannelIcon(template.channel)}
-                      <span>{template.channel === 'EMAIL' ? 'Email' : 'Telegram'}</span>
+                      <span>{getChannelLabel(template.channel)}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -429,7 +438,7 @@ export function AdminNotificationTemplatesPage({ onNavigate }: AdminNotification
                 <span>
                   {getCodeLabel(editingTemplate.code)} &middot;{' '}
                   {editingTemplate.language.toUpperCase()} &middot;{' '}
-                  {editingTemplate.channel === 'EMAIL' ? 'Email' : 'Telegram'}
+                  {getChannelLabel(editingTemplate.channel)}
                 </span>
               )}
             </DialogDescription>

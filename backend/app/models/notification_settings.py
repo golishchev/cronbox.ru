@@ -26,6 +26,10 @@ class NotificationSettings(Base, UUIDMixin, TimestampMixin):
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     email_addresses: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
 
+    # MAX
+    max_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    max_chat_ids: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
+
     # Webhook
     webhook_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     webhook_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)

@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     admin_telegram_id: int | None = None  # Admin chat ID for system notifications
 
+    # MAX
+    max_bot_token: str = ""
+
     # Email (SMTP fallback)
     smtp_host: str = "smtp.yandex.ru"
     smtp_port: int = 587

@@ -14,6 +14,7 @@ from app.models.notification_template import NotificationChannel
 from app.models.payment import Payment
 from app.models.workspace import Workspace
 from app.services.email import email_service  # SMTP fallback
+from app.services.max_messenger import max_messenger_service
 from app.services.postal import postal_service
 from app.services.telegram import telegram_service
 from app.services.template_service import template_service
@@ -112,6 +113,22 @@ class NotificationService:
                 text=body.replace("<br>", "\n").replace("</p>", "\n"),
             )
 
+    async def _send_templated_max(
+        self,
+        db: AsyncSession,
+        chat_ids: list[str],
+        template_code: str,
+        language: str,
+        variables: dict,
+    ) -> None:
+        """Send MAX notification using template."""
+        template = await template_service.get_template(db, template_code, language, NotificationChannel.MAX)
+        _, body = template_service.render(template, variables)
+
+        if body:
+            for chat_id in chat_ids:
+                await max_messenger_service.send_message(chat_id, body)
+
     async def send_task_failure(
         self,
         db: AsyncSession,
@@ -138,6 +155,10 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_failure", language, variables)
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(db, settings.max_chat_ids, "task_failure", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -191,6 +212,10 @@ class NotificationService:
         if settings.telegram_enabled and settings.telegram_chat_ids:
             await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_recovery", language, variables)
 
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(db, settings.max_chat_ids, "task_recovery", language, variables)
+
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
             await self._send_templated_email(
@@ -224,10 +249,18 @@ class NotificationService:
         task_name: str,
         task_type: str,
         duration_ms: int | None = None,
+        task_level_override: bool = False,
     ) -> None:
-        """Send success notifications through all enabled channels."""
+        """Send success notifications through all enabled channels.
+
+        Args:
+            task_level_override: If True, skip workspace-level notify_on_success check.
+                Used when the task itself has notify_on_success enabled.
+        """
         settings = await self.get_settings(db, workspace_id)
-        if not settings or not settings.notify_on_success:
+        if not settings:
+            return
+        if not task_level_override and not settings.notify_on_success:
             return
 
         workspace_name, language = await self._get_workspace_info(db, workspace_id)
@@ -242,6 +275,10 @@ class NotificationService:
         # Send Telegram notifications
         if settings.telegram_enabled and settings.telegram_chat_ids:
             await self._send_templated_telegram(db, settings.telegram_chat_ids, "task_success", language, variables)
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(db, settings.max_chat_ids, "task_success", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -298,6 +335,12 @@ class NotificationService:
                 "subscription_expiring",
                 language,
                 variables,
+            )
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(
+                db, settings.max_chat_ids, "subscription_expiring", language, variables
             )
 
         # Send Email notifications
@@ -369,6 +412,12 @@ class NotificationService:
                 "subscription_expired",
                 language,
                 variables,
+            )
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(
+                db, settings.max_chat_ids, "subscription_expired", language, variables
             )
 
         # Send Email notifications
@@ -446,6 +495,12 @@ class NotificationService:
                 variables,
             )
 
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            await self._send_templated_max(
+                db, settings.max_chat_ids, "subscription_renewed", language, variables
+            )
+
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
             await self._send_templated_email(
@@ -490,6 +545,7 @@ class NotificationService:
         completed_steps: int | None = None,
         failed_steps: int | None = None,
         total_steps: int | None = None,
+        task_level_override: bool = False,
     ) -> None:
         """Send task chain notifications through all enabled channels."""
         settings = await self.get_settings(db, workspace_id)
@@ -497,7 +553,7 @@ class NotificationService:
             return
 
         # Check notification settings based on event
-        if event == "success" and not settings.notify_on_success:
+        if event == "success" and not task_level_override and not settings.notify_on_success:
             return
         if event == "failure" and not settings.notify_on_failure:
             return
@@ -536,6 +592,22 @@ class NotificationService:
                 )
                 for chat_id in settings.telegram_chat_ids:
                     await telegram_service.send_message(chat_id, message)
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            try:
+                await self._send_templated_max(db, settings.max_chat_ids, template_code, language, variables)
+            except Exception as e:
+                logger.warning(
+                    "Chain Max notification template not found, using fallback",
+                    template=template_code,
+                    error=str(e),
+                )
+                message = self._format_chain_notification_fallback(
+                    chain_name, event, completed_steps, failed_steps, total_steps, error_message
+                )
+                for chat_id in settings.max_chat_ids:
+                    await max_messenger_service.send_message(chat_id, message)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -635,6 +707,18 @@ class NotificationService:
                 for chat_id in settings.telegram_chat_ids:
                     await telegram_service.send_message(chat_id, message)
 
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            try:
+                await self._send_templated_max(db, settings.max_chat_ids, "ssl_expiring", language, variables)
+            except Exception:
+                if days_until_expiry <= 0:
+                    message = f"SSL certificate for {domain} ({monitor_name}) has expired!"
+                else:
+                    message = f"SSL certificate for {domain} ({monitor_name}) expires in {days_until_expiry} days (on {expiry_date})"
+                for chat_id in settings.max_chat_ids:
+                    await max_messenger_service.send_message(chat_id, message)
+
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
             try:
@@ -705,6 +789,15 @@ class NotificationService:
                 for chat_id in settings.telegram_chat_ids:
                     await telegram_service.send_message(chat_id, message)
 
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            try:
+                await self._send_templated_max(db, settings.max_chat_ids, "ssl_error", language, variables)
+            except Exception:
+                message = f"SSL check failed for {domain} ({monitor_name})\nError: {error}"
+                for chat_id in settings.max_chat_ids:
+                    await max_messenger_service.send_message(chat_id, message)
+
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
             try:
@@ -773,6 +866,15 @@ class NotificationService:
                 message = f"SSL certificate invalid for {domain} ({monitor_name})\n{error}"
                 for chat_id in settings.telegram_chat_ids:
                     await telegram_service.send_message(chat_id, message)
+
+        # Send MAX notifications
+        if settings.max_enabled and settings.max_chat_ids:
+            try:
+                await self._send_templated_max(db, settings.max_chat_ids, "ssl_invalid", language, variables)
+            except Exception:
+                message = f"SSL certificate invalid for {domain} ({monitor_name})\n{error}"
+                for chat_id in settings.max_chat_ids:
+                    await max_messenger_service.send_message(chat_id, message)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:

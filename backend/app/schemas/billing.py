@@ -28,6 +28,7 @@ class PlanResponse(BaseModel):
     # Features
     telegram_notifications: bool
     email_notifications: bool
+    max_notifications: bool
     webhook_callbacks: bool
     custom_headers: bool
     retry_on_failure: bool

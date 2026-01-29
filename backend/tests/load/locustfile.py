@@ -57,19 +57,20 @@ API_PREFIX = "/v1"
 # Утилиты
 # ============================================================================
 
+
 def random_string(length: int = 8) -> str:
     """Генерация случайной строки."""
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 def random_cron_schedule() -> str:
     """Генерация случайного cron расписания."""
     schedules = [
         "*/15 * * * *",  # каждые 15 минут
-        "0 * * * *",     # каждый час
-        "0 */2 * * *",   # каждые 2 часа
-        "0 0 * * *",     # ежедневно в полночь
-        "0 9 * * 1-5",   # будни в 9:00
+        "0 * * * *",  # каждый час
+        "0 */2 * * *",  # каждые 2 часа
+        "0 0 * * *",  # ежедневно в полночь
+        "0 9 * * 1-5",  # будни в 9:00
     ]
     return random.choice(schedules)
 
@@ -83,6 +84,7 @@ def future_datetime(minutes: int = 30) -> str:
 # ============================================================================
 # Base User Class
 # ============================================================================
+
 
 class CronBoxUser(HttpUser):
     """Базовый класс пользователя CronBox."""
@@ -111,10 +113,7 @@ class CronBoxUser(HttpUser):
         user = random.choice(TEST_USERS)
 
         with self.client.post(
-            f"{API_PREFIX}/auth/login",
-            json=user,
-            catch_response=True,
-            name="POST /auth/login"
+            f"{API_PREFIX}/auth/login", json=user, catch_response=True, name="POST /auth/login"
         ) as response:
             if response.status_code == 200:
                 data = response.json()
@@ -132,13 +131,9 @@ class CronBoxUser(HttpUser):
         """Регистрация нового пользователя."""
         with self.client.post(
             f"{API_PREFIX}/auth/register",
-            json={
-                "email": user["email"],
-                "password": user["password"],
-                "name": f"Load Test User {random_string(4)}"
-            },
+            json={"email": user["email"], "password": user["password"], "name": f"Load Test User {random_string(4)}"},
             catch_response=True,
-            name="POST /auth/register"
+            name="POST /auth/register",
         ) as response:
             if response.status_code == 201:
                 data = response.json()
@@ -151,19 +146,13 @@ class CronBoxUser(HttpUser):
 
     def get_headers(self) -> dict:
         """Получить заголовки с авторизацией."""
-        return {
-            "Authorization": f"Bearer {self.token}",
-            "Content-Type": "application/json"
-        }
+        return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
     def get_or_create_workspace(self):
         """Получить или создать workspace."""
         # Сначала пробуем получить список
         with self.client.get(
-            f"{API_PREFIX}/workspaces",
-            headers=self.get_headers(),
-            catch_response=True,
-            name="GET /workspaces"
+            f"{API_PREFIX}/workspaces", headers=self.get_headers(), catch_response=True, name="GET /workspaces"
         ) as response:
             if response.status_code == 200:
                 workspaces = response.json()
@@ -183,10 +172,10 @@ class CronBoxUser(HttpUser):
             json={
                 "name": f"Load Test Workspace {random_string(6)}",
                 "slug": f"load-test-{random_string(6)}",
-                "default_timezone": "Europe/Moscow"
+                "default_timezone": "Europe/Moscow",
             },
             catch_response=True,
-            name="POST /workspaces"
+            name="POST /workspaces",
         ) as response:
             if response.status_code == 201:
                 self.workspace_id = response.json()["id"]
@@ -198,6 +187,7 @@ class CronBoxUser(HttpUser):
 # ============================================================================
 # Read-Heavy User (типичный пользователь)
 # ============================================================================
+
 
 class ReadHeavyUser(CronBoxUser):
     """
@@ -220,7 +210,7 @@ class ReadHeavyUser(CronBoxUser):
             headers=self.get_headers(),
             params={"page": 1, "limit": 20},
             catch_response=True,
-            name="GET /workspaces/{id}/cron"
+            name="GET /workspaces/{id}/cron",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
@@ -241,7 +231,7 @@ class ReadHeavyUser(CronBoxUser):
             headers=self.get_headers(),
             params={"page": 1, "limit": 20},
             catch_response=True,
-            name="GET /workspaces/{id}/delayed"
+            name="GET /workspaces/{id}/delayed",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
@@ -261,7 +251,7 @@ class ReadHeavyUser(CronBoxUser):
             headers=self.get_headers(),
             params={"page": 1, "limit": 20},
             catch_response=True,
-            name="GET /workspaces/{id}/executions"
+            name="GET /workspaces/{id}/executions",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -278,7 +268,7 @@ class ReadHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/executions/stats",
             headers=self.get_headers(),
             catch_response=True,
-            name="GET /workspaces/{id}/executions/stats"
+            name="GET /workspaces/{id}/executions/stats",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -296,7 +286,7 @@ class ReadHeavyUser(CronBoxUser):
             headers=self.get_headers(),
             params={"days": 7},
             catch_response=True,
-            name="GET /workspaces/{id}/executions/stats/daily"
+            name="GET /workspaces/{id}/executions/stats/daily",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -314,7 +304,7 @@ class ReadHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron/{task_id}",
             headers=self.get_headers(),
             catch_response=True,
-            name="GET /workspaces/{id}/cron/{task_id}"
+            name="GET /workspaces/{id}/cron/{task_id}",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -328,10 +318,7 @@ class ReadHeavyUser(CronBoxUser):
     def get_user_profile(self):
         """Получить профиль пользователя."""
         with self.client.get(
-            f"{API_PREFIX}/auth/me",
-            headers=self.get_headers(),
-            catch_response=True,
-            name="GET /auth/me"
+            f"{API_PREFIX}/auth/me", headers=self.get_headers(), catch_response=True, name="GET /auth/me"
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -360,10 +347,10 @@ class ReadHeavyUser(CronBoxUser):
                 "timezone": "Europe/Moscow",
                 "timeout_seconds": 30,
                 "retry_count": 2,
-                "notify_on_failure": False
+                "notify_on_failure": False,
             },
             catch_response=True,
-            name="POST /workspaces/{id}/cron"
+            name="POST /workspaces/{id}/cron",
         ) as response:
             if response.status_code == 201:
                 task_id = response.json()["id"]
@@ -393,10 +380,10 @@ class ReadHeavyUser(CronBoxUser):
                 "body": json.dumps({"test": True}),
                 "execute_at": future_datetime(random.randint(5, 60)),
                 "timeout_seconds": 30,
-                "retry_count": 2
+                "retry_count": 2,
             },
             catch_response=True,
-            name="POST /workspaces/{id}/delayed"
+            name="POST /workspaces/{id}/delayed",
         ) as response:
             if response.status_code == 201:
                 task_id = response.json()["id"]
@@ -418,7 +405,7 @@ class ReadHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron/{task_id}",
             headers=self.get_headers(),
             catch_response=True,
-            name="DELETE /workspaces/{id}/cron/{task_id}"
+            name="DELETE /workspaces/{id}/cron/{task_id}",
         ) as response:
             if response.status_code in [200, 204, 404]:
                 response.success()
@@ -429,6 +416,7 @@ class ReadHeavyUser(CronBoxUser):
 # ============================================================================
 # Write-Heavy User (активный пользователь)
 # ============================================================================
+
 
 class WriteHeavyUser(CronBoxUser):
     """
@@ -448,7 +436,7 @@ class WriteHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron",
             headers=self.get_headers(),
             catch_response=True,
-            name="GET /workspaces/{id}/cron"
+            name="GET /workspaces/{id}/cron",
         ) as response:
             if response.status_code == 200:
                 data = response.json()
@@ -467,7 +455,7 @@ class WriteHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/executions",
             headers=self.get_headers(),
             catch_response=True,
-            name="GET /workspaces/{id}/executions"
+            name="GET /workspaces/{id}/executions",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -489,10 +477,10 @@ class WriteHeavyUser(CronBoxUser):
                 "method": "POST",
                 "schedule": random_cron_schedule(),
                 "timezone": "Europe/Moscow",
-                "timeout_seconds": 30
+                "timeout_seconds": 30,
             },
             catch_response=True,
-            name="POST /workspaces/{id}/cron"
+            name="POST /workspaces/{id}/cron",
         ) as response:
             if response.status_code == 201:
                 self.cron_task_ids.append(response.json()["id"])
@@ -517,10 +505,10 @@ class WriteHeavyUser(CronBoxUser):
                 "url": TEST_WEBHOOK_URL,
                 "method": "POST",
                 "execute_at": future_datetime(random.randint(1, 30)),
-                "timeout_seconds": 30
+                "timeout_seconds": 30,
             },
             catch_response=True,
-            name="POST /workspaces/{id}/delayed"
+            name="POST /workspaces/{id}/delayed",
         ) as response:
             if response.status_code == 201:
                 self.delayed_task_ids.append(response.json()["id"])
@@ -541,7 +529,7 @@ class WriteHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron/{task_id}/run",
             headers=self.get_headers(),
             catch_response=True,
-            name="POST /workspaces/{id}/cron/{task_id}/run"
+            name="POST /workspaces/{id}/cron/{task_id}/run",
         ) as response:
             if response.status_code in [200, 202]:
                 response.success()
@@ -561,12 +549,9 @@ class WriteHeavyUser(CronBoxUser):
         with self.client.patch(
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron/{task_id}",
             headers=self.get_headers(),
-            json={
-                "name": f"Updated Cron {random_string(4)}",
-                "timeout_seconds": random.choice([30, 60, 120])
-            },
+            json={"name": f"Updated Cron {random_string(4)}", "timeout_seconds": random.choice([30, 60, 120])},
             catch_response=True,
-            name="PATCH /workspaces/{id}/cron/{task_id}"
+            name="PATCH /workspaces/{id}/cron/{task_id}",
         ) as response:
             if response.status_code == 200:
                 response.success()
@@ -587,7 +572,7 @@ class WriteHeavyUser(CronBoxUser):
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron/{task_id}",
             headers=self.get_headers(),
             catch_response=True,
-            name="DELETE /workspaces/{id}/cron/{task_id}"
+            name="DELETE /workspaces/{id}/cron/{task_id}",
         ) as response:
             if response.status_code in [200, 204, 404]:
                 response.success()
@@ -598,6 +583,7 @@ class WriteHeavyUser(CronBoxUser):
 # ============================================================================
 # API-Only User (для тестирования rate limits)
 # ============================================================================
+
 
 class APIOnlyUser(CronBoxUser):
     """
@@ -617,7 +603,7 @@ class APIOnlyUser(CronBoxUser):
         self.client.get(
             f"{API_PREFIX}/workspaces/{self.workspace_id}/cron",
             headers=self.get_headers(),
-            name="GET /workspaces/{id}/cron [rapid]"
+            name="GET /workspaces/{id}/cron [rapid]",
         )
 
     @task(5)
@@ -629,13 +615,14 @@ class APIOnlyUser(CronBoxUser):
         self.client.get(
             f"{API_PREFIX}/workspaces/{self.workspace_id}/executions",
             headers=self.get_headers(),
-            name="GET /workspaces/{id}/executions [rapid]"
+            name="GET /workspaces/{id}/executions [rapid]",
         )
 
 
 # ============================================================================
 # Event Hooks (для отладки и метрик)
 # ============================================================================
+
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):

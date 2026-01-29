@@ -15,6 +15,7 @@ class NotificationChannel(str, enum.Enum):
 
     EMAIL = "email"
     TELEGRAM = "telegram"
+    MAX = "max"
 
 
 class NotificationTemplate(Base, UUIDMixin, TimestampMixin):

@@ -238,9 +238,7 @@ class TestExecuteIcmpPing:
 rtt min/avg/max/mdev = 1.000/1.233/1.500/0.204 ms"""
 
         mock_process = MagicMock()
-        mock_process.communicate = AsyncMock(
-            return_value=(mock_output.encode(), b"")
-        )
+        mock_process.communicate = AsyncMock(return_value=(mock_output.encode(), b""))
 
         with patch("app.services.icmp.asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_create:
             mock_create.return_value = mock_process

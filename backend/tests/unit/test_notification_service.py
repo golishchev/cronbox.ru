@@ -158,6 +158,7 @@ class TestNotificationService:
         mock_settings.notify_on_failure = True
         mock_settings.telegram_enabled = True
         mock_settings.telegram_chat_ids = [123456]
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = False
 
@@ -167,6 +168,30 @@ class TestNotificationService:
                     await service.send_task_failure(mock_db, workspace_id, "Test Task", "cron", "Error message")
 
                     mock_telegram.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_task_failure_with_max(self):
+        """Test send_task_failure sends MAX notification."""
+        from app.services.notifications import NotificationService
+
+        service = NotificationService()
+        mock_db = AsyncMock()
+
+        workspace_id = uuid4()
+        mock_settings = MagicMock()
+        mock_settings.notify_on_failure = True
+        mock_settings.telegram_enabled = False
+        mock_settings.max_enabled = True
+        mock_settings.max_chat_ids = ["12345"]
+        mock_settings.email_enabled = False
+        mock_settings.webhook_enabled = False
+
+        with patch.object(service, "get_settings", return_value=mock_settings):
+            with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
+                with patch.object(service, "_send_templated_max") as mock_max:
+                    await service.send_task_failure(mock_db, workspace_id, "Test Task", "cron", "Error message")
+
+                    mock_max.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_task_failure_with_webhook(self):
@@ -180,6 +205,7 @@ class TestNotificationService:
         mock_settings = MagicMock()
         mock_settings.notify_on_failure = True
         mock_settings.telegram_enabled = False
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = True
         mock_settings.webhook_url = "https://webhook.example.com"
@@ -207,6 +233,7 @@ class TestNotificationService:
         mock_settings.notify_on_recovery = True
         mock_settings.telegram_enabled = True
         mock_settings.telegram_chat_ids = [123]
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = False
 
@@ -229,6 +256,7 @@ class TestNotificationService:
         mock_settings = MagicMock()
         mock_settings.notify_on_success = True
         mock_settings.telegram_enabled = False
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = True
         mock_settings.webhook_url = "https://webhook.example.com"
@@ -245,7 +273,7 @@ class TestNotificationService:
 
     @pytest.mark.asyncio
     async def test_send_task_success_disabled(self):
-        """Test send_task_success when notify_on_success is disabled."""
+        """Test send_task_success when notify_on_success is disabled at workspace level."""
         from app.services.notifications import NotificationService
 
         service = NotificationService()
@@ -256,6 +284,8 @@ class TestNotificationService:
         mock_settings.notify_on_success = False
         mock_settings.telegram_enabled = True
         mock_settings.telegram_chat_ids = [123]
+        mock_settings.max_enabled = True
+        mock_settings.max_chat_ids = ["789"]
         mock_settings.email_enabled = True
         mock_settings.email_addresses = ["test@example.com"]
         mock_settings.webhook_enabled = True
@@ -265,14 +295,45 @@ class TestNotificationService:
         with patch.object(service, "get_settings", return_value=mock_settings):
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_templated_telegram") as mock_telegram:
-                    with patch.object(service, "_send_templated_email") as mock_email:
-                        with patch.object(service, "_send_webhook") as mock_webhook:
-                            await service.send_task_success(mock_db, workspace_id, "Test Task", "cron", duration_ms=150)
+                    with patch.object(service, "_send_templated_max") as mock_max:
+                        with patch.object(service, "_send_templated_email") as mock_email:
+                            with patch.object(service, "_send_webhook") as mock_webhook:
+                                await service.send_task_success(mock_db, workspace_id, "Test Task", "cron", duration_ms=150)
 
-                            # Should not send any notifications when notify_on_success is False
-                            mock_telegram.assert_not_called()
-                            mock_email.assert_not_called()
-                            mock_webhook.assert_not_called()
+                                # Should not send any notifications when workspace notify_on_success is False
+                                mock_telegram.assert_not_called()
+                                mock_max.assert_not_called()
+                                mock_email.assert_not_called()
+                                mock_webhook.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_task_success_task_level_override(self):
+        """Test send_task_success with task_level_override bypasses workspace setting."""
+        from app.services.notifications import NotificationService
+
+        service = NotificationService()
+        mock_db = AsyncMock()
+
+        workspace_id = uuid4()
+        mock_settings = MagicMock()
+        mock_settings.notify_on_success = False  # workspace-level disabled
+        mock_settings.telegram_enabled = False
+        mock_settings.max_enabled = False
+        mock_settings.email_enabled = False
+        mock_settings.webhook_enabled = True
+        mock_settings.webhook_url = "https://webhook.example.com"
+        mock_settings.webhook_secret = None
+
+        with patch.object(service, "get_settings", return_value=mock_settings):
+            with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
+                with patch.object(service, "_send_webhook") as mock_webhook:
+                    await service.send_task_success(
+                        mock_db, workspace_id, "Test Task", "process_monitor",
+                        duration_ms=150, task_level_override=True,
+                    )
+
+                    # Should send notification despite workspace notify_on_success=False
+                    mock_webhook.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_subscription_expiring(self):
@@ -286,6 +347,7 @@ class TestNotificationService:
         mock_settings = MagicMock()
         mock_settings.telegram_enabled = True
         mock_settings.telegram_chat_ids = [123]
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = False
 
@@ -318,6 +380,7 @@ class TestNotificationService:
 
         mock_settings = MagicMock()
         mock_settings.telegram_enabled = False
+        mock_settings.max_enabled = False
         mock_settings.email_enabled = False
         mock_settings.webhook_enabled = True
         mock_settings.webhook_url = "https://webhook.example.com"
@@ -468,6 +531,57 @@ class TestNotificationService:
                     )
 
                     mock_postal.send_email.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_templated_max(self):
+        """Test sending templated MAX notification."""
+        from app.services.notifications import NotificationService
+
+        service = NotificationService()
+        mock_db = AsyncMock()
+
+        mock_template = MagicMock()
+
+        with patch("app.services.notifications.template_service") as mock_template_service:
+            with patch("app.services.notifications.max_messenger_service") as mock_max:
+                mock_template_service.get_template = AsyncMock(return_value=mock_template)
+                mock_template_service.render.return_value = (None, "Test message")
+                mock_max.send_message = AsyncMock()
+
+                await service._send_templated_max(
+                    mock_db,
+                    chat_ids=["123", "456"],
+                    template_code="test_template",
+                    language="en",
+                    variables={"key": "value"},
+                )
+
+                assert mock_max.send_message.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_send_templated_max_empty_body(self):
+        """Test sending templated Max notification with empty body does nothing."""
+        from app.services.notifications import NotificationService
+
+        service = NotificationService()
+        mock_db = AsyncMock()
+
+        mock_template = MagicMock()
+
+        with patch("app.services.notifications.template_service") as mock_template_service:
+            with patch("app.services.notifications.max_messenger_service") as mock_max:
+                mock_template_service.get_template = AsyncMock(return_value=mock_template)
+                mock_template_service.render.return_value = (None, "")
+
+                await service._send_templated_max(
+                    mock_db,
+                    chat_ids=["123"],
+                    template_code="test_template",
+                    language="en",
+                    variables={},
+                )
+
+                mock_max.send_message.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_send_templated_email_empty_body(self):

@@ -11,6 +11,9 @@ class NotificationSettingsBase(BaseModel):
     telegram_enabled: bool = False
     telegram_chat_ids: list[str] | None = None
 
+    max_enabled: bool = False
+    max_chat_ids: list[str] | None = None
+
     email_enabled: bool = False
     email_addresses: list[str] | None = None
 
@@ -28,6 +31,9 @@ class NotificationSettingsUpdate(BaseModel):
 
     telegram_enabled: bool | None = None
     telegram_chat_ids: list[str] | None = None
+
+    max_enabled: bool | None = None
+    max_chat_ids: list[str] | None = None
 
     email_enabled: bool | None = None
     email_addresses: list[str] | None = None
@@ -68,4 +74,4 @@ class TelegramLinkResponse(BaseModel):
 class TestNotificationRequest(BaseModel):
     """Request to send a test notification."""
 
-    channel: str  # "telegram", "email", "webhook"
+    channel: str  # "telegram", "max", "email", "webhook"

@@ -422,6 +422,12 @@ export function BillingPage({ onNavigate: _ }: BillingPageProps) {
                       <span>{t('billing.emailNotifications')}</span>
                     </li>
                   )}
+                  {plan.max_notifications && (
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{t('billing.maxNotifications')}</span>
+                    </li>
+                  )}
                   {plan.webhook_callbacks && (
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-500" />

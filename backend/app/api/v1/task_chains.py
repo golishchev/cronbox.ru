@@ -283,7 +283,9 @@ async def update_task_chain(
             if interval_minutes < user_plan.min_chain_interval_minutes:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=t("errors.chain_interval_too_frequent", lang, min_interval=user_plan.min_chain_interval_minutes),
+                    detail=t(
+                        "errors.chain_interval_too_frequent", lang, min_interval=user_plan.min_chain_interval_minutes
+                    ),
                 )
             update_data["next_run_at"] = calculate_next_run(schedule, timezone)
     elif trigger_type == TriggerType.DELAYED:

@@ -627,7 +627,6 @@ class TaskScheduler:
         if processed > 0:
             logger.info(f"Processed {processed} task chains")
 
-
     async def _cleanup_stale_instances(self):
         """Cleanup stale running instances every 5 minutes."""
         while self.running:
@@ -675,9 +674,7 @@ class TaskScheduler:
 
                             # Delete old executions for each workspace
                             for workspace_id in workspace_ids:
-                                deleted = await execution_repo.cleanup_old_executions(
-                                    workspace_id, cutoff
-                                )
+                                deleted = await execution_repo.cleanup_old_executions(workspace_id, cutoff)
                                 total_deleted += deleted
 
                                 chain_deleted = await chain_execution_repo.delete_old_executions(

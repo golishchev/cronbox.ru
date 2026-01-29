@@ -289,9 +289,7 @@ class OverlapService:
         Returns:
             True if item was removed, False if not found
         """
-        result = await db.execute(
-            select(TaskQueue).where(TaskQueue.id == queue_item_id)
-        )
+        result = await db.execute(select(TaskQueue).where(TaskQueue.id == queue_item_id))
         queue_item = result.scalar_one_or_none()
         if queue_item:
             await db.delete(queue_item)
@@ -409,9 +407,7 @@ class OverlapService:
         """Increment running instances counter."""
         if task_type == "cron":
             await db.execute(
-                update(CronTask)
-                .where(CronTask.id == task_id)
-                .values(running_instances=CronTask.running_instances + 1)
+                update(CronTask).where(CronTask.id == task_id).values(running_instances=CronTask.running_instances + 1)
             )
         elif task_type == "chain":
             await db.execute(

@@ -41,11 +41,7 @@ class ProcessMonitorRepository(BaseRepository[ProcessMonitor]):
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         """Count process monitors for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(ProcessMonitor)
-            .where(ProcessMonitor.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(ProcessMonitor).where(ProcessMonitor.workspace_id == workspace_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
@@ -299,11 +295,7 @@ class ProcessMonitorEventRepository(BaseRepository[ProcessMonitorEvent]):
 
     async def count_by_monitor(self, monitor_id: UUID) -> int:
         """Count events for a process monitor."""
-        stmt = (
-            select(func.count())
-            .select_from(ProcessMonitorEvent)
-            .where(ProcessMonitorEvent.monitor_id == monitor_id)
-        )
+        stmt = select(func.count()).select_from(ProcessMonitorEvent).where(ProcessMonitorEvent.monitor_id == monitor_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 

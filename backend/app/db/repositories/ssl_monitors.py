@@ -34,11 +34,7 @@ class SSLMonitorRepository(BaseRepository[SSLMonitor]):
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         """Count SSL monitors for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(SSLMonitor)
-            .where(SSLMonitor.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(SSLMonitor).where(SSLMonitor.workspace_id == workspace_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 

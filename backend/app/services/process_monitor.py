@@ -497,6 +497,7 @@ class ProcessMonitorService:
             task_name=monitor.name,
             task_type="process_monitor",
             duration_ms=duration_ms,
+            task_level_override=True,
         )
 
 

@@ -112,9 +112,7 @@ class TestHeartbeats:
         heartbeat_id = create_response.json()["id"]
 
         # Get heartbeat
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == heartbeat_id
@@ -158,9 +156,7 @@ class TestHeartbeats:
         heartbeat_id = create_response.json()["id"]
 
         # Pause heartbeat
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is True
@@ -179,12 +175,8 @@ class TestHeartbeats:
         heartbeat_id = create_response.json()["id"]
 
         # Pause then resume
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause"
-        )
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/resume"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause")
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/resume")
         assert response.status_code == 200
         data = response.json()
         assert data["is_paused"] is False
@@ -203,15 +195,11 @@ class TestHeartbeats:
         heartbeat_id = create_response.json()["id"]
 
         # Delete heartbeat
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}")
         assert get_response.status_code == 404
 
     async def test_get_nonexistent_heartbeat(self, authenticated_client: AsyncClient, workspace):
@@ -249,9 +237,7 @@ class TestHeartbeats:
             )
 
         # List with limit
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats?limit=2"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["heartbeats"]) <= 2
@@ -280,9 +266,7 @@ class TestPingEndpoint:
         assert data["message"] == "pong"
         assert data["status"] == "healthy"
 
-    async def test_ping_post_with_payload(
-        self, authenticated_client: AsyncClient, workspace, client: AsyncClient
-    ):
+    async def test_ping_post_with_payload(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
         """Test sending a POST ping with payload."""
         # Create heartbeat
         create_response = await authenticated_client.post(
@@ -313,9 +297,7 @@ class TestPingEndpoint:
         response = await client.get("/ping/nonexistent-token")
         assert response.status_code == 404
 
-    async def test_ping_paused_heartbeat(
-        self, authenticated_client: AsyncClient, workspace, client: AsyncClient
-    ):
+    async def test_ping_paused_heartbeat(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
         """Test pinging a paused heartbeat."""
         # Create heartbeat
         create_response = await authenticated_client.post(
@@ -329,17 +311,13 @@ class TestPingEndpoint:
         ping_token = create_response.json()["ping_token"]
 
         # Pause heartbeat
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pause")
 
         # Try to ping
         response = await client.get(f"/ping/{ping_token}")
         assert response.status_code == 400
 
-    async def test_ping_updates_status(
-        self, authenticated_client: AsyncClient, workspace, client: AsyncClient
-    ):
+    async def test_ping_updates_status(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
         """Test that ping updates heartbeat status."""
         # Create heartbeat
         create_response = await authenticated_client.post(
@@ -353,24 +331,18 @@ class TestPingEndpoint:
         ping_token = create_response.json()["ping_token"]
 
         # Initial status should be waiting
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}")
         assert get_response.json()["status"] == "waiting"
 
         # Send ping
         await client.get(f"/ping/{ping_token}")
 
         # Status should be healthy
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}")
         assert get_response.json()["status"] == "healthy"
         assert get_response.json()["last_ping_at"] is not None
 
-    async def test_list_heartbeat_pings(
-        self, authenticated_client: AsyncClient, workspace, client: AsyncClient
-    ):
+    async def test_list_heartbeat_pings(self, authenticated_client: AsyncClient, workspace, client: AsyncClient):
         """Test listing ping history for a heartbeat."""
         # Create heartbeat
         create_response = await authenticated_client.post(
@@ -388,9 +360,7 @@ class TestPingEndpoint:
             await client.get(f"/ping/{ping_token}")
 
         # List pings
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pings"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/heartbeats/{heartbeat_id}/pings")
         assert response.status_code == 200
         data = response.json()
         assert "pings" in data

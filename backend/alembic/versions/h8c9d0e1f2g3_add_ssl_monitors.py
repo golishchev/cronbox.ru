@@ -48,8 +48,15 @@ def upgrade() -> None:
         sa.Column(
             "status",
             postgresql.ENUM(
-                "pending", "valid", "expiring", "expired", "invalid", "error", "paused",
-                name="sslmonitorstatus", create_type=False
+                "pending",
+                "valid",
+                "expiring",
+                "expired",
+                "invalid",
+                "error",
+                "paused",
+                name="sslmonitorstatus",
+                create_type=False,
             ),
             nullable=False,
             server_default="pending",

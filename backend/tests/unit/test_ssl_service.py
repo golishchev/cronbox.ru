@@ -70,9 +70,7 @@ class TestSSLMonitorServiceCheckCertificate:
             with patch("app.services.ssl_monitor.ssl.create_default_context") as mock_ctx:
                 mock_ctx_instance = MagicMock()
                 mock_ctx.return_value = mock_ctx_instance
-                mock_ctx_instance.wrap_socket.side_effect = ssl.SSLCertVerificationError(
-                    "certificate verify failed"
-                )
+                mock_ctx_instance.wrap_socket.side_effect = ssl.SSLCertVerificationError("certificate verify failed")
 
                 result = await service.check_certificate("example.com", 443)
 

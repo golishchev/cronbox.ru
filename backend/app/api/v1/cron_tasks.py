@@ -421,7 +421,11 @@ async def copy_cron_task(
     # Check overlap prevention feature
     from app.models.cron_task import OverlapPolicy
 
-    if original_task.overlap_policy and original_task.overlap_policy != OverlapPolicy.ALLOW and not user_plan.overlap_prevention_enabled:
+    if (
+        original_task.overlap_policy
+        and original_task.overlap_policy != OverlapPolicy.ALLOW
+        and not user_plan.overlap_prevention_enabled
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=t("errors.cannot_copy_task_with_overlap", lang),

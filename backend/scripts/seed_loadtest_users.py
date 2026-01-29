@@ -31,9 +31,7 @@ async def seed_loadtest_users():
     async with AsyncSessionLocal() as db:
         for user_data in LOAD_TEST_USERS:
             # Check if user exists
-            result = await db.execute(
-                select(User).where(User.email == user_data["email"])
-            )
+            result = await db.execute(select(User).where(User.email == user_data["email"]))
             existing_user = result.scalar_one_or_none()
 
             if existing_user:
@@ -56,9 +54,7 @@ async def seed_loadtest_users():
                 print(f"Created user: {user_data['email']}")
 
             # Check if user has a workspace
-            result = await db.execute(
-                select(Workspace).where(Workspace.owner_id == user.id)
-            )
+            result = await db.execute(select(Workspace).where(Workspace.owner_id == user.id))
             existing_workspace = result.scalar_one_or_none()
 
             if not existing_workspace:
@@ -81,9 +77,7 @@ async def cleanup_loadtest_users():
     """Remove all load test users and their data."""
     async with AsyncSessionLocal() as db:
         emails = [u["email"] for u in LOAD_TEST_USERS]
-        result = await db.execute(
-            select(User).where(User.email.in_(emails))
-        )
+        result = await db.execute(select(User).where(User.email.in_(emails)))
         users = result.scalars().all()
 
         for user in users:

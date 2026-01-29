@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { updateWorkspace } from '@/api/workspaces'
 import {
@@ -29,6 +29,7 @@ import {
   Bell,
   Mail,
   MessageSquare,
+  MessageCircle,
   Webhook,
   Send,
   Plus,
@@ -103,6 +104,10 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
   const [emailAddresses, setEmailAddresses] = useState<string[]>([])
   const [newEmailAddress, setNewEmailAddress] = useState('')
 
+  const [maxEnabled, setMaxEnabled] = useState(false)
+  const [maxChatIds, setMaxChatIds] = useState<string[]>([])
+  const [newMaxChatId, setNewMaxChatId] = useState('')
+
   const [webhookEnabled, setWebhookEnabled] = useState(false)
   const [webhookUrl, setWebhookUrl] = useState('')
   const [webhookSecret, setWebhookSecret] = useState('')
@@ -134,6 +139,8 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
       setSettings(data)
       setTelegramEnabled(data.telegram_enabled)
       setTelegramChatIds(data.telegram_chat_ids || [])
+      setMaxEnabled(data.max_enabled)
+      setMaxChatIds(data.max_chat_ids || [])
       setEmailEnabled(data.email_enabled)
       setEmailAddresses(data.email_addresses || [])
       setWebhookEnabled(data.webhook_enabled)
@@ -169,6 +176,8 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
       await updateNotificationSettings(currentWorkspace.id, {
         telegram_enabled: telegramEnabled,
         telegram_chat_ids: telegramChatIds,
+        max_enabled: maxEnabled,
+        max_chat_ids: maxChatIds,
         email_enabled: emailEnabled,
         email_addresses: emailAddresses,
         webhook_enabled: webhookEnabled,
@@ -190,6 +199,8 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
     currentWorkspace,
     telegramEnabled,
     telegramChatIds,
+    maxEnabled,
+    maxChatIds,
     emailEnabled,
     emailAddresses,
     webhookEnabled,
@@ -222,6 +233,8 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
   }, [
     telegramEnabled,
     telegramChatIds,
+    maxEnabled,
+    maxChatIds,
     emailEnabled,
     emailAddresses,
     webhookEnabled,
@@ -283,7 +296,7 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
   }, [name, timezone, saveGeneralSettings])
 
   // Notification helper functions
-  const handleTestNotification = async (channel: 'telegram' | 'email' | 'webhook') => {
+  const handleTestNotification = async (channel: 'telegram' | 'max' | 'email' | 'webhook') => {
     if (!currentWorkspace) return
     setTestingChannel(channel)
     setNotificationError('')
@@ -311,6 +324,17 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
 
   const removeTelegramChatId = (chatId: string) => {
     setTelegramChatIds(telegramChatIds.filter(id => id !== chatId))
+  }
+
+  const addMaxChatId = () => {
+    if (newMaxChatId && !maxChatIds.includes(newMaxChatId)) {
+      setMaxChatIds([...maxChatIds, newMaxChatId])
+      setNewMaxChatId('')
+    }
+  }
+
+  const removeMaxChatId = (chatId: string) => {
+    setMaxChatIds(maxChatIds.filter(id => id !== chatId))
   }
 
   const addEmailAddress = () => {
@@ -556,7 +580,9 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {t('notifications.chatIdHint')}
+                    <Trans i18nKey="notifications.chatIdHint">
+                      Начните чат с <a href="https://t.me/cronbox_bot" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@cronbox_bot</a> и отправьте /start для получения вашего Chat ID
+                    </Trans>
                   </p>
                 </div>
 
@@ -568,6 +594,77 @@ export function WorkspaceSettingsPage({ onNavigate: _ }: WorkspaceSettingsPagePr
                     disabled={testingChannel === 'telegram'}
                   >
                     {testingChannel === 'telegram' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
+                    )}
+                    {t('notifications.sendTest')}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* MAX */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    <CardTitle>{t('notifications.max')}</CardTitle>
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={maxEnabled}
+                      onChange={(e) => setMaxEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm">{t('common.enabled')}</span>
+                  </label>
+                </div>
+                <CardDescription>
+                  {t('notifications.maxDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t('notifications.maxChatIds')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {maxChatIds.map((chatId) => (
+                      <Badge key={chatId} variant="secondary" className="gap-1">
+                        {chatId}
+                        <button onClick={() => removeMaxChatId(chatId)}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={t('notifications.maxChatIdPlaceholder')}
+                      value={newMaxChatId}
+                      onChange={(e) => setNewMaxChatId(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addMaxChatId()}
+                    />
+                    <Button type="button" variant="outline" onClick={addMaxChatId}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans i18nKey="notifications.maxChatIdHint">
+                      Начните чат с <a href="https://max.ru/id263107925047_bot" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ботом в MAX</a> и отправьте /start для получения вашего Chat ID
+                    </Trans>
+                  </p>
+                </div>
+
+                {maxEnabled && maxChatIds.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTestNotification('max')}
+                    disabled={testingChannel === 'max'}
+                  >
+                    {testingChannel === 'max' ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Send className="mr-2 h-4 w-4" />

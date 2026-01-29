@@ -5,6 +5,8 @@ export interface NotificationSettings {
   workspace_id: string
   telegram_enabled: boolean
   telegram_chat_ids: string[] | null
+  max_enabled: boolean
+  max_chat_ids: string[] | null
   email_enabled: boolean
   email_addresses: string[] | null
   webhook_enabled: boolean
@@ -18,6 +20,8 @@ export interface NotificationSettings {
 export interface NotificationSettingsUpdate {
   telegram_enabled?: boolean
   telegram_chat_ids?: string[]
+  max_enabled?: boolean
+  max_chat_ids?: string[]
   email_enabled?: boolean
   email_addresses?: string[]
   webhook_enabled?: boolean
@@ -50,7 +54,7 @@ export async function updateNotificationSettings(
 
 export async function sendTestNotification(
   workspaceId: string,
-  channel: 'telegram' | 'email' | 'webhook'
+  channel: 'telegram' | 'max' | 'email' | 'webhook'
 ): Promise<{ success: boolean; message: string }> {
   const response = await apiClient.post<{ success: boolean; message: string }>(
     `/workspaces/${workspaceId}/notifications/test`,

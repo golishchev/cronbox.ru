@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list dev-max-bot
 
 # Start all dev services (backend + frontend + landing in background)
 dev: infra
@@ -10,6 +10,8 @@ dev: infra
 	@cd backend && uv run python -m app.cli worker &
 	@echo "Starting Telegram bot..."
 	@cd backend && uv run python -m app.cli bot &
+	@echo "Starting MAX bot..."
+	@cd backend && uv run python -m app.cli max-bot &
 	@echo "Starting frontend (control panel)..."
 	@cd frontend && npm run dev &
 	@echo "Starting landing page..."
@@ -22,6 +24,7 @@ dev: infra
 	@echo "  Scheduler: running"
 	@echo "  Worker:    running"
 	@echo "  Bot:       running"
+	@echo "  Max Bot:   running"
 	@echo ""
 	@echo "Run 'make stop' to stop all services"
 
@@ -45,6 +48,10 @@ dev-worker:
 dev-bot:
 	cd backend && uv run python -m app.cli bot
 
+# MAX bot (foreground)
+dev-max-bot:
+	cd backend && uv run python -m app.cli max-bot
+
 # Frontend dev server (foreground)
 dev-frontend:
 	cd frontend && npm run dev
@@ -60,6 +67,7 @@ stop:
 	-pkill -f "app.cli scheduler" 2>/dev/null || true
 	-pkill -f "app.cli worker" 2>/dev/null || true
 	-pkill -f "app.cli bot" 2>/dev/null || true
+	-pkill -f "app.cli max-bot" 2>/dev/null || true
 	-pkill -f "uvicorn" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
 	-pkill -f "next dev" 2>/dev/null || true

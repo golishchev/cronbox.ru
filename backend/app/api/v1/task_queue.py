@@ -32,9 +32,7 @@ async def list_queued_tasks(
     items = await overlap_service.get_queued_tasks(db, workspace.id, limit=limit)
 
     # Get total count
-    result = await db.execute(
-        select(func.count(TaskQueue.id)).where(TaskQueue.workspace_id == workspace.id)
-    )
+    result = await db.execute(select(func.count(TaskQueue.id)).where(TaskQueue.workspace_id == workspace.id))
     total = result.scalar() or 0
 
     return TaskQueueListResponse(
@@ -87,9 +85,7 @@ async def clear_workspace_queue(
     """Clear all queued tasks for the workspace."""
     from sqlalchemy import delete
 
-    await db.execute(
-        delete(TaskQueue).where(TaskQueue.workspace_id == workspace.id)
-    )
+    await db.execute(delete(TaskQueue).where(TaskQueue.workspace_id == workspace.id))
     await db.commit()
 
 
@@ -105,9 +101,7 @@ async def get_overlap_stats(
 ) -> OverlapStatsResponse:
     """Get overlap prevention statistics."""
     # Get current queue size
-    result = await db.execute(
-        select(func.count(TaskQueue.id)).where(TaskQueue.workspace_id == workspace.id)
-    )
+    result = await db.execute(select(func.count(TaskQueue.id)).where(TaskQueue.workspace_id == workspace.id))
     current_queue_size = result.scalar() or 0
 
     # Calculate overlap rate
@@ -171,11 +165,13 @@ async def get_cron_task_queue(
 ) -> TaskQueueListResponse:
     """Get queue for a specific cron task."""
     result = await db.execute(
-        select(TaskQueue).where(
+        select(TaskQueue)
+        .where(
             TaskQueue.workspace_id == workspace.id,
             TaskQueue.task_type == "cron",
             TaskQueue.task_id == task_id,
-        ).order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
+        )
+        .order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
     )
     items = result.scalars().all()
 
@@ -198,11 +194,13 @@ async def get_chain_queue(
 ) -> TaskQueueListResponse:
     """Get queue for a specific task chain."""
     result = await db.execute(
-        select(TaskQueue).where(
+        select(TaskQueue)
+        .where(
             TaskQueue.workspace_id == workspace.id,
             TaskQueue.task_type == "chain",
             TaskQueue.task_id == chain_id,
-        ).order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
+        )
+        .order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
     )
     items = result.scalars().all()
 

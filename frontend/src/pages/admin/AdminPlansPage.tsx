@@ -61,6 +61,7 @@ const defaultPlanData: CreatePlanRequest = {
   min_cron_interval_minutes: 5,
   telegram_notifications: false,
   email_notifications: false,
+  max_notifications: false,
   webhook_callbacks: false,
   custom_headers: true,
   retry_on_failure: false,
@@ -142,6 +143,7 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
       min_cron_interval_minutes: plan.min_cron_interval_minutes,
       telegram_notifications: plan.telegram_notifications,
       email_notifications: plan.email_notifications,
+      max_notifications: plan.max_notifications,
       webhook_callbacks: plan.webhook_callbacks,
       custom_headers: plan.custom_headers,
       retry_on_failure: plan.retry_on_failure,
@@ -315,6 +317,9 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                       </span>
                       <span className="text-xs" title="Email">
                         <BooleanBadge value={plan.email_notifications} />
+                      </span>
+                      <span className="text-xs" title="Max">
+                        <BooleanBadge value={plan.max_notifications} />
                       </span>
                       <span className="text-xs" title="Webhook">
                         <BooleanBadge value={plan.webhook_callbacks} />
@@ -570,6 +575,14 @@ export function AdminPlansPage({ onNavigate }: AdminPlansPageProps) {
                     id="email"
                     checked={formData.email_notifications}
                     onCheckedChange={(checked) => setFormData({ ...formData, email_notifications: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between py-2 px-3 rounded-md border">
+                  <Label htmlFor="max" className="text-sm font-normal">{t('admin.plans.maxNotifications')}</Label>
+                  <Switch
+                    id="max"
+                    checked={formData.max_notifications}
+                    onCheckedChange={(checked) => setFormData({ ...formData, max_notifications: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between py-2 px-3 rounded-md border">

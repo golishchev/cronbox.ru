@@ -32,9 +32,7 @@ class HeartbeatService:
             return workspace.owner.preferred_language or "en"
         return "en"
 
-    async def _get_workspace_settings(
-        self, db: AsyncSession, workspace_id: UUID
-    ) -> tuple[str, str]:
+    async def _get_workspace_settings(self, db: AsyncSession, workspace_id: UUID) -> tuple[str, str]:
         """Get workspace language and timezone."""
         result = await db.execute(
             select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
@@ -224,9 +222,7 @@ class HeartbeatService:
         """Send notification when heartbeat becomes late."""
         lang, tz = await self._get_workspace_settings(db, heartbeat.workspace_id)
         last_ping = (
-            self._format_datetime(heartbeat.last_ping_at, tz)
-            if heartbeat.last_ping_at
-            else t("heartbeat.never", lang)
+            self._format_datetime(heartbeat.last_ping_at, tz) if heartbeat.last_ping_at else t("heartbeat.never", lang)
         )
         error_message = t("heartbeat.late", lang, name=heartbeat.name, last_ping=last_ping)
 
@@ -246,9 +242,7 @@ class HeartbeatService:
         """Send notification when heartbeat becomes dead."""
         lang, tz = await self._get_workspace_settings(db, heartbeat.workspace_id)
         last_ping = (
-            self._format_datetime(heartbeat.last_ping_at, tz)
-            if heartbeat.last_ping_at
-            else t("heartbeat.never", lang)
+            self._format_datetime(heartbeat.last_ping_at, tz) if heartbeat.last_ping_at else t("heartbeat.never", lang)
         )
         error_message = t(
             "heartbeat.dead",

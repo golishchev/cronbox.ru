@@ -440,9 +440,7 @@ class TestCleanupOldExecutions:
 
         # Mock workspace repository
         mock_workspace_repo = AsyncMock()
-        mock_workspace_repo.get_all_workspace_ids_grouped_by_owner.return_value = [
-            (owner_id, [workspace_id])
-        ]
+        mock_workspace_repo.get_all_workspace_ids_grouped_by_owner.return_value = [(owner_id, [workspace_id])]
 
         # Mock execution repository
         mock_execution_repo = AsyncMock()
@@ -471,9 +469,7 @@ class TestCleanupOldExecutions:
                         "app.db.repositories.chain_executions.ChainExecutionRepository",
                         return_value=mock_chain_repo,
                     ):
-                        with patch(
-                            "app.services.billing.billing_service"
-                        ) as mock_billing:
+                        with patch("app.services.billing.billing_service") as mock_billing:
                             mock_billing.get_user_plan = AsyncMock(return_value=mock_plan)
 
                             with patch("asyncio.sleep", side_effect=stop_scheduler):
@@ -542,9 +538,7 @@ class TestCleanupOldExecutions:
                         "app.db.repositories.chain_executions.ChainExecutionRepository",
                         return_value=mock_chain_repo,
                     ):
-                        with patch(
-                            "app.services.billing.billing_service"
-                        ) as mock_billing:
+                        with patch("app.services.billing.billing_service") as mock_billing:
                             mock_billing.get_user_plan = AsyncMock(return_value=mock_plan)
 
                             with patch("asyncio.sleep", side_effect=stop_scheduler):

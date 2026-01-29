@@ -179,15 +179,11 @@ async def get_admin_stats(admin: AdminUser, db: DB):
 
     # Heartbeat stats (active = not paused)
     total_heartbeats = await db.scalar(select(func.count(Heartbeat.id)))
-    active_heartbeats = await db.scalar(
-        select(func.count(Heartbeat.id)).where(Heartbeat.status != "paused")
-    )
+    active_heartbeats = await db.scalar(select(func.count(Heartbeat.id)).where(Heartbeat.status != "paused"))
 
     # SSL monitor stats (active = not paused)
     total_ssl_monitors = await db.scalar(select(func.count(SSLMonitor.id)))
-    active_ssl_monitors = await db.scalar(
-        select(func.count(SSLMonitor.id)).where(SSLMonitor.is_paused.is_(False))
-    )
+    active_ssl_monitors = await db.scalar(select(func.count(SSLMonitor.id)).where(SSLMonitor.is_paused.is_(False)))
 
     # Execution stats
     total_executions = await db.scalar(select(func.count(Execution.id)))
@@ -740,6 +736,7 @@ class PlanListItem(BaseModel):
     min_cron_interval_minutes: int
     telegram_notifications: bool
     email_notifications: bool
+    max_notifications: bool
     webhook_callbacks: bool
     custom_headers: bool
     retry_on_failure: bool
@@ -791,6 +788,7 @@ class CreatePlanRequest(BaseModel):
     min_cron_interval_minutes: int = Field(default=5, ge=1)
     telegram_notifications: bool = False
     email_notifications: bool = False
+    max_notifications: bool = False
     webhook_callbacks: bool = False
     custom_headers: bool = True
     retry_on_failure: bool = False
@@ -829,6 +827,7 @@ class UpdatePlanRequest(BaseModel):
     min_cron_interval_minutes: int | None = Field(default=None, ge=1)
     telegram_notifications: bool | None = None
     email_notifications: bool | None = None
+    max_notifications: bool | None = None
     webhook_callbacks: bool | None = None
     custom_headers: bool | None = None
     retry_on_failure: bool | None = None
@@ -884,6 +883,7 @@ async def list_plans(admin: AdminUser, db: DB):
                 min_cron_interval_minutes=plan.min_cron_interval_minutes,
                 telegram_notifications=plan.telegram_notifications,
                 email_notifications=plan.email_notifications,
+                max_notifications=plan.max_notifications,
                 webhook_callbacks=plan.webhook_callbacks,
                 custom_headers=plan.custom_headers,
                 retry_on_failure=plan.retry_on_failure,
@@ -939,6 +939,7 @@ async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
         min_cron_interval_minutes=plan.min_cron_interval_minutes,
         telegram_notifications=plan.telegram_notifications,
         email_notifications=plan.email_notifications,
+        max_notifications=plan.max_notifications,
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
@@ -989,6 +990,7 @@ async def get_plan(admin: AdminUser, db: DB, plan_id: str):
         min_cron_interval_minutes=plan.min_cron_interval_minutes,
         telegram_notifications=plan.telegram_notifications,
         email_notifications=plan.email_notifications,
+        max_notifications=plan.max_notifications,
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
@@ -1049,6 +1051,7 @@ async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRe
         min_cron_interval_minutes=plan.min_cron_interval_minutes,
         telegram_notifications=plan.telegram_notifications,
         email_notifications=plan.email_notifications,
+        max_notifications=plan.max_notifications,
         webhook_callbacks=plan.webhook_callbacks,
         custom_headers=plan.custom_headers,
         retry_on_failure=plan.retry_on_failure,
@@ -1170,7 +1173,7 @@ async def list_notification_templates(
     if language:
         query = query.where(NotificationTemplate.language == language)
     if channel:
-        query = query.where(NotificationTemplate.channel == NotificationChannel(channel))
+        query = query.where(NotificationTemplate.channel == NotificationChannel[channel])
 
     result = await db.execute(query)
     templates = result.scalars().all()
@@ -1180,7 +1183,7 @@ async def list_notification_templates(
             id=str(t.id),
             code=t.code,
             language=t.language,
-            channel=t.channel.value,
+            channel=t.channel.name,
             subject=t.subject,
             body=t.body,
             description=t.description,
@@ -1209,7 +1212,7 @@ async def get_notification_template(admin: AdminUser, db: DB, template_id: str):
         id=str(template.id),
         code=template.code,
         language=template.language,
-        channel=template.channel.value,
+        channel=template.channel.name,
         subject=template.subject,
         body=template.body,
         description=template.description,
@@ -1244,7 +1247,7 @@ async def update_notification_template(
         id=str(template.id),
         code=template.code,
         language=template.language,
-        channel=template.channel.value,
+        channel=template.channel.name,
         subject=template.subject,
         body=template.body,
         description=template.description,
@@ -1300,7 +1303,7 @@ async def reset_notification_template(admin: AdminUser, db: DB, template_id: str
         id=str(template.id),
         code=template.code,
         language=template.language,
-        channel=template.channel.value,
+        channel=template.channel.name,
         subject=template.subject,
         body=template.body,
         description=template.description,

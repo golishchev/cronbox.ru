@@ -219,9 +219,7 @@ class TestOverlapServiceCheckChainOverlap:
 
         with patch.object(service, "_add_to_queue", new_callable=AsyncMock) as mock_add:
             mock_add.return_value = OverlapResult(OverlapAction.QUEUE, queue_position=1)
-            result = await service.check_chain_overlap(
-                mock_db, mock_chain, initial_variables=initial_variables
-            )
+            result = await service.check_chain_overlap(mock_db, mock_chain, initial_variables=initial_variables)
 
         mock_add.assert_called_once()
         call_kwargs = mock_add.call_args[1]
@@ -241,9 +239,7 @@ class TestOverlapServiceRelease:
         mock_task.id = uuid4()
         mock_task.overlap_policy = OverlapPolicy.SKIP
 
-        with patch.object(
-            service, "_decrement_running_instances", new_callable=AsyncMock
-        ) as mock_dec:
+        with patch.object(service, "_decrement_running_instances", new_callable=AsyncMock) as mock_dec:
             await service.release_cron_task(mock_db, mock_task)
 
         mock_dec.assert_called_once_with(mock_db, "cron", mock_task.id)
@@ -258,12 +254,8 @@ class TestOverlapServiceRelease:
         mock_task.id = uuid4()
         mock_task.overlap_policy = OverlapPolicy.QUEUE
 
-        with patch.object(
-            service, "_decrement_running_instances", new_callable=AsyncMock
-        ):
-            with patch.object(
-                service, "_pop_from_queue", new_callable=AsyncMock
-            ) as mock_pop:
+        with patch.object(service, "_decrement_running_instances", new_callable=AsyncMock):
+            with patch.object(service, "_pop_from_queue", new_callable=AsyncMock) as mock_pop:
                 mock_pop.return_value = None
                 await service.release_cron_task(mock_db, mock_task)
 
@@ -281,12 +273,8 @@ class TestOverlapServiceRelease:
 
         mock_queued = MagicMock()
 
-        with patch.object(
-            service, "_decrement_running_instances", new_callable=AsyncMock
-        ):
-            with patch.object(
-                service, "_pop_from_queue", new_callable=AsyncMock
-            ) as mock_pop:
+        with patch.object(service, "_decrement_running_instances", new_callable=AsyncMock):
+            with patch.object(service, "_pop_from_queue", new_callable=AsyncMock) as mock_pop:
                 mock_pop.return_value = mock_queued
                 result = await service.release_chain(mock_db, mock_chain)
 
@@ -400,9 +388,7 @@ class TestOverlapServiceAddToQueue:
 
         with patch.object(service, "get_queue_size", new_callable=AsyncMock) as mock_size:
             mock_size.return_value = 3
-            with patch.object(
-                service, "_increment_queued_count", new_callable=AsyncMock
-            ):
+            with patch.object(service, "_increment_queued_count", new_callable=AsyncMock):
                 result = await service._add_to_queue(
                     db=mock_db,
                     workspace_id=uuid4(),
@@ -424,9 +410,7 @@ class TestOverlapServiceAddToQueue:
 
         with patch.object(service, "get_queue_size", new_callable=AsyncMock) as mock_size:
             mock_size.return_value = 10
-            with patch.object(
-                service, "_increment_skipped_count", new_callable=AsyncMock
-            ):
+            with patch.object(service, "_increment_skipped_count", new_callable=AsyncMock):
                 result = await service._add_to_queue(
                     db=mock_db,
                     workspace_id=uuid4(),

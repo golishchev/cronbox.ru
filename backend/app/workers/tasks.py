@@ -1115,6 +1115,7 @@ async def execute_chain(
                     duration_ms=duration_ms,
                     completed_steps=exec_context.completed_steps,
                     total_steps=len(chain.steps),
+                    task_level_override=True,
                 )
             elif final_status == ChainStatus.FAILED and chain.notify_on_failure:
                 await redis.enqueue_job(
@@ -1161,6 +1162,7 @@ async def send_chain_notification(
     completed_steps: int | None = None,
     failed_steps: int | None = None,
     total_steps: int | None = None,
+    task_level_override: bool = False,
 ) -> dict:
     """Send chain notification asynchronously."""
     db_factory = ctx["db_factory"]
@@ -1181,6 +1183,7 @@ async def send_chain_notification(
                 completed_steps=completed_steps,
                 failed_steps=failed_steps,
                 total_steps=total_steps,
+                task_level_override=task_level_override,
             )
 
             logger.info(

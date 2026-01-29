@@ -45,9 +45,7 @@ class TestListQueuedTasks:
             mock_result.scalar.return_value = 1
             mock_db.execute.return_value = mock_result
 
-            result = await list_queued_tasks(
-                workspace=mock_workspace, db=mock_db, limit=50
-            )
+            result = await list_queued_tasks(workspace=mock_workspace, db=mock_db, limit=50)
 
         assert result.total == 1
         assert len(result.items) == 1
@@ -68,9 +66,7 @@ class TestListQueuedTasks:
             mock_result.scalar.return_value = 0
             mock_db.execute.return_value = mock_result
 
-            result = await list_queued_tasks(
-                workspace=mock_workspace, db=mock_db, limit=50
-            )
+            result = await list_queued_tasks(workspace=mock_workspace, db=mock_db, limit=50)
 
         assert result.total == 0
         assert len(result.items) == 0
@@ -206,9 +202,7 @@ class TestClearTaskQueue:
         with patch("app.api.v1.task_queue.overlap_service") as mock_service:
             mock_service.clear_task_queue = AsyncMock(return_value=3)
 
-            await clear_cron_task_queue(
-                workspace=mock_workspace, task_id=task_id, db=mock_db
-            )
+            await clear_cron_task_queue(workspace=mock_workspace, task_id=task_id, db=mock_db)
 
         mock_service.clear_task_queue.assert_called_once_with(mock_db, "cron", task_id)
         mock_db.commit.assert_called_once()
@@ -225,9 +219,7 @@ class TestClearTaskQueue:
         with patch("app.api.v1.task_queue.overlap_service") as mock_service:
             mock_service.clear_task_queue = AsyncMock(return_value=2)
 
-            await clear_chain_queue(
-                workspace=mock_workspace, chain_id=chain_id, db=mock_db
-            )
+            await clear_chain_queue(workspace=mock_workspace, chain_id=chain_id, db=mock_db)
 
         mock_service.clear_task_queue.assert_called_once_with(mock_db, "chain", chain_id)
         mock_db.commit.assert_called_once()
@@ -266,9 +258,7 @@ class TestGetTaskQueue:
         mock_result.scalars.return_value.all.return_value = mock_items
         mock_db.execute.return_value = mock_result
 
-        result = await get_cron_task_queue(
-            workspace=mock_workspace, task_id=task_id, db=mock_db
-        )
+        result = await get_cron_task_queue(workspace=mock_workspace, task_id=task_id, db=mock_db)
 
         assert result.total == 1
         assert len(result.items) == 1
@@ -287,9 +277,7 @@ class TestGetTaskQueue:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        result = await get_chain_queue(
-            workspace=mock_workspace, chain_id=chain_id, db=mock_db
-        )
+        result = await get_chain_queue(workspace=mock_workspace, chain_id=chain_id, db=mock_db)
 
         assert result.total == 0
         assert len(result.items) == 0

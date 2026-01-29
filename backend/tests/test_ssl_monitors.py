@@ -68,9 +68,7 @@ class TestSSLMonitors:
         assert data["name"] == "Production API"
         assert data["description"] == "Main production API endpoint"
 
-    async def test_create_ssl_monitor_with_notification_settings(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_create_ssl_monitor_with_notification_settings(self, authenticated_client: AsyncClient, workspace):
         """Test creating an SSL monitor with notification settings."""
         response = await authenticated_client.post(
             f"/v1/workspaces/{workspace['id']}/ssl-monitors",
@@ -149,9 +147,7 @@ class TestSSLMonitors:
         monitor_id = create_response.json()["id"]
 
         # Get SSL monitor
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == monitor_id
@@ -220,9 +216,7 @@ class TestSSLMonitors:
         monitor_id = create_response.json()["id"]
 
         # Pause SSL monitor
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "paused"
@@ -240,12 +234,8 @@ class TestSSLMonitors:
         monitor_id = create_response.json()["id"]
 
         # Pause then resume
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause"
-        )
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/resume"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause")
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/resume")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "pending"
@@ -263,9 +253,7 @@ class TestSSLMonitors:
         monitor_id = create_response.json()["id"]
 
         # Trigger manual check
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/check"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/check")
         assert response.status_code == 200
         data = response.json()
         # Should have checked the certificate
@@ -286,15 +274,11 @@ class TestSSLMonitors:
         monitor_id = create_response.json()["id"]
 
         # Delete SSL monitor
-        response = await authenticated_client.delete(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}"
-        )
+        response = await authenticated_client.delete(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}")
         assert response.status_code == 204
 
         # Verify deleted
-        get_response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}"
-        )
+        get_response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}")
         assert get_response.status_code == 404
 
     async def test_get_nonexistent_ssl_monitor(self, authenticated_client: AsyncClient, workspace):
@@ -319,9 +303,7 @@ class TestSSLMonitors:
         )
         assert response.status_code == 404
 
-    async def test_list_ssl_monitors_with_pagination(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_list_ssl_monitors_with_pagination(self, authenticated_client: AsyncClient, workspace):
         """Test listing SSL monitors with pagination."""
         # Create a few SSL monitors
         for i in range(3):
@@ -334,9 +316,7 @@ class TestSSLMonitors:
             )
 
         # List with limit
-        response = await authenticated_client.get(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors?limit=2"
-        )
+        response = await authenticated_client.get(f"/v1/workspaces/{workspace['id']}/ssl-monitors?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["monitors"]) <= 2
@@ -366,9 +346,7 @@ class TestSSLMonitorDuplicates:
         )
         assert response.status_code == 400
 
-    async def test_create_same_domain_different_port(
-        self, authenticated_client: AsyncClient, workspace
-    ):
+    async def test_create_same_domain_different_port(self, authenticated_client: AsyncClient, workspace):
         """Test creating SSL monitor with same domain but different port is rejected."""
         # Create first monitor
         await authenticated_client.post(
@@ -407,14 +385,10 @@ class TestSSLMonitorPausedState:
         )
         monitor_id = create_response.json()["id"]
 
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause")
 
         # Try to check
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/check"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/check")
         assert response.status_code == 400
 
     async def test_pause_already_paused(self, authenticated_client: AsyncClient, workspace):
@@ -429,14 +403,10 @@ class TestSSLMonitorPausedState:
         )
         monitor_id = create_response.json()["id"]
 
-        await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause"
-        )
+        await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause")
 
         # Pause again - should return error
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/pause")
         assert response.status_code == 400
 
     async def test_resume_not_paused(self, authenticated_client: AsyncClient, workspace):
@@ -452,7 +422,5 @@ class TestSSLMonitorPausedState:
         monitor_id = create_response.json()["id"]
 
         # Try to resume
-        response = await authenticated_client.post(
-            f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/resume"
-        )
+        response = await authenticated_client.post(f"/v1/workspaces/{workspace['id']}/ssl-monitors/{monitor_id}/resume")
         assert response.status_code == 400

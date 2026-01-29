@@ -29,6 +29,7 @@ class Plan(Base, UUIDMixin, TimestampMixin):
     telegram_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
     email_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
     webhook_callbacks: Mapped[bool] = mapped_column(Boolean, default=False)
+    max_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_headers: Mapped[bool] = mapped_column(Boolean, default=True)
     retry_on_failure: Mapped[bool] = mapped_column(Boolean, default=False)
 

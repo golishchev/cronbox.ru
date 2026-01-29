@@ -11,13 +11,13 @@ def parse_interval_to_seconds(interval: str) -> int:
     """Parse interval string like '1h', '30m', '10s' to seconds."""
     interval = interval.strip().lower()
 
-    if interval.endswith('s'):
+    if interval.endswith("s"):
         return int(interval[:-1])
-    elif interval.endswith('m'):
+    elif interval.endswith("m"):
         return int(interval[:-1]) * 60
-    elif interval.endswith('h'):
+    elif interval.endswith("h"):
         return int(interval[:-1]) * 3600
-    elif interval.endswith('d'):
+    elif interval.endswith("d"):
         return int(interval[:-1]) * 86400
     else:
         # Try to parse as seconds directly

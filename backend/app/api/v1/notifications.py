@@ -17,6 +17,7 @@ from app.schemas.notification_settings import (
 )
 from app.services.email import email_service
 from app.services.i18n import get_i18n, t
+from app.services.max_messenger import max_messenger_service
 from app.services.notifications import notification_service
 from app.services.telegram import telegram_service
 
@@ -57,6 +58,12 @@ async def update_notification_settings(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=t("errors.email_notifications_not_available", lang),
+        )
+
+    if update_data.get("max_enabled") and not user_plan.max_notifications:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("errors.max_notifications_not_available", lang),
         )
 
     if update_data.get("webhook_enabled") and not user_plan.webhook_callbacks:
@@ -117,6 +124,33 @@ async def send_test_notification(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to send Telegram notification",
+            )
+
+    elif data.channel == "max":
+        if not settings.max_enabled or not settings.max_chat_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="MAX notifications not configured",
+            )
+
+        success = False
+        safe_workspace_name = escape(workspace.name)
+        max_text = (
+            f"<b>{i18n.t('notifications.test.max_title')}</b>\n\n"
+            f"{i18n.t('notifications.test.max_body', workspace_name=safe_workspace_name)}"
+        )
+        for chat_id in settings.max_chat_ids:
+            result = await max_messenger_service.send_message(
+                chat_id=chat_id,
+                text=max_text,
+            )
+            if result:
+                success = True
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send MAX notification",
             )
 
     elif data.channel == "email":

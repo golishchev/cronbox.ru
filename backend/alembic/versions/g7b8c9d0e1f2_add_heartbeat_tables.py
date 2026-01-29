@@ -46,10 +46,7 @@ def upgrade() -> None:
         sa.Column("grace_period", sa.Integer(), nullable=False, server_default="600"),
         sa.Column(
             "status",
-            postgresql.ENUM(
-                "waiting", "healthy", "late", "dead", "paused",
-                name="heartbeatstatus", create_type=False
-            ),
+            postgresql.ENUM("waiting", "healthy", "late", "dead", "paused", name="heartbeatstatus", create_type=False),
             nullable=False,
             server_default="waiting",
         ),
@@ -94,7 +91,9 @@ def upgrade() -> None:
 
     # Add heartbeat limits to plans
     op.add_column("plans", sa.Column("max_heartbeats", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("plans", sa.Column("min_heartbeat_interval_minutes", sa.Integer(), nullable=False, server_default="5"))
+    op.add_column(
+        "plans", sa.Column("min_heartbeat_interval_minutes", sa.Integer(), nullable=False, server_default="5")
+    )
 
 
 def downgrade() -> None:

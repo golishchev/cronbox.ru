@@ -34,11 +34,7 @@ class HeartbeatRepository(BaseRepository[Heartbeat]):
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         """Count heartbeats for a workspace."""
-        stmt = (
-            select(func.count())
-            .select_from(Heartbeat)
-            .where(Heartbeat.workspace_id == workspace_id)
-        )
+        stmt = select(func.count()).select_from(Heartbeat).where(Heartbeat.workspace_id == workspace_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
@@ -150,9 +146,7 @@ class HeartbeatRepository(BaseRepository[Heartbeat]):
         heartbeat.alert_sent = True
         heartbeat.last_alert_at = datetime.utcnow()
         # Update next expected time for next check
-        heartbeat.next_expected_at = datetime.fromtimestamp(
-            datetime.utcnow().timestamp() + heartbeat.expected_interval
-        )
+        heartbeat.next_expected_at = datetime.fromtimestamp(datetime.utcnow().timestamp() + heartbeat.expected_interval)
 
         await self.db.flush()
         await self.db.refresh(heartbeat)
@@ -217,11 +211,7 @@ class HeartbeatPingRepository(BaseRepository[HeartbeatPing]):
 
     async def count_by_heartbeat(self, heartbeat_id: UUID) -> int:
         """Count pings for a heartbeat."""
-        stmt = (
-            select(func.count())
-            .select_from(HeartbeatPing)
-            .where(HeartbeatPing.heartbeat_id == heartbeat_id)
-        )
+        stmt = select(func.count()).select_from(HeartbeatPing).where(HeartbeatPing.heartbeat_id == heartbeat_id)
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
@@ -247,13 +237,10 @@ class HeartbeatPingRepository(BaseRepository[HeartbeatPing]):
         # Delete pings not in the keep list
         from sqlalchemy import delete
 
-        delete_stmt = (
-            delete(HeartbeatPing)
-            .where(
-                and_(
-                    HeartbeatPing.heartbeat_id == heartbeat_id,
-                    HeartbeatPing.id.notin_(keep_ids),
-                )
+        delete_stmt = delete(HeartbeatPing).where(
+            and_(
+                HeartbeatPing.heartbeat_id == heartbeat_id,
+                HeartbeatPing.id.notin_(keep_ids),
             )
         )
         result = await self.db.execute(delete_stmt)

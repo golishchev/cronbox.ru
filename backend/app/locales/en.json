@@ -7,7 +7,9 @@
       "email_title": "Test Notification",
       "email_body": "This is a test notification from CronBox for workspace <strong>{workspace_name}</strong>.",
       "email_success": "If you received this email, your email notifications are working correctly.",
-      "webhook_message": "This is a test notification from CronBox"
+      "webhook_message": "This is a test notification from CronBox",
+      "max_title": "Test Notification",
+      "max_body": "This is a test notification from CronBox for workspace <b>{workspace_name}</b>."
     }
   },
   "billing": {
@@ -58,29 +60,15 @@
   },
   "bot": {
     "start": {
-      "greeting": "👋 <b>Hello!</b> I'm the CronBox bot.\n\n🆔 <b>Your Chat ID:</b> <code>{chat_id}</code>\n\nI will send you notifications about task executions.\n\n<b>Available commands:</b>\n/link <code>code</code> - link your CronBox account\n/status - check link status\n/help - show help\n\n💡 <b>To link your account:</b>\n1. Go to CronBox settings\n2. Click \"Link Telegram\"\n3. Copy the code and send it to me with /link"
+      "greeting": "👋 <b>Hello!</b> I'm the CronBox bot.\n\n🆔 <b>Your Chat ID:</b> <code>{chat_id}</code>\n\nCopy this ID and paste it in CronBox notification settings → Telegram.\n\nI will send you notifications about task executions."
     },
     "help": {
-      "title": "📖 <b>CronBox Bot Help</b>\n\n<b>Commands:</b>\n/start - start using the bot\n/link <code>code</code> - link your CronBox account\n/status - check link status\n/unlink - unlink your account\n/help - show this help\n\n<b>Notifications:</b>\nAfter linking your account, you will receive notifications about:\n• Failed task executions\n• Task recovery after errors\n• Successful executions (if enabled)\n\n🌐 <a href=\"https://cronbox.ru\">cronbox.ru</a>"
-    },
-    "link": {
-      "missing_code": "❌ Please provide a link code.\n\n<b>Example:</b> /link 123456\n\nYou can get the code in CronBox settings → Telegram.",
-      "invalid_format": "❌ Invalid code format.\nThe code must consist of 6 digits.",
-      "success": "✅ <b>Account successfully linked!</b>\n\nEmail: {email}\nName: {name}\n\nYou will now receive task notifications in this chat.",
-      "failed": "❌ <b>Failed to link account.</b>\n\nPossible reasons:\n• The code is incorrect or expired\n• This Telegram is already linked to another account\n\nGet a new code in CronBox settings.",
-      "error": "❌ <b>An error occurred.</b>\n\nPlease try again later or contact support."
-    },
-    "status": {
-      "linked": "✅ <b>Account linked</b>\n\nEmail: {email}\nName: {name}\nStatus: {status}\nEmail verified: {email_verified}",
-      "not_linked": "❌ <b>Account not linked</b>\n\nUse the /link command to link your CronBox account.",
-      "active": "Active",
-      "inactive": "Inactive",
-      "yes": "Yes",
-      "no": "No"
-    },
-    "unlink": {
-      "not_linked": "❌ Your Telegram is not linked to a CronBox account.",
-      "success": "✅ <b>Account unlinked</b>\n\nYou will no longer receive Telegram notifications.\nTo link again, use /link."
+      "title": "📖 <b>CronBox Bot Help</b>\n\n<b>How to enable notifications:</b>\n1. Copy your Chat ID (/start command)\n2. Paste it in CronBox → Settings → Notifications → Telegram\n\n<b>Notifications:</b>\nYou will receive notifications about:\n• Failed task executions\n• Task recovery after errors\n• Successful executions (if enabled)\n\n🌐 <a href=\"https://cronbox.ru\">cronbox.ru</a>"
+    }
+  },
+  "max_bot": {
+    "start": {
+      "greeting": "👋 <b>Hello!</b> I'm the CronBox bot.\n\n🆔 <b>Your Chat ID:</b> <code>{chat_id}</code>\n\nCopy this ID and paste it in CronBox notification settings → MAX.\n\nI will send you notifications about task executions."
     }
   },
   "heartbeat": {
@@ -133,6 +121,7 @@
     "telegram_notifications_not_available": "Telegram notifications are not available on your plan. Please upgrade to use this feature.",
     "email_notifications_not_available": "Email notifications are not available on your plan. Please upgrade to use this feature.",
     "webhook_notifications_not_available": "Webhook notifications are not available on your plan. Please upgrade to use this feature.",
+    "max_notifications_not_available": "MAX notifications are not available on your plan. Please upgrade to use this feature.",
     "chain_variable_substitution_not_available": "Variable substitution in chains is not available on your plan. Please upgrade to use this feature.",
     "task_chain_limit": "Task chain limit reached. Your plan allows {max_chains} chain(s)",
     "task_chains_not_available": "Task chains are not available on your plan. Please upgrade to use this feature.",

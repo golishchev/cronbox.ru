@@ -97,9 +97,7 @@ async def create_heartbeat(
 
     # Calculate initial next_expected_at (now + interval + grace)
     now = datetime.utcnow()
-    next_expected_at = datetime.fromtimestamp(
-        now.timestamp() + expected_interval_seconds + grace_period_seconds
-    )
+    next_expected_at = datetime.fromtimestamp(now.timestamp() + expected_interval_seconds + grace_period_seconds)
 
     # Create heartbeat
     heartbeat = await heartbeat_repo.create(

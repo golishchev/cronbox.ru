@@ -60,6 +60,7 @@ class SSLMonitorBase(BaseModel):
             raise ValueError("Invalid domain name")
         # Check for valid characters
         import re
+
         if not re.match(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$", v):
             raise ValueError("Invalid domain name format")
         return v
@@ -118,9 +119,7 @@ class SSLMonitorResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer(
-        "valid_from", "valid_until", "last_check_at", "next_check_at", "created_at", "updated_at"
-    )
+    @field_serializer("valid_from", "valid_until", "last_check_at", "next_check_at", "created_at", "updated_at")
     def serialize_datetime(self, dt: datetime | None) -> str | None:
         """Serialize datetime as UTC with 'Z' suffix for proper JS parsing."""
         if dt is None:

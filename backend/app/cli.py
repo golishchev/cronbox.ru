@@ -42,10 +42,18 @@ def run_bot():
     asyncio.run(bot_main())
 
 
+def run_max_bot():
+    """Run the MAX bot."""
+    from app.bot.max_handlers import run_max_bot as max_bot_main
+
+    print("Starting CronBox MAX bot...")
+    asyncio.run(max_bot_main())
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python -m app.cli <command>")
-        print("Commands: worker, scheduler, server, bot")
+        print("Commands: worker, scheduler, server, bot, max-bot")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -58,6 +66,8 @@ if __name__ == "__main__":
         run_server()
     elif command == "bot":
         run_bot()
+    elif command == "max-bot":
+        run_max_bot()
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

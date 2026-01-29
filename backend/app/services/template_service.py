@@ -75,6 +75,36 @@ DEFAULT_TEMPLATES: list[dict] = [
         "description": "Telegram уведомление об ошибке выполнения задачи",
         "variables": ["workspace_name", "task_name", "task_type", "error_message"],
     },
+    # English - Max
+    {
+        "code": "task_failure",
+        "language": "en",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Task Failed</b>
+
+<b>Workspace:</b> {workspace_name}
+<b>Task:</b> {task_name}
+<b>Type:</b> {task_type}
+<b>Error:</b> {error_message}""",
+        "description": "MAX notification when a task execution fails",
+        "variables": ["workspace_name", "task_name", "task_type", "error_message"],
+    },
+    # Russian - Max
+    {
+        "code": "task_failure",
+        "language": "ru",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Ошибка задачи</b>
+
+<b>Пространство:</b> {workspace_name}
+<b>Задача:</b> {task_name}
+<b>Тип:</b> {task_type}
+<b>Ошибка:</b> {error_message}""",
+        "description": "MAX уведомление об ошибке выполнения задачи",
+        "variables": ["workspace_name", "task_name", "task_type", "error_message"],
+    },
     # ==================== TASK RECOVERY ====================
     # English - Email
     {
@@ -136,6 +166,36 @@ DEFAULT_TEMPLATES: list[dict] = [
         "description": "Telegram уведомление о восстановлении задачи",
         "variables": ["workspace_name", "task_name", "task_type"],
     },
+    # English - Max
+    {
+        "code": "task_recovery",
+        "language": "en",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Task Recovered</b>
+
+<b>Workspace:</b> {workspace_name}
+<b>Task:</b> {task_name}
+<b>Type:</b> {task_type}
+<b>Status:</b> Back to normal""",
+        "description": "MAX notification when a task recovers from failure",
+        "variables": ["workspace_name", "task_name", "task_type"],
+    },
+    # Russian - Max
+    {
+        "code": "task_recovery",
+        "language": "ru",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Задача восстановлена</b>
+
+<b>Пространство:</b> {workspace_name}
+<b>Задача:</b> {task_name}
+<b>Тип:</b> {task_type}
+<b>Статус:</b> Работает нормально""",
+        "description": "MAX уведомление о восстановлении задачи",
+        "variables": ["workspace_name", "task_name", "task_type"],
+    },
     # ==================== TASK SUCCESS ====================
     # English - Email
     {
@@ -193,6 +253,36 @@ DEFAULT_TEMPLATES: list[dict] = [
 <b>Тип:</b> {task_type}
 <b>Время:</b> {duration_ms}мс""",
         "description": "Telegram уведомление об успешном выполнении задачи",
+        "variables": ["workspace_name", "task_name", "task_type", "duration_ms"],
+    },
+    # English - Max
+    {
+        "code": "task_success",
+        "language": "en",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Task Succeeded</b>
+
+<b>Workspace:</b> {workspace_name}
+<b>Task:</b> {task_name}
+<b>Type:</b> {task_type}
+<b>Duration:</b> {duration_ms}ms""",
+        "description": "MAX notification when a task executes successfully",
+        "variables": ["workspace_name", "task_name", "task_type", "duration_ms"],
+    },
+    # Russian - Max
+    {
+        "code": "task_success",
+        "language": "ru",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Задача выполнена</b>
+
+<b>Пространство:</b> {workspace_name}
+<b>Задача:</b> {task_name}
+<b>Тип:</b> {task_type}
+<b>Время:</b> {duration_ms}мс""",
+        "description": "MAX уведомление об успешном выполнении задачи",
         "variables": ["workspace_name", "task_name", "task_type", "duration_ms"],
     },
     # ==================== SUBSCRIPTION EXPIRING ====================
@@ -256,6 +346,38 @@ Renew your subscription to avoid service interruption.""",
         "description": "Telegram уведомление о скором истечении подписки",
         "variables": ["workspace_name", "days_remaining", "expiration_date"],
     },
+    # English - Max
+    {
+        "code": "subscription_expiring",
+        "language": "en",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Subscription Expiring Soon</b>
+
+<b>Workspace:</b> {workspace_name}
+<b>Expires in:</b> {days_remaining} day(s)
+<b>Expiration date:</b> {expiration_date}
+
+Renew your subscription to avoid service interruption.""",
+        "description": "MAX notification when subscription is about to expire",
+        "variables": ["workspace_name", "days_remaining", "expiration_date"],
+    },
+    # Russian - Max
+    {
+        "code": "subscription_expiring",
+        "language": "ru",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Подписка скоро истекает</b>
+
+<b>Пространство:</b> {workspace_name}
+<b>Истекает через:</b> {days_remaining} дн.
+<b>Дата истечения:</b> {expiration_date}
+
+Продлите подписку, чтобы избежать прерывания сервиса.""",
+        "description": "MAX уведомление о скором истечении подписки",
+        "variables": ["workspace_name", "days_remaining", "expiration_date"],
+    },
     # ==================== SUBSCRIPTION EXPIRED ====================
     # English - Email
     {
@@ -317,6 +439,38 @@ Renew your subscription to restore full access.""",
         "description": "Telegram уведомление об истечении подписки",
         "variables": ["workspace_name", "tasks_paused"],
     },
+    # English - Max
+    {
+        "code": "subscription_expired",
+        "language": "en",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Subscription Expired</b>
+
+<b>Workspace:</b> {workspace_name}
+Your subscription has expired and workspace has been downgraded to the free plan.
+<b>Tasks paused:</b> {tasks_paused} (exceeded free plan limit)
+
+Renew your subscription to restore full access.""",
+        "description": "MAX notification when subscription has expired",
+        "variables": ["workspace_name", "tasks_paused"],
+    },
+    # Russian - Max
+    {
+        "code": "subscription_expired",
+        "language": "ru",
+        "channel": NotificationChannel.MAX,
+        "subject": None,
+        "body": """<b>Подписка истекла</b>
+
+<b>Пространство:</b> {workspace_name}
+Ваша подписка истекла, пространство переведено на бесплатный план.
+<b>Задач приостановлено:</b> {tasks_paused} (превышен лимит)
+
+Продлите подписку для восстановления доступа.""",
+        "description": "MAX уведомление об истечении подписки",
+        "variables": ["workspace_name", "tasks_paused"],
+    },
 ]
 
 
@@ -372,9 +526,7 @@ class TemplateService:
             return None, ""
 
         # Escape all string variables to prevent HTML injection
-        safe_variables = {
-            k: escape(str(v)) if isinstance(v, str) else v for k, v in variables.items()
-        }
+        safe_variables = {k: escape(str(v)) if isinstance(v, str) else v for k, v in variables.items()}
 
         # Render body
         try:

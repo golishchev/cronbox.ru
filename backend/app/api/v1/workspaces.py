@@ -111,18 +111,14 @@ async def get_workspace(
 
     # Heartbeats stats
     heartbeats_total = await heartbeat_repo.count_by_workspace(workspace.id)
-    heartbeats_healthy = await heartbeat_repo.count_by_status(
-        workspace.id, [HeartbeatStatus.HEALTHY]
-    )
+    heartbeats_healthy = await heartbeat_repo.count_by_status(workspace.id, [HeartbeatStatus.HEALTHY])
     heartbeats_unhealthy = await heartbeat_repo.count_by_status(
         workspace.id, [HeartbeatStatus.LATE, HeartbeatStatus.DEAD]
     )
 
     # SSL monitors stats
     ssl_monitors_total = await ssl_repo.count_by_workspace(workspace.id)
-    ssl_expiring_soon = await ssl_repo.count_by_status(
-        workspace.id, [SSLMonitorStatus.EXPIRING]
-    )
+    ssl_expiring_soon = await ssl_repo.count_by_status(workspace.id, [SSLMonitorStatus.EXPIRING])
 
     # Task chains stats
     chains_total = await chain_repo.count_by_workspace(workspace.id)
