@@ -154,19 +154,56 @@ jobs:
 
             echo "==> Image tag: $IMAGE_TAG"
 
+            # Check and start infrastructure if needed
+            check_infrastructure() {
+              echo "==> Checking infrastructure services..."
+              RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
+              NEED_INFRA=false
+
+              for service in postgres redis traefik; do
+                if ! echo "$RUNNING_SERVICES" | grep -q "^${service}$"; then
+                  echo "Service $service is not running"
+                  NEED_INFRA=true
+                fi
+              done
+
+              if [ "$NEED_INFRA" = true ]; then
+                echo "==> Stopping application services before infrastructure restart..."
+                docker compose -f docker-compose.prod.yml stop worker scheduler bot api 2>/dev/null || true
+                echo "==> Waiting for services to stop gracefully..."
+                sleep 5
+
+                echo "==> Starting infrastructure services..."
+                docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
+                echo "==> Waiting for infrastructure to be healthy..."
+                sleep 30
+
+                echo "==> Restarting application services..."
+                docker compose -f docker-compose.prod.yml up -d api
+                sleep 3
+                docker compose -f docker-compose.prod.yml up -d worker scheduler bot
+              else
+                echo "==> Infrastructure is running"
+              fi
+            }
+
             deploy_backend() {
               echo "==> Pulling backend image..."
               if docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG} 2>/dev/null; then
                 docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
-                echo "==> Deploying backend services..."
-                docker compose -f docker-compose.prod.yml up -d --no-deps api
-                sleep 3
-                docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
               else
                 echo "==> Image not found in registry, building locally..."
                 DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
-                docker compose -f docker-compose.prod.yml up -d --no-deps api worker scheduler bot
               fi
+
+              echo "==> Stopping backend services gracefully..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot 2>/dev/null || true
+              sleep 3
+
+              echo "==> Deploying backend services..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
             }
 
             deploy_frontend() {
@@ -194,6 +231,9 @@ jobs:
                 docker compose -f docker-compose.prod.yml up -d --no-deps landing
               fi
             }
+
+            # Check infrastructure before deploying
+            check_infrastructure
 
             # Deploy selected components
             if [ "$COMPONENTS" = "all" ]; then
