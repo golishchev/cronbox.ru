@@ -40,8 +40,11 @@ async def engine():
 
     yield engine
 
-    # Close Redis
-    await redis_client.close()
+    # Close Redis (ignore errors if event loop is already closed)
+    try:
+        await redis_client.close()
+    except RuntimeError:
+        pass  # Event loop already closed, connection will be dropped anyway
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
