@@ -39,9 +39,13 @@ class RedisClient:
         """Set a value in Redis with optional expiration."""
         await self.client.set(key, value, ex=expire)
 
-    async def delete(self, key: str) -> None:
-        """Delete a key from Redis."""
-        await self.client.delete(key)
+    async def delete(self, key: str) -> int:
+        """Delete a key from Redis.
+
+        Returns:
+            Number of keys deleted (0 or 1).
+        """
+        return await self.client.delete(key)
 
     async def exists(self, key: str) -> bool:
         """Check if a key exists in Redis."""

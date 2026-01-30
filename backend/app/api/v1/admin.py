@@ -922,7 +922,7 @@ async def create_plan(admin: AdminUser, db: DB, data: CreatePlanRequest):
     await db.commit()
     await db.refresh(plan)
 
-    # Invalidate plans cache
+    # Invalidate plans cache AFTER commit to avoid race condition
     await billing_service.invalidate_plans_cache()
 
     return PlanListItem(
@@ -1027,7 +1027,7 @@ async def update_plan(admin: AdminUser, db: DB, plan_id: str, data: UpdatePlanRe
     await db.commit()
     await db.refresh(plan)
 
-    # Invalidate plans cache
+    # Invalidate plans cache AFTER commit to avoid race condition
     await billing_service.invalidate_plans_cache()
 
     subs_count = await db.scalar(
@@ -1097,7 +1097,7 @@ async def delete_plan(admin: AdminUser, db: DB, plan_id: str):
     await db.delete(plan)
     await db.commit()
 
-    # Invalidate plans cache
+    # Invalidate plans cache AFTER commit to avoid race condition
     await billing_service.invalidate_plans_cache()
 
 

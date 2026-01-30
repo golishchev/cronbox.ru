@@ -135,13 +135,23 @@ class BillingService:
 
         return plans
 
-    async def invalidate_plans_cache(self) -> None:
-        """Invalidate the plans cache. Call this after any plan modification."""
+    async def invalidate_plans_cache(self) -> bool:
+        """Invalidate the plans cache. Call this after any plan modification.
+
+        Returns True if successfully invalidated, False otherwise.
+        Uses best-effort approach - logs errors but doesn't raise exceptions
+        since cache has TTL and will eventually expire.
+        """
         try:
-            await redis_client.delete(PLANS_CACHE_KEY)
-            logger.info("Plans cache invalidated")
+            deleted = await redis_client.delete(PLANS_CACHE_KEY)
+            if deleted:
+                logger.info("Plans cache invalidated successfully")
+            else:
+                logger.info("Plans cache key did not exist (already cleared or never cached)")
+            return True
         except Exception as e:
-            logger.warning("Failed to invalidate plans cache", error=str(e))
+            logger.error("Failed to invalidate plans cache - cache will expire in 1 hour", error=str(e))
+            return False
 
     async def get_plan_by_name(self, db: AsyncSession, name: str) -> Plan | None:
         """Get a plan by name."""
