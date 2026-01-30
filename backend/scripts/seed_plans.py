@@ -27,6 +27,7 @@ PLANS = [
         "min_cron_interval_minutes": 15,
         "telegram_notifications": False,
         "email_notifications": False,
+        "max_notifications": False,
         "webhook_callbacks": False,
         "custom_headers": True,
         "retry_on_failure": False,
@@ -40,6 +41,9 @@ PLANS = [
         "min_heartbeat_interval_minutes": 60,
         # SSL monitors
         "max_ssl_monitors": 1,
+        # Process monitors
+        "max_process_monitors": 0,
+        "min_process_monitor_interval_minutes": 60,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": False,
         "max_queue_size": 0,
@@ -60,6 +64,7 @@ PLANS = [
         "min_cron_interval_minutes": 1,
         "telegram_notifications": True,
         "email_notifications": True,
+        "max_notifications": False,
         "webhook_callbacks": True,
         "custom_headers": True,
         "retry_on_failure": True,
@@ -73,6 +78,9 @@ PLANS = [
         "min_heartbeat_interval_minutes": 5,
         # SSL monitors
         "max_ssl_monitors": 10,
+        # Process monitors
+        "max_process_monitors": 3,
+        "min_process_monitor_interval_minutes": 15,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": True,
         "max_queue_size": 10,
@@ -93,6 +101,7 @@ PLANS = [
         "min_cron_interval_minutes": 1,
         "telegram_notifications": True,
         "email_notifications": True,
+        "max_notifications": True,
         "webhook_callbacks": True,
         "custom_headers": True,
         "retry_on_failure": True,
@@ -106,6 +115,9 @@ PLANS = [
         "min_heartbeat_interval_minutes": 1,
         # SSL monitors
         "max_ssl_monitors": 50,
+        # Process monitors
+        "max_process_monitors": 20,
+        "min_process_monitor_interval_minutes": 5,
         # Launch policy (overlap prevention)
         "overlap_prevention_enabled": True,
         "max_queue_size": 100,

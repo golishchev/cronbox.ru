@@ -21,7 +21,7 @@ class Execution(Base, UUIDMixin):
     )
 
     # Task reference
-    task_type: Mapped[str] = mapped_column(String(20))  # 'cron', 'delayed', 'chain', 'heartbeat', 'ssl'
+    task_type: Mapped[str] = mapped_column(String(20))  # 'cron', 'delayed', 'chain', 'heartbeat', 'ssl', 'process_monitor'
     task_id: Mapped[UUID] = mapped_column(index=True)
     task_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
@@ -34,6 +34,12 @@ class Execution(Base, UUIDMixin):
     # SSL monitor relationship (optional)
     ssl_monitor_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("ssl_monitors.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Process monitor relationship (optional)
+    process_monitor_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("process_monitors.id", ondelete="SET NULL"),
         nullable=True,
     )
 

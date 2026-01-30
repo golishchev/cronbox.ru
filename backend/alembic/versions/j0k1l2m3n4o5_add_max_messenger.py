@@ -36,6 +36,9 @@ def upgrade() -> None:
         sa.Column("max_notifications", sa.Boolean(), nullable=False, server_default=sa.text("false")),
     )
 
+    # Update existing plans to have max_notifications=false
+    op.execute("UPDATE plans SET max_notifications = false WHERE max_notifications IS NULL")
+
     # Add MAX to NotificationChannel enum
     op.execute("ALTER TYPE notificationchannel ADD VALUE IF NOT EXISTS 'MAX'")
 

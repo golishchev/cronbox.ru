@@ -10,10 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.execution import Execution
+
+from app.db.repositories.executions import ExecutionRepository
 from app.db.repositories.process_monitors import (
     ProcessMonitorEventRepository,
     ProcessMonitorRepository,
 )
+from app.models.cron_task import TaskStatus
 from app.models.process_monitor import (
     ConcurrencyPolicy,
     ProcessMonitor,
@@ -141,6 +145,7 @@ class ProcessMonitorService:
         """
         monitor_repo = ProcessMonitorRepository(db)
         event_repo = ProcessMonitorEventRepository(db)
+        execution_repo = ExecutionRepository(db)
 
         now = datetime.utcnow()
 
@@ -191,6 +196,17 @@ class ProcessMonitorService:
         # Mark monitor as running
         await monitor_repo.mark_running(monitor, now, run_id)
 
+        # Create execution record
+        execution = await execution_repo.create(
+            workspace_id=monitor.workspace_id,
+            task_type="process_monitor",
+            task_id=monitor.id,
+            task_name=monitor.name,
+            process_monitor_id=monitor.id,
+            status=TaskStatus.RUNNING,
+            started_at=now,
+        )
+
         # Send recovery notification if was in failure state
         if was_failed and monitor.notify_on_recovery:
             try:
@@ -234,6 +250,7 @@ class ProcessMonitorService:
         """
         monitor_repo = ProcessMonitorRepository(db)
         event_repo = ProcessMonitorEventRepository(db)
+        execution_repo = ExecutionRepository(db)
 
         now = datetime.utcnow()
 
@@ -271,6 +288,26 @@ class ProcessMonitorService:
         # Mark monitor as completed
         await monitor_repo.mark_completed(monitor, now, duration_ms or 0, next_expected_start)
 
+        # Update execution record
+        # Find the most recent running execution for this monitor
+        stmt = (
+            select(Execution)
+            .where(
+                Execution.process_monitor_id == monitor.id,
+                Execution.status == TaskStatus.RUNNING,
+            )
+            .order_by(Execution.started_at.desc())
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        execution = result.scalar_one_or_none()
+
+        if execution:
+            execution.status = TaskStatus.SUCCESS
+            execution.finished_at = now
+            execution.duration_ms = duration_ms
+            await db.flush()
+
         # Send success notification if enabled
         if monitor.notify_on_success:
             try:
@@ -301,6 +338,7 @@ class ProcessMonitorService:
         """
         monitor_repo = ProcessMonitorRepository(db)
         event_repo = ProcessMonitorEventRepository(db)
+        execution_repo = ExecutionRepository(db)
         now = datetime.utcnow()
         processed = 0
 
@@ -323,6 +361,19 @@ class ProcessMonitorService:
 
                 # Mark as missed
                 await monitor_repo.mark_missed_start(monitor, next_expected_start)
+
+                # Create failed execution record
+                await execution_repo.create(
+                    workspace_id=monitor.workspace_id,
+                    task_type="process_monitor",
+                    task_id=monitor.id,
+                    task_name=monitor.name,
+                    process_monitor_id=monitor.id,
+                    status=TaskStatus.FAILED,
+                    started_at=monitor.next_expected_start or now,
+                    finished_at=now,
+                    error_message="Start signal not received within grace period",
+                )
 
                 # Send notification
                 if monitor.notify_on_missed_start:
@@ -362,6 +413,7 @@ class ProcessMonitorService:
         """
         monitor_repo = ProcessMonitorRepository(db)
         event_repo = ProcessMonitorEventRepository(db)
+        execution_repo = ExecutionRepository(db)
         now = datetime.utcnow()
         processed = 0
 
@@ -383,6 +435,32 @@ class ProcessMonitorService:
 
                 # Mark as missed end
                 await monitor_repo.mark_missed_end(monitor, next_expected_start)
+
+                # Update execution record to failed
+                stmt = (
+                    select(Execution)
+                    .where(
+                        Execution.process_monitor_id == monitor.id,
+                        Execution.status == TaskStatus.RUNNING,
+                    )
+                    .order_by(Execution.started_at.desc())
+                    .limit(1)
+                )
+                result = await db.execute(stmt)
+                execution = result.scalar_one_or_none()
+
+                if execution:
+                    execution.status = TaskStatus.FAILED
+                    execution.finished_at = now
+                    if monitor.last_start_at:
+                        last_start_naive = (
+                            monitor.last_start_at.replace(tzinfo=None)
+                            if monitor.last_start_at.tzinfo
+                            else monitor.last_start_at
+                        )
+                        execution.duration_ms = int((now - last_start_naive).total_seconds() * 1000)
+                    execution.error_message = "End signal not received within timeout"
+                    await db.flush()
 
                 # Send notification
                 if monitor.notify_on_missed_end:

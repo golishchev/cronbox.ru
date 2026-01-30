@@ -749,6 +749,7 @@
     "chainVariables": "Переменные",
     "heartbeat": "Монитор",
     "ssl": "SSL",
+    "processMonitor": "Монитор процессов",
     "pingReceived": "Пинг получен"
   },
   "notifications": {

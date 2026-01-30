@@ -1101,6 +1101,13 @@ async def delete_plan(admin: AdminUser, db: DB, plan_id: str):
     await billing_service.invalidate_plans_cache()
 
 
+@router.post("/plans/invalidate-cache")
+async def invalidate_plans_cache(admin: AdminUser):
+    """Manually invalidate the plans cache."""
+    await billing_service.invalidate_plans_cache()
+    return {"message": "Plans cache invalidated successfully"}
+
+
 # ============== Notification Templates ==============
 
 

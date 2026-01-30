@@ -9,6 +9,14 @@ CronBox is an HTTP request scheduling service with cron and delayed task capabil
 - **Frontend** (`/frontend`): React 19 control panel with Vite, TailwindCSS, and Zustand
 - **Landing** (`/landing`): Next.js marketing site
 
+## Environment Configuration
+
+**IMPORTANT:** This project uses a **single master .env file** in the project root.
+- See [ENV.md](./ENV.md) for complete environment variables documentation
+- Backend reads from root `/.env` (configured in `backend/app/config.py`)
+- Frontend uses `frontend/.env` only for VITE_* variables in development
+- Production uses root `.env` via docker-compose environment blocks
+
 ## Development Commands
 
 ### Start all services (recommended)

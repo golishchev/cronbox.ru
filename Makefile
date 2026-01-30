@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list dev-max-bot
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list dev-max-bot invalidate-plans-cache
 
 # Start all dev services (backend + frontend + landing in background)
 dev: infra
@@ -112,3 +112,7 @@ restore:
 # List available backups
 backup-list:
 	@./scripts/restore.sh --list
+
+# Invalidate plans cache in Redis
+invalidate-plans-cache:
+	cd backend && uv run python scripts/invalidate_plans_cache.py

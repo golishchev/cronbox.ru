@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -8,11 +9,31 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from app import __version__
 from app.config import settings
 from app.core.rate_limiter import RateLimitMiddleware
 from app.core.redis import redis_client
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.database import engine
+
+# Initialize Sentry for error tracking and performance monitoring
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        release=f"cronbox-backend@{__version__}",
+        # Performance monitoring - capture 10% of transactions
+        traces_sample_rate=0.1,
+        # Profiling - capture 10% of transactions
+        profiles_sample_rate=0.1,
+        # Ignore health check endpoints to reduce noise
+        ignore_errors=[KeyboardInterrupt],
+        before_send=lambda event, hint: (
+            None
+            if event.get("request", {}).get("url", "").endswith(("/health", "/metrics"))
+            else event
+        ),
+    )
 
 # OpenAPI tags metadata
 tags_metadata = [

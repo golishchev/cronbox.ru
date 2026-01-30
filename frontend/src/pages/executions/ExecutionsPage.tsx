@@ -41,6 +41,7 @@ import {
   ShieldCheck,
   Radio,
   Plug,
+  Activity,
 } from 'lucide-react'
 import { getErrorMessage } from '@/api/client'
 import { TableSkeleton } from '@/components/ui/skeleton'
@@ -234,6 +235,7 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
               <SelectItem value="delayed">{t('executions.delayed')}</SelectItem>
               <SelectItem value="chain">{t('executions.chain')}</SelectItem>
               <SelectItem value="heartbeat">{t('executions.heartbeat')}</SelectItem>
+              <SelectItem value="process_monitor">{t('executions.processMonitor')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -310,13 +312,16 @@ export function ExecutionsPage({ onNavigate: _ }: ExecutionsPageProps) {
                       {execution.task_type === 'chain' && <Link2 className="h-3 w-3" />}
                       {execution.task_type === 'heartbeat' && <HeartPulse className="h-3 w-3" />}
                       {execution.task_type === 'ssl' && <ShieldCheck className="h-3 w-3" />}
+                      {execution.task_type === 'process_monitor' && <Activity className="h-3 w-3" />}
                       {execution.task_type === 'chain'
                         ? t('executions.chain')
                         : execution.task_type === 'heartbeat'
                           ? t('executions.heartbeat')
                           : execution.task_type === 'ssl'
                             ? t('executions.ssl')
-                            : execution.task_type}
+                            : execution.task_type === 'process_monitor'
+                              ? t('executions.processMonitor')
+                              : execution.task_type}
                     </Badge>
                   </TableCell>
                   <TableCell>

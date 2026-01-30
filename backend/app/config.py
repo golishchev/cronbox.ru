@@ -1,13 +1,23 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Find project root (where .env is located)
+# Backend is in /backend subdirectory, so go up one level
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """Application settings loaded from environment variables.
+
+    Reads from root .env file (one level up from backend/).
+    This allows using a single master .env file for the entire project.
+    """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -18,6 +28,9 @@ class Settings(BaseSettings):
     debug: bool = False
     environment: str = "development"  # development, staging, production
     secret_key: str = "change-me-in-production"
+
+    # Sentry
+    sentry_dsn: str = ""  # Leave empty to disable Sentry
 
     # Database
     database_url: str = "postgresql+asyncpg://cronbox:cronbox@localhost:5432/cronbox"
