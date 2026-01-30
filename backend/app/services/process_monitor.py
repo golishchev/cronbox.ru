@@ -6,11 +6,7 @@ from datetime import datetime, time, timedelta, timezone
 import pytz
 import structlog
 from croniter import croniter
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from app.models.execution import Execution
 
 from app.db.repositories.executions import ExecutionRepository
 from app.db.repositories.process_monitors import (
@@ -25,7 +21,6 @@ from app.models.process_monitor import (
     ProcessMonitorStatus,
     ScheduleType,
 )
-from app.models.workspace import Workspace
 from app.services.i18n import t
 from app.services.notifications import notification_service
 
@@ -37,10 +32,10 @@ class ProcessMonitorService:
 
     async def _get_workspace_settings(self, db: AsyncSession, workspace_id: uuid.UUID) -> tuple[str, str]:
         """Get workspace language and timezone."""
-        result = await db.execute(
-            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_with_owner(workspace_id)
 
         lang = "en"
         tz = "Europe/Moscow"
@@ -197,7 +192,7 @@ class ProcessMonitorService:
         await monitor_repo.mark_running(monitor, now, run_id)
 
         # Create execution record
-        execution = await execution_repo.create(
+        await execution_repo.create(
             workspace_id=monitor.workspace_id,
             task_type="process_monitor",
             task_id=monitor.id,
@@ -289,24 +284,13 @@ class ProcessMonitorService:
         await monitor_repo.mark_completed(monitor, now, duration_ms or 0, next_expected_start)
 
         # Update execution record
-        # Find the most recent running execution for this monitor
-        stmt = (
-            select(Execution)
-            .where(
-                Execution.process_monitor_id == monitor.id,
-                Execution.status == TaskStatus.RUNNING,
-            )
-            .order_by(Execution.started_at.desc())
-            .limit(1)
-        )
-        result = await db.execute(stmt)
-        execution = result.scalar_one_or_none()
-
+        execution = await execution_repo.get_running_execution_by_process_monitor(monitor.id)
         if execution:
-            execution.status = TaskStatus.SUCCESS
-            execution.finished_at = now
-            execution.duration_ms = duration_ms
-            await db.flush()
+            await execution_repo.complete_process_monitor_execution(
+                execution,
+                status=TaskStatus.SUCCESS,
+                duration_ms=duration_ms,
+            )
 
         # Send success notification if enabled
         if monitor.notify_on_success:
@@ -437,30 +421,24 @@ class ProcessMonitorService:
                 await monitor_repo.mark_missed_end(monitor, next_expected_start)
 
                 # Update execution record to failed
-                stmt = (
-                    select(Execution)
-                    .where(
-                        Execution.process_monitor_id == monitor.id,
-                        Execution.status == TaskStatus.RUNNING,
-                    )
-                    .order_by(Execution.started_at.desc())
-                    .limit(1)
-                )
-                result = await db.execute(stmt)
-                execution = result.scalar_one_or_none()
-
+                execution = await execution_repo.get_running_execution_by_process_monitor(monitor.id)
                 if execution:
-                    execution.status = TaskStatus.FAILED
-                    execution.finished_at = now
+                    # Calculate duration if we have a start time
+                    duration_ms = None
                     if monitor.last_start_at:
                         last_start_naive = (
                             monitor.last_start_at.replace(tzinfo=None)
                             if monitor.last_start_at.tzinfo
                             else monitor.last_start_at
                         )
-                        execution.duration_ms = int((now - last_start_naive).total_seconds() * 1000)
-                    execution.error_message = "End signal not received within timeout"
-                    await db.flush()
+                        duration_ms = int((now - last_start_naive).total_seconds() * 1000)
+
+                    await execution_repo.complete_process_monitor_execution(
+                        execution,
+                        status=TaskStatus.FAILED,
+                        duration_ms=duration_ms,
+                        error_message="End signal not received within timeout",
+                    )
 
                 # Send notification
                 if monitor.notify_on_missed_end:

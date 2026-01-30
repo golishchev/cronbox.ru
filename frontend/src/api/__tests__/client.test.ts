@@ -10,7 +10,9 @@ describe('apiClient', () => {
 
   describe('configuration', () => {
     it('should have correct base URL', () => {
-      expect(apiClient.defaults.baseURL).toBe('/v1')
+      // Should be either env variable or fallback to /v1
+      const expectedUrl = import.meta.env.VITE_API_URL || '/v1'
+      expect(apiClient.defaults.baseURL).toBe(expectedUrl)
     })
 
     it('should have JSON content type', () => {

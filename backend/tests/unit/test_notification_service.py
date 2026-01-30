@@ -298,7 +298,9 @@ class TestNotificationService:
                     with patch.object(service, "_send_templated_max") as mock_max:
                         with patch.object(service, "_send_templated_email") as mock_email:
                             with patch.object(service, "_send_webhook") as mock_webhook:
-                                await service.send_task_success(mock_db, workspace_id, "Test Task", "cron", duration_ms=150)
+                                await service.send_task_success(
+                                    mock_db, workspace_id, "Test Task", "cron", duration_ms=150
+                                )
 
                                 # Should not send any notifications when workspace notify_on_success is False
                                 mock_telegram.assert_not_called()
@@ -328,8 +330,12 @@ class TestNotificationService:
             with patch.object(service, "_get_workspace_info", return_value=("Workspace", "en")):
                 with patch.object(service, "_send_webhook") as mock_webhook:
                     await service.send_task_success(
-                        mock_db, workspace_id, "Test Task", "process_monitor",
-                        duration_ms=150, task_level_override=True,
+                        mock_db,
+                        workspace_id,
+                        "Test Task",
+                        "process_monitor",
+                        duration_ms=150,
+                        task_level_override=True,
                     )
 
                     # Should send notification despite workspace notify_on_success=False

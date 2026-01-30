@@ -491,28 +491,16 @@ class TemplateService:
         if isinstance(channel, str):
             channel = NotificationChannel(channel)
 
+        from app.db.repositories.notification_templates import NotificationTemplateRepository
+
+        template_repo = NotificationTemplateRepository(db)
+
         # Try to get template for requested language
-        result = await db.execute(
-            select(NotificationTemplate).where(
-                NotificationTemplate.code == code,
-                NotificationTemplate.language == language,
-                NotificationTemplate.channel == channel,
-                NotificationTemplate.is_active.is_(True),
-            )
-        )
-        template = result.scalar_one_or_none()
+        template = await template_repo.get_by_code_and_language(code, language, channel.value)
 
         # Fallback to English if not found
         if template is None and language != "en":
-            result = await db.execute(
-                select(NotificationTemplate).where(
-                    NotificationTemplate.code == code,
-                    NotificationTemplate.language == "en",
-                    NotificationTemplate.channel == channel,
-                    NotificationTemplate.is_active.is_(True),
-                )
-            )
-            template = result.scalar_one_or_none()
+            template = await template_repo.get_by_code_and_language(code, "en", channel.value)
 
         return template
 
@@ -572,16 +560,17 @@ class TemplateService:
         """
         created = 0
 
+        from app.db.repositories.notification_templates import NotificationTemplateRepository
+
+        template_repo = NotificationTemplateRepository(db)
+
         for template_data in DEFAULT_TEMPLATES:
             # Check if template exists
-            result = await db.execute(
-                select(NotificationTemplate).where(
-                    NotificationTemplate.code == template_data["code"],
-                    NotificationTemplate.language == template_data["language"],
-                    NotificationTemplate.channel == template_data["channel"],
-                )
+            existing = await template_repo.find_by_code_language_channel(
+                template_data["code"],
+                template_data["language"],
+                template_data["channel"],
             )
-            existing = result.scalar_one_or_none()
 
             if existing is None:
                 template = NotificationTemplate(**template_data)
@@ -596,14 +585,10 @@ class TemplateService:
 
     async def get_all_templates(self, db: AsyncSession) -> list[NotificationTemplate]:
         """Get all templates for admin UI."""
-        result = await db.execute(
-            select(NotificationTemplate).order_by(
-                NotificationTemplate.code,
-                NotificationTemplate.language,
-                NotificationTemplate.channel,
-            )
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.notification_templates import NotificationTemplateRepository
+
+        template_repo = NotificationTemplateRepository(db)
+        return await template_repo.get_all_ordered()
 
     async def get_template_by_id(self, db: AsyncSession, template_id: UUID) -> NotificationTemplate | None:
         """Get template by ID."""

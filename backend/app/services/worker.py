@@ -5,7 +5,7 @@ from uuid import UUID
 
 import structlog
 from redis.asyncio import Redis
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
@@ -85,10 +85,10 @@ class WorkerService:
         workspace_id: UUID,
     ) -> list[Worker]:
         """Get all workers for a workspace."""
-        result = await db.execute(
-            select(Worker).where(Worker.workspace_id == workspace_id).order_by(Worker.created_at.desc())
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.workers import WorkerRepository
+
+        worker_repo = WorkerRepository(db)
+        return await worker_repo.get_by_workspace(workspace_id)
 
     async def update_worker(
         self,
@@ -143,10 +143,10 @@ class WorkerService:
         # Get prefix to narrow down search
         prefix = Worker.get_key_prefix(api_key)
 
-        result = await db.execute(
-            select(Worker).where(Worker.api_key_prefix == prefix).where(Worker.is_active == True)  # noqa: E712
-        )
-        workers = result.scalars().all()
+        from app.db.repositories.workers import WorkerRepository
+
+        worker_repo = WorkerRepository(db)
+        workers = await worker_repo.get_active_by_prefix(prefix)
 
         # Verify full API key
         for worker in workers:
@@ -309,16 +309,14 @@ class WorkerService:
         """Mark workers as offline if they haven't sent a heartbeat recently."""
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)
 
-        result = await db.execute(
-            update(Worker)
-            .where(Worker.status != WorkerStatus.OFFLINE)
-            .where(Worker.last_heartbeat < cutoff)
-            .values(status=WorkerStatus.OFFLINE)
-        )
+        from app.db.repositories.workers import WorkerRepository
+
+        worker_repo = WorkerRepository(db)
+        count = await worker_repo.mark_offline_by_heartbeat(cutoff)
 
         await db.commit()
 
-        return result.rowcount
+        return count
 
 
 from datetime import timedelta  # noqa: E402

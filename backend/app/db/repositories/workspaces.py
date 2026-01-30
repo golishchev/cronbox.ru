@@ -139,3 +139,69 @@ class WorkspaceRepository(BaseRepository[Workspace]):
             grouped[owner_id].append(workspace_id)
 
         return list(grouped.items())
+
+    async def get_with_owner(self, workspace_id: UUID) -> Workspace | None:
+        """Get workspace with owner eagerly loaded."""
+        stmt = select(Workspace).where(Workspace.id == workspace_id).options(selectinload(Workspace.owner))
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_first_by_owner(self, owner_id: UUID) -> Workspace | None:
+        """Get user's first (oldest) workspace."""
+        stmt = select(Workspace).where(Workspace.owner_id == owner_id).order_by(Workspace.created_at.asc()).limit(1)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_all_by_owner(self, owner_id: UUID) -> list[Workspace]:
+        """Get all workspaces for an owner ordered by creation date."""
+        stmt = select(Workspace).where(Workspace.owner_id == owner_id).order_by(Workspace.created_at.asc())
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_active_by_owner(self, owner_id: UUID) -> int:
+        """Count active (non-blocked) workspaces for an owner."""
+        stmt = (
+            select(func.count())
+            .select_from(Workspace)
+            .where(
+                Workspace.owner_id == owner_id,
+                Workspace.is_blocked.is_(False),
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one()
+
+    async def get_blocked_by_owner(self, owner_id: UUID) -> list[Workspace]:
+        """Get blocked workspaces for an owner ordered by creation date."""
+        stmt = (
+            select(Workspace)
+            .where(
+                Workspace.owner_id == owner_id,
+                Workspace.is_blocked.is_(True),
+            )
+            .order_by(Workspace.created_at.asc())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def increment_executions_skipped(self, workspace_id: UUID) -> None:
+        """Increment skipped executions counter."""
+        from sqlalchemy import update
+
+        stmt = (
+            update(Workspace)
+            .where(Workspace.id == workspace_id)
+            .values(executions_skipped=Workspace.executions_skipped + 1)
+        )
+        await self.db.execute(stmt)
+
+    async def increment_executions_queued(self, workspace_id: UUID) -> None:
+        """Increment queued executions counter."""
+        from sqlalchemy import update
+
+        stmt = (
+            update(Workspace)
+            .where(Workspace.id == workspace_id)
+            .values(executions_queued=Workspace.executions_queued + 1)
+        )
+        await self.db.execute(stmt)

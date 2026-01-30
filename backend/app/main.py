@@ -29,9 +29,7 @@ if settings.sentry_dsn:
         # Ignore health check endpoints to reduce noise
         ignore_errors=[KeyboardInterrupt],
         before_send=lambda event, hint: (
-            None
-            if event.get("request", {}).get("url", "").endswith(("/health", "/metrics"))
-            else event
+            None if event.get("request", {}).get("url", "").endswith(("/health", "/metrics")) else event
         ),
     )
 

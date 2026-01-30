@@ -142,3 +142,30 @@ class CronTaskRepository(BaseRepository[CronTask]):
         await self.db.flush()
         await self.db.refresh(task)
         return task
+
+    async def get_with_timeout_and_running(self) -> list[CronTask]:
+        """Get tasks with running instances and execution timeout set."""
+        stmt = select(CronTask).where(
+            CronTask.running_instances > 0,
+            CronTask.execution_timeout.isnot(None),
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def increment_running_instances(self, task_id: UUID) -> None:
+        """Increment running instances counter."""
+        from sqlalchemy import update
+
+        stmt = update(CronTask).where(CronTask.id == task_id).values(running_instances=CronTask.running_instances + 1)
+        await self.db.execute(stmt)
+
+    async def decrement_running_instances(self, task_id: UUID) -> None:
+        """Decrement running instances counter."""
+        from sqlalchemy import update
+
+        stmt = (
+            update(CronTask)
+            .where(CronTask.id == task_id, CronTask.running_instances > 0)
+            .values(running_instances=CronTask.running_instances - 1)
+        )
+        await self.db.execute(stmt)

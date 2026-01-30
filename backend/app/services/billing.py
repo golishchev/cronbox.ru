@@ -7,7 +7,7 @@ from uuid import UUID
 
 import httpx
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -253,10 +253,10 @@ class BillingService:
         user_lang = user.preferred_language or "ru"
 
         # Get user's first workspace for payment association
-        workspace_result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
-        )
-        workspace = workspace_result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_first_by_owner(user_id)
         if not workspace:
             logger.error("User has no workspace", user_id=user_id)
             return None
@@ -811,19 +811,19 @@ class BillingService:
 
     async def _get_oldest_workspace(self, db: AsyncSession, user_id: uuid_module.UUID) -> Workspace | None:
         """Get user's oldest workspace by created_at."""
-        result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
-        )
-        return result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        return await workspace_repo.get_first_by_owner(user_id)
 
     async def _block_excess_workspaces(
         self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int
     ) -> list[uuid_module.UUID]:
         """Block workspaces exceeding the limit. Returns list of blocked workspace IDs."""
-        result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc())
-        )
-        workspaces = list(result.scalars().all())
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspaces = await workspace_repo.get_all_by_owner(user_id)
 
         blocked_ids = []
         now = datetime.now(timezone.utc)
@@ -854,35 +854,22 @@ class BillingService:
 
     async def _unblock_user_workspaces(self, db: AsyncSession, user_id: uuid_module.UUID, max_workspaces: int) -> int:
         """Unblock workspaces up to the plan limit. Returns count of unblocked."""
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+
         # Count currently active workspaces
-        active_count_result = await db.execute(
-            select(func.count())
-            .select_from(Workspace)
-            .where(
-                Workspace.owner_id == user_id,
-                Workspace.is_blocked.is_(False),
-            )
-        )
-        active_count = active_count_result.scalar_one()
+        active_count = await workspace_repo.count_active_by_owner(user_id)
 
         can_unblock = max_workspaces - active_count
         if can_unblock <= 0:
             return 0
 
         # Get blocked workspaces ordered by created_at
-        result = await db.execute(
-            select(Workspace)
-            .where(
-                Workspace.owner_id == user_id,
-                Workspace.is_blocked.is_(True),
-            )
-            .order_by(Workspace.created_at.asc())
-            .limit(can_unblock)
-        )
-        blocked_workspaces = list(result.scalars().all())
+        blocked_workspaces = await workspace_repo.get_blocked_by_owner(user_id)
 
         unblocked = 0
-        for workspace in blocked_workspaces:
+        for workspace in blocked_workspaces[:can_unblock]:
             workspace.is_blocked = False
             workspace.blocked_at = None
             await self._resume_workspace_tasks(db, workspace.id)
@@ -953,14 +940,10 @@ class BillingService:
         offset: int = 0,
     ) -> list[Payment]:
         """Get payment history for a user."""
-        result = await db.execute(
-            select(Payment)
-            .where(Payment.user_id == user_id)
-            .order_by(Payment.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.payments import PaymentRepository
+
+        payment_repo = PaymentRepository(db)
+        return await payment_repo.get_by_user(user_id, limit, offset)
 
     async def get_expiring_subscriptions(self, db: AsyncSession, days_before: int) -> list[Subscription]:
         """Get subscriptions expiring in exactly N days (within that day)."""
@@ -969,14 +952,10 @@ class BillingService:
         start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
 
-        result = await db.execute(
-            select(Subscription).where(
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.current_period_end >= start_of_day,
-                Subscription.current_period_end < end_of_day,
-            )
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.subscriptions import SubscriptionRepository
+
+        sub_repo = SubscriptionRepository(db)
+        return await sub_repo.get_expiring_today(start_of_day, end_of_day)
 
     async def get_subscriptions_for_renewal(self, db: AsyncSession) -> list[Subscription]:
         """
@@ -990,15 +969,10 @@ class BillingService:
         now = datetime.now(timezone.utc)
         renewal_window = now + timedelta(hours=1)
 
-        result = await db.execute(
-            select(Subscription).where(
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.current_period_end <= renewal_window,
-                Subscription.yookassa_payment_method_id.isnot(None),
-                Subscription.cancel_at_period_end.is_(False),
-            )
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.subscriptions import SubscriptionRepository
+
+        sub_repo = SubscriptionRepository(db)
+        return await sub_repo.get_pending_renewal(renewal_window)
 
     async def auto_pause_excess_tasks(self, db: AsyncSession, workspace_id: uuid_module.UUID, max_tasks: int) -> int:
         """Pause cron tasks exceeding the limit. Returns count of paused tasks."""
@@ -1041,13 +1015,10 @@ class BillingService:
         now = datetime.now(timezone.utc)
 
         # Find active subscriptions that have expired
-        result = await db.execute(
-            select(Subscription).where(
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.current_period_end < now,
-            )
-        )
-        subscriptions = result.scalars().all()
+        from app.db.repositories.subscriptions import SubscriptionRepository
+
+        sub_repo = SubscriptionRepository(db)
+        subscriptions = await sub_repo.get_expired_active(now)
 
         affected_users: list[tuple[uuid_module.UUID, int, int]] = []
         free_plan = await self.get_plan_by_name(db, "free")
@@ -1093,14 +1064,10 @@ class BillingService:
         """
         now = datetime.now(timezone.utc)
 
-        result = await db.execute(
-            select(Subscription).where(
-                Subscription.scheduled_plan_id.isnot(None),
-                Subscription.current_period_end <= now,
-                Subscription.status == SubscriptionStatus.ACTIVE,
-            )
-        )
-        return list(result.scalars().all())
+        from app.db.repositories.subscriptions import SubscriptionRepository
+
+        sub_repo = SubscriptionRepository(db)
+        return await sub_repo.get_with_scheduled_plan_change(now)
 
     async def apply_scheduled_plan_change(
         self,
@@ -1382,14 +1349,10 @@ class BillingService:
         cutoff_time = now - timedelta(minutes=timeout_minutes)
 
         # Find old pending payments
-        result = await db.execute(
-            select(Payment).where(
-                Payment.status == PaymentStatus.PENDING,
-                Payment.created_at < cutoff_time,
-                Payment.yookassa_payment_id.isnot(None),
-            )
-        )
-        pending_payments = list(result.scalars().all())
+        from app.db.repositories.payments import PaymentRepository
+
+        payment_repo = PaymentRepository(db)
+        pending_payments = await payment_repo.get_old_pending(cutoff_time)
 
         if not pending_payments:
             return 0

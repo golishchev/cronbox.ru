@@ -5,13 +5,15 @@ from enum import Enum
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.repositories.cron_tasks import CronTaskRepository
+from app.db.repositories.task_chains import TaskChainRepository
+from app.db.repositories.task_queue import TaskQueueRepository
+from app.db.repositories.workspaces import WorkspaceRepository
 from app.models.cron_task import CronTask, OverlapPolicy
 from app.models.task_chain import TaskChain
 from app.models.task_queue import TaskQueue
-from app.models.workspace import Workspace
 
 logger = structlog.get_logger()
 
@@ -241,22 +243,15 @@ class OverlapService:
         Returns:
             Number of items in queue
         """
-        from sqlalchemy import func
-
-        result = await db.execute(
-            select(func.count(TaskQueue.id)).where(
-                TaskQueue.task_type == task_type,
-                TaskQueue.task_id == task_id,
-            )
-        )
-        return result.scalar() or 0
+        queue_repo = TaskQueueRepository(db)
+        return await queue_repo.count_by_task(task_type, task_id)
 
     async def get_queued_tasks(
         self,
         db: AsyncSession,
         workspace_id: UUID,
         limit: int = 50,
-    ) -> list[TaskQueue]:
+    ) -> list:
         """Get all queued tasks for a workspace.
 
         Args:
@@ -267,13 +262,8 @@ class OverlapService:
         Returns:
             List of queued tasks
         """
-        result = await db.execute(
-            select(TaskQueue)
-            .where(TaskQueue.workspace_id == workspace_id)
-            .order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
-            .limit(limit)
-        )
-        return list(result.scalars().all())
+        queue_repo = TaskQueueRepository(db)
+        return await queue_repo.get_by_workspace(workspace_id, limit)
 
     async def remove_from_queue(
         self,
@@ -289,12 +279,8 @@ class OverlapService:
         Returns:
             True if item was removed, False if not found
         """
-        result = await db.execute(select(TaskQueue).where(TaskQueue.id == queue_item_id))
-        queue_item = result.scalar_one_or_none()
-        if queue_item:
-            await db.delete(queue_item)
-            return True
-        return False
+        queue_repo = TaskQueueRepository(db)
+        return await queue_repo.delete_by_id(queue_item_id)
 
     async def clear_task_queue(
         self,
@@ -312,26 +298,8 @@ class OverlapService:
         Returns:
             Number of items removed
         """
-        from sqlalchemy import delete, func
-
-        # Count items first
-        count_result = await db.execute(
-            select(func.count(TaskQueue.id)).where(
-                TaskQueue.task_type == task_type,
-                TaskQueue.task_id == task_id,
-            )
-        )
-        count = count_result.scalar() or 0
-
-        # Delete all items
-        await db.execute(
-            delete(TaskQueue).where(
-                TaskQueue.task_type == task_type,
-                TaskQueue.task_id == task_id,
-            )
-        )
-
-        return count
+        queue_repo = TaskQueueRepository(db)
+        return await queue_repo.delete_by_task(task_type, task_id)
 
     async def cleanup_stale_instances(
         self,
@@ -353,13 +321,8 @@ class OverlapService:
         # Cleanup cron tasks with execution_timeout set
         if timeout_threshold is None:
             # Use individual task timeouts
-            result = await db.execute(
-                select(CronTask).where(
-                    CronTask.running_instances > 0,
-                    CronTask.execution_timeout.isnot(None),
-                )
-            )
-            tasks = result.scalars().all()
+            cron_repo = CronTaskRepository(db)
+            tasks = await cron_repo.get_with_timeout_and_running()
 
             for task in tasks:
                 if task.last_run_at:
@@ -375,13 +338,8 @@ class OverlapService:
                         )
 
             # Cleanup chains with execution_timeout set
-            chain_result = await db.execute(
-                select(TaskChain).where(
-                    TaskChain.running_instances > 0,
-                    TaskChain.execution_timeout.isnot(None),
-                )
-            )
-            chains = chain_result.scalars().all()
+            chain_repo = TaskChainRepository(db)
+            chains = await chain_repo.get_with_timeout_and_running()
 
             for chain in chains:
                 if chain.last_run_at:
@@ -406,15 +364,11 @@ class OverlapService:
     ) -> None:
         """Increment running instances counter."""
         if task_type == "cron":
-            await db.execute(
-                update(CronTask).where(CronTask.id == task_id).values(running_instances=CronTask.running_instances + 1)
-            )
+            cron_repo = CronTaskRepository(db)
+            await cron_repo.increment_running_instances(task_id)
         elif task_type == "chain":
-            await db.execute(
-                update(TaskChain)
-                .where(TaskChain.id == task_id)
-                .values(running_instances=TaskChain.running_instances + 1)
-            )
+            chain_repo = TaskChainRepository(db)
+            await chain_repo.increment_running_instances(task_id)
 
     async def _decrement_running_instances(
         self,
@@ -424,17 +378,11 @@ class OverlapService:
     ) -> None:
         """Decrement running instances counter (minimum 0)."""
         if task_type == "cron":
-            await db.execute(
-                update(CronTask)
-                .where(CronTask.id == task_id, CronTask.running_instances > 0)
-                .values(running_instances=CronTask.running_instances - 1)
-            )
+            cron_repo = CronTaskRepository(db)
+            await cron_repo.decrement_running_instances(task_id)
         elif task_type == "chain":
-            await db.execute(
-                update(TaskChain)
-                .where(TaskChain.id == task_id, TaskChain.running_instances > 0)
-                .values(running_instances=TaskChain.running_instances - 1)
-            )
+            chain_repo = TaskChainRepository(db)
+            await chain_repo.decrement_running_instances(task_id)
 
     async def _increment_skipped_count(
         self,
@@ -442,11 +390,8 @@ class OverlapService:
         workspace_id: UUID,
     ) -> None:
         """Increment skipped executions counter for workspace."""
-        await db.execute(
-            update(Workspace)
-            .where(Workspace.id == workspace_id)
-            .values(executions_skipped=Workspace.executions_skipped + 1)
-        )
+        workspace_repo = WorkspaceRepository(db)
+        await workspace_repo.increment_executions_skipped(workspace_id)
 
     async def _increment_queued_count(
         self,
@@ -454,11 +399,8 @@ class OverlapService:
         workspace_id: UUID,
     ) -> None:
         """Increment queued executions counter for workspace."""
-        await db.execute(
-            update(Workspace)
-            .where(Workspace.id == workspace_id)
-            .values(executions_queued=Workspace.executions_queued + 1)
-        )
+        workspace_repo = WorkspaceRepository(db)
+        await workspace_repo.increment_executions_queued(workspace_id)
 
     async def _add_to_queue(
         self,
@@ -519,23 +461,10 @@ class OverlapService:
         db: AsyncSession,
         task_type: str,
         task_id: UUID,
-    ) -> TaskQueue | None:
+    ):
         """Get and remove next item from queue."""
-        result = await db.execute(
-            select(TaskQueue)
-            .where(
-                TaskQueue.task_type == task_type,
-                TaskQueue.task_id == task_id,
-            )
-            .order_by(TaskQueue.priority.desc(), TaskQueue.queued_at.asc())
-            .limit(1)
-        )
-        queue_item = result.scalar_one_or_none()
-
-        if queue_item:
-            await db.delete(queue_item)
-
-        return queue_item
+        queue_repo = TaskQueueRepository(db)
+        return await queue_repo.get_next_by_task(task_type, task_id)
 
 
 # Singleton instance

@@ -6,13 +6,11 @@ import httpx
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.config import settings as app_settings
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_template import NotificationChannel
 from app.models.payment import Payment
-from app.models.workspace import Workspace
 from app.services.email import email_service  # SMTP fallback
 from app.services.max_messenger import max_messenger_service
 from app.services.postal import postal_service
@@ -50,10 +48,10 @@ class NotificationService:
 
     async def _get_workspace_info(self, db: AsyncSession, workspace_id: UUID) -> tuple[str, str]:
         """Get workspace name and owner's preferred language."""
-        result = await db.execute(
-            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_with_owner(workspace_id)
 
         workspace_name = workspace.name if workspace else "Unknown"
         language = "en"
@@ -339,9 +337,7 @@ class NotificationService:
 
         # Send MAX notifications
         if settings.max_enabled and settings.max_chat_ids:
-            await self._send_templated_max(
-                db, settings.max_chat_ids, "subscription_expiring", language, variables
-            )
+            await self._send_templated_max(db, settings.max_chat_ids, "subscription_expiring", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -384,10 +380,10 @@ class NotificationService:
     ) -> None:
         """Send subscription expired notifications through all enabled channels."""
         # Get user's first workspace for notification settings
-        workspace_result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
-        )
-        workspace = workspace_result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_first_by_owner(user_id)
         if not workspace:
             return
 
@@ -416,9 +412,7 @@ class NotificationService:
 
         # Send MAX notifications
         if settings.max_enabled and settings.max_chat_ids:
-            await self._send_templated_max(
-                db, settings.max_chat_ids, "subscription_expired", language, variables
-            )
+            await self._send_templated_max(db, settings.max_chat_ids, "subscription_expired", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:
@@ -461,10 +455,10 @@ class NotificationService:
     ) -> None:
         """Send subscription auto-renewed notification."""
         # Get user's first workspace for notification settings
-        workspace_result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_id).order_by(Workspace.created_at.asc()).limit(1)
-        )
-        workspace = workspace_result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_first_by_owner(user_id)
         if not workspace:
             return
 
@@ -497,9 +491,7 @@ class NotificationService:
 
         # Send MAX notifications
         if settings.max_enabled and settings.max_chat_ids:
-            await self._send_templated_max(
-                db, settings.max_chat_ids, "subscription_renewed", language, variables
-            )
+            await self._send_templated_max(db, settings.max_chat_ids, "subscription_renewed", language, variables)
 
         # Send Email notifications
         if settings.email_enabled and settings.email_addresses:

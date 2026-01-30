@@ -537,13 +537,19 @@ class TestProcessMonitorStateMachine:
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
         ):
             mock_repo = MockRepo.return_value
             mock_repo.mark_completed = AsyncMock()
             mock_event_repo = MockEventRepo.return_value
+            mock_exec_repo = MockExecRepo.return_value
 
             mock_event = MagicMock()
             mock_event_repo.create_end_event = AsyncMock(return_value=mock_event)
+
+            mock_execution = MagicMock()
+            mock_exec_repo.get_running_execution_by_process_monitor = AsyncMock(return_value=mock_execution)
+            mock_exec_repo.complete_process_monitor_execution = AsyncMock(return_value=mock_execution)
 
             event = await service.process_end_ping(mock_db, monitor)
 
@@ -587,6 +593,7 @@ class TestProcessMonitorStateMachine:
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
             patch.object(service, "_send_recovery_notification", new_callable=AsyncMock) as mock_send_recovery,
         ):
             mock_repo = MockRepo.return_value
@@ -594,6 +601,9 @@ class TestProcessMonitorStateMachine:
             mock_event_repo = MockEventRepo.return_value
             mock_event_repo.create_start_event = AsyncMock(return_value=MagicMock())
             mock_event_repo.delete_old_events = AsyncMock()
+
+            mock_exec_repo = MockExecRepo.return_value
+            mock_exec_repo.create = AsyncMock(return_value=MagicMock())
 
             await service.process_start_ping(mock_db, monitor)
 
@@ -641,13 +651,19 @@ class TestProcessMonitorStateMachine:
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
         ):
             mock_repo = MockRepo.return_value
             mock_repo.mark_completed = AsyncMock()
             mock_event_repo = MockEventRepo.return_value
+            mock_exec_repo = MockExecRepo.return_value
 
             mock_event = MagicMock()
             mock_event_repo.create_end_event = AsyncMock(return_value=mock_event)
+
+            mock_execution = MagicMock()
+            mock_exec_repo.get_running_execution_by_process_monitor = AsyncMock(return_value=mock_execution)
+            mock_exec_repo.complete_process_monitor_execution = AsyncMock(return_value=mock_execution)
 
             # Provide explicit duration
             await service.process_end_ping(mock_db, monitor, duration_ms=12345)
@@ -681,12 +697,18 @@ class TestProcessMonitorStateMachine:
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
             patch.object(service, "_send_success_notification", new_callable=AsyncMock) as mock_send_success,
         ):
             mock_repo = MockRepo.return_value
             mock_repo.mark_completed = AsyncMock()
             mock_event_repo = MockEventRepo.return_value
             mock_event_repo.create_end_event = AsyncMock(return_value=MagicMock())
+
+            mock_exec_repo = MockExecRepo.return_value
+            mock_execution = MagicMock()
+            mock_exec_repo.get_running_execution_by_process_monitor = AsyncMock(return_value=mock_execution)
+            mock_exec_repo.complete_process_monitor_execution = AsyncMock(return_value=mock_execution)
 
             await service.process_end_ping(mock_db, monitor)
 
@@ -828,10 +850,12 @@ class TestProcessMonitorCheckMissed:
         monitor.schedule_interval = 3600
         monitor.timezone = "UTC"
         monitor.start_grace_period = 300
+        monitor.last_start_at = datetime.utcnow() - timedelta(minutes=10)
 
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
         ):
             mock_repo = MockRepo.return_value
             mock_repo.get_monitors_waiting_for_end = AsyncMock(return_value=[monitor])
@@ -839,6 +863,12 @@ class TestProcessMonitorCheckMissed:
 
             mock_event_repo = MockEventRepo.return_value
             mock_event_repo.create_timeout_event = AsyncMock()
+
+            mock_exec_repo = MockExecRepo.return_value
+            mock_execution = MagicMock()
+            mock_execution.status = None
+            mock_exec_repo.get_running_execution_by_process_monitor = AsyncMock(return_value=mock_execution)
+            mock_exec_repo.complete_process_monitor_execution = AsyncMock(return_value=mock_execution)
 
             result = await service.check_missed_ends(mock_db)
 
@@ -866,10 +896,12 @@ class TestProcessMonitorCheckMissed:
         monitor.schedule_interval = 3600
         monitor.timezone = "UTC"
         monitor.start_grace_period = 300
+        monitor.last_start_at = datetime.utcnow() - timedelta(minutes=10)
 
         with (
             patch("app.services.process_monitor.ProcessMonitorRepository") as MockRepo,
             patch("app.services.process_monitor.ProcessMonitorEventRepository") as MockEventRepo,
+            patch("app.services.process_monitor.ExecutionRepository") as MockExecRepo,
             patch.object(service, "_send_missed_end_notification", new_callable=AsyncMock) as mock_send,
         ):
             mock_repo = MockRepo.return_value
@@ -878,6 +910,12 @@ class TestProcessMonitorCheckMissed:
 
             mock_event_repo = MockEventRepo.return_value
             mock_event_repo.create_timeout_event = AsyncMock()
+
+            mock_exec_repo = MockExecRepo.return_value
+            mock_execution = MagicMock()
+            mock_execution.status = None
+            mock_exec_repo.get_running_execution_by_process_monitor = AsyncMock(return_value=mock_execution)
+            mock_exec_repo.complete_process_monitor_execution = AsyncMock(return_value=mock_execution)
 
             await service.check_missed_ends(mock_db)
 

@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint test-db backup restore backup-list dev-max-bot invalidate-plans-cache
+.PHONY: dev dev-backend dev-frontend dev-landing infra stop test test-cov lint fix test-db backup restore backup-list dev-max-bot invalidate-plans-cache
 
 # Start all dev services (backend + frontend + landing in background)
 dev: infra
@@ -97,6 +97,17 @@ lint:
 	cd backend && uv run mypy app --ignore-missing-imports
 	cd frontend && npm run lint
 	cd landing && npm run lint
+
+# Auto-fix linting and formatting issues
+fix:
+	@echo "Fixing backend..."
+	cd backend && uv run ruff check --fix .
+	cd backend && uv run ruff format .
+	@echo "Fixing frontend..."
+	cd frontend && npx eslint . --fix
+	@echo "Fixing landing..."
+	cd landing && npx eslint . --fix
+	@echo "All fixes applied!"
 
 # Backup database and uploads (for dev environment)
 backup:

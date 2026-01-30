@@ -602,3 +602,39 @@ class ExecutionRepository(BaseRepository[Execution]):
                 total += heartbeat_result.scalar_one()
 
         return total
+
+    async def get_running_execution_by_process_monitor(
+        self,
+        process_monitor_id: UUID,
+    ) -> Execution | None:
+        """Get the most recent running execution for a process monitor."""
+        stmt = (
+            select(Execution)
+            .where(
+                Execution.process_monitor_id == process_monitor_id,
+                Execution.status == TaskStatus.RUNNING,
+            )
+            .order_by(Execution.started_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def complete_process_monitor_execution(
+        self,
+        execution: Execution,
+        status: TaskStatus,
+        duration_ms: int | None = None,
+        error_message: str | None = None,
+    ) -> Execution:
+        """Complete a process monitor execution record."""
+        now = datetime.utcnow()
+        execution.status = status
+        execution.finished_at = now
+        if duration_ms is not None:
+            execution.duration_ms = duration_ms
+        if error_message is not None:
+            execution.error_message = error_message
+
+        await self.db.flush()
+        return execution

@@ -5,13 +5,10 @@ from uuid import UUID
 
 import pytz
 import structlog
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.db.repositories.heartbeats import HeartbeatPingRepository, HeartbeatRepository
 from app.models.heartbeat import Heartbeat, HeartbeatPing, HeartbeatStatus
-from app.models.workspace import Workspace
 from app.services.i18n import t
 from app.services.notifications import notification_service
 
@@ -23,10 +20,10 @@ class HeartbeatService:
 
     async def _get_workspace_language(self, db: AsyncSession, workspace_id: UUID) -> str:
         """Get the preferred language of the workspace owner."""
-        result = await db.execute(
-            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_with_owner(workspace_id)
 
         if workspace and workspace.owner:
             return workspace.owner.preferred_language or "en"
@@ -34,10 +31,10 @@ class HeartbeatService:
 
     async def _get_workspace_settings(self, db: AsyncSession, workspace_id: UUID) -> tuple[str, str]:
         """Get workspace language and timezone."""
-        result = await db.execute(
-            select(Workspace).options(selectinload(Workspace.owner)).where(Workspace.id == workspace_id)
-        )
-        workspace = result.scalar_one_or_none()
+        from app.db.repositories.workspaces import WorkspaceRepository
+
+        workspace_repo = WorkspaceRepository(db)
+        workspace = await workspace_repo.get_with_owner(workspace_id)
 
         lang = "en"
         tz = "Europe/Moscow"

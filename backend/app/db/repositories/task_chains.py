@@ -210,6 +210,31 @@ class TaskChainRepository(BaseRepository[TaskChain]):
         await self.db.refresh(new_chain)
         return new_chain
 
+    async def get_with_timeout_and_running(self) -> list[TaskChain]:
+        """Get chains with running instances and execution timeout set."""
+        stmt = select(TaskChain).where(
+            TaskChain.running_instances > 0,
+            TaskChain.execution_timeout.isnot(None),
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def increment_running_instances(self, chain_id: UUID) -> None:
+        """Increment running instances counter."""
+        stmt = (
+            update(TaskChain).where(TaskChain.id == chain_id).values(running_instances=TaskChain.running_instances + 1)
+        )
+        await self.db.execute(stmt)
+
+    async def decrement_running_instances(self, chain_id: UUID) -> None:
+        """Decrement running instances counter."""
+        stmt = (
+            update(TaskChain)
+            .where(TaskChain.id == chain_id, TaskChain.running_instances > 0)
+            .values(running_instances=TaskChain.running_instances - 1)
+        )
+        await self.db.execute(stmt)
+
 
 class ChainStepRepository(BaseRepository[ChainStep]):
     """Repository for chain step operations."""
