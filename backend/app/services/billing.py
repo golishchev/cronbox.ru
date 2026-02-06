@@ -104,6 +104,7 @@ class BillingService:
                         "min_cron_interval_minutes": p.min_cron_interval_minutes,
                         "telegram_notifications": p.telegram_notifications,
                         "email_notifications": p.email_notifications,
+                        "max_notifications": p.max_notifications,
                         "webhook_callbacks": p.webhook_callbacks,
                         "custom_headers": p.custom_headers,
                         "retry_on_failure": p.retry_on_failure,
