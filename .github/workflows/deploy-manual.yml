@@ -1,5 +1,6 @@
 # Manual deployment and rollback workflow
-# Supports selective deployment of components
+# Pulls pre-built images from GHCR and deploys to production
+# Images are built by CI on push to main
 
 name: Manual Deploy
 
@@ -14,7 +15,6 @@ on:
         options:
           - deploy
           - rollback
-          - build-and-deploy
       ref:
         description: 'Git ref to deploy (commit SHA, branch, tag)'
         required: false
@@ -29,178 +29,83 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
 
 jobs:
-  # Build images if action is build-and-deploy
-  build:
-    name: Build Images
-    if: github.event.inputs.action == 'build-and-deploy'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get commit SHA
-        id: sha
-        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Build and push backend
-        if: contains(github.event.inputs.components, 'backend') || github.event.inputs.components == 'all'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-api:${{ steps.sha.outputs.sha }}
-            ${{ env.IMAGE_PREFIX }}-api:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push frontend
-        if: contains(github.event.inputs.components, 'frontend') || github.event.inputs.components == 'all'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.sha.outputs.sha }}
-            ${{ env.IMAGE_PREFIX }}-frontend:latest
-          build-args: |
-            VITE_API_URL=https://api.cronbox.ru/v1
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push landing
-        if: contains(github.event.inputs.components, 'landing') || github.event.inputs.components == 'all'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./landing
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-landing:${{ steps.sha.outputs.sha }}
-            ${{ env.IMAGE_PREFIX }}-landing:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-    outputs:
-      sha: ${{ steps.sha.outputs.sha }}
-
   deploy:
     name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }}
     runs-on: ubuntu-latest
-    needs: [build]
-    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: production
       url: https://cronbox.ru
 
     steps:
-      - name: Get target ref
-        id: target
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "rollback" ]; then
-            echo "ref=HEAD~1" >> $GITHUB_OUTPUT
-          elif [ "${{ needs.build.outputs.sha }}" != "" ]; then
-            echo "ref=${{ needs.build.outputs.sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "ref=${{ github.event.inputs.ref }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: ${{ github.event.inputs.action == 'rollback' && 'Rollback' || 'Deploy' }} via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
-          TARGET_REF: ${{ steps.target.outputs.ref }}
           COMPONENTS: ${{ github.event.inputs.components }}
           ACTION: ${{ github.event.inputs.action }}
-          REGISTRY: ghcr.io
+          REF: ${{ github.event.inputs.ref }}
           IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: TARGET_REF,COMPONENTS,ACTION,REGISTRY,IMAGE_PREFIX
+          envs: COMPONENTS,ACTION,REF,IMAGE_PREFIX,GHCR_TOKEN,GHCR_USER
           script: |
             set -e
             cd /opt/cronbox
 
             echo "==> Action: $ACTION"
-            echo "==> Target ref: $TARGET_REF"
             echo "==> Components: $COMPONENTS"
+
+            # Login to GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             if [ "$ACTION" = "rollback" ]; then
               echo "==> Rolling back to previous commit..."
               git checkout HEAD~1
               IMAGE_TAG=$(git rev-parse HEAD)
             else
-              echo "==> Deploying ref: $TARGET_REF"
+              echo "==> Deploying ref: $REF"
               git fetch origin
-              git checkout $TARGET_REF
+              git checkout "$REF"
               IMAGE_TAG=$(git rev-parse HEAD)
             fi
 
             echo "==> Image tag: $IMAGE_TAG"
 
-            # Check and start infrastructure if needed
-            check_infrastructure() {
-              echo "==> Checking infrastructure services..."
-              RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
-              NEED_INFRA=false
-
-              for service in postgres redis traefik; do
-                if ! echo "$RUNNING_SERVICES" | grep -q "^${service}$"; then
-                  echo "Service $service is not running"
-                  NEED_INFRA=true
-                fi
-              done
-
-              if [ "$NEED_INFRA" = true ]; then
-                echo "==> Stopping application services before infrastructure restart..."
-                docker compose -f docker-compose.prod.yml stop worker scheduler bot api 2>/dev/null || true
-                echo "==> Waiting for services to stop gracefully..."
-                sleep 5
-
-                echo "==> Starting infrastructure services..."
-                docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
-                echo "==> Waiting for infrastructure to be healthy..."
-                sleep 30
-
-                echo "==> Restarting application services..."
-                docker compose -f docker-compose.prod.yml up -d api
-                sleep 3
-                docker compose -f docker-compose.prod.yml up -d worker scheduler bot
-              else
-                echo "==> Infrastructure is running"
+            # Check infrastructure
+            RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
+            NEED_INFRA=false
+            for service in postgres redis traefik; do
+              if ! echo "$RUNNING_SERVICES" | grep -q "^${service}$"; then
+                echo "Service $service is not running"
+                NEED_INFRA=true
               fi
-            }
+            done
+
+            if [ "$NEED_INFRA" = true ]; then
+              echo "==> Starting infrastructure..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot api 2>/dev/null || true
+              sleep 5
+              docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
+              sleep 30
+              docker compose -f docker-compose.prod.yml up -d api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d worker scheduler bot
+            fi
 
             deploy_backend() {
               echo "==> Pulling backend image..."
-              if docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG} 2>/dev/null; then
-                docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
-              else
-                echo "==> Image not found in registry, building locally..."
-                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
-              fi
-
-              echo "==> Stopping backend services gracefully..."
+              docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
+              echo "==> Deploying backend..."
               docker compose -f docker-compose.prod.yml stop worker scheduler bot 2>/dev/null || true
               sleep 3
-
-              echo "==> Deploying backend services..."
               docker compose -f docker-compose.prod.yml up -d --no-deps api
               sleep 3
               docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
@@ -208,32 +113,19 @@ jobs:
 
             deploy_frontend() {
               echo "==> Pulling frontend image..."
-              if docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} 2>/dev/null; then
-                docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
-                echo "==> Deploying frontend..."
-                docker compose -f docker-compose.prod.yml up -d --no-deps frontend
-              else
-                echo "==> Image not found in registry, building locally..."
-                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build frontend
-                docker compose -f docker-compose.prod.yml up -d --no-deps frontend
-              fi
+              docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
+              echo "==> Deploying frontend..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps frontend
             }
 
             deploy_landing() {
               echo "==> Pulling landing image..."
-              if docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG} 2>/dev/null; then
-                docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
-                echo "==> Deploying landing..."
-                docker compose -f docker-compose.prod.yml up -d --no-deps landing
-              else
-                echo "==> Image not found in registry, building locally..."
-                DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build landing
-                docker compose -f docker-compose.prod.yml up -d --no-deps landing
-              fi
+              docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG}
+              docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
+              echo "==> Deploying landing..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps landing
             }
-
-            # Check infrastructure before deploying
-            check_infrastructure
 
             # Deploy selected components
             if [ "$COMPONENTS" = "all" ]; then
@@ -252,11 +144,13 @@ jobs:
               fi
             fi
 
+            # Cleanup
             echo "==> Cleaning up..."
             docker image prune -f --filter "until=168h"
 
+            # Health check
             echo "==> Health check..."
             curl -sf --retry 3 --retry-delay 2 https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
 
-            echo "==> Done! Current commit:"
+            echo "==> Done!"
             git log -1 --oneline

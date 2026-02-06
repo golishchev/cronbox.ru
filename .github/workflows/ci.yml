@@ -1,11 +1,13 @@
-# GitHub Actions CI Pipeline for CronBox
-# Tests and builds images on push to main
-# Deploy is done manually via deploy-manual.yml
+# GitHub Actions CI/CD Pipeline for CronBox
+# - On PR: detect changes → test
+# - On push to main: detect changes → test → build & push images → auto-deploy
 
 name: CI
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 env:
@@ -108,7 +110,7 @@ jobs:
 
       - name: Type check with mypy
         run: uv run mypy app
-        continue-on-error: true  # SQLAlchemy has many type issues, don't block CI
+        continue-on-error: true
 
       - name: Create test database
         run: |
@@ -174,7 +176,7 @@ jobs:
         run: npm run build
 
   # ===================
-  # BUILD & PUSH IMAGES
+  # BUILD & PUSH IMAGES (only on push to main)
   # ===================
 
   build-backend:
@@ -182,8 +184,9 @@ jobs:
     needs: [changes, test-backend]
     if: |
       always() &&
+      github.event_name == 'push' &&
       needs.changes.outputs.backend == 'true' &&
-      (needs.test-backend.result == 'success')
+      needs.test-backend.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -218,8 +221,9 @@ jobs:
     needs: [changes, test-frontend]
     if: |
       always() &&
+      github.event_name == 'push' &&
       needs.changes.outputs.frontend == 'true' &&
-      (needs.test-frontend.result == 'success')
+      needs.test-frontend.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -256,8 +260,9 @@ jobs:
     needs: [changes, test-landing]
     if: |
       always() &&
+      github.event_name == 'push' &&
       needs.changes.outputs.landing == 'true' &&
-      (needs.test-landing.result == 'success')
+      needs.test-landing.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -287,3 +292,132 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ===================
+  # AUTO-DEPLOY (only on push to main, after successful builds)
+  # ===================
+
+  deploy:
+    name: Deploy to Production
+    needs: [changes, test-backend, test-frontend, test-landing, build-backend, build-frontend, build-landing]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs.test-backend.result != 'failure' &&
+      needs.test-frontend.result != 'failure' &&
+      needs.test-landing.result != 'failure' &&
+      (
+        needs.build-backend.result == 'success' ||
+        needs.build-frontend.result == 'success' ||
+        needs.build-landing.result == 'success' ||
+        needs.changes.outputs.infra == 'true'
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    environment:
+      name: production
+      url: https://cronbox.ru
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cronbox
+          DEPLOY_BACKEND: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+          DEPLOY_FRONTEND: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+          DEPLOY_LANDING: ${{ needs.build-landing.result == 'success' || needs.changes.outputs.infra == 'true' }}
+          BACKEND_BUILT: ${{ needs.build-backend.result == 'success' }}
+          FRONTEND_BUILT: ${{ needs.build-frontend.result == 'success' }}
+          LANDING_BUILT: ${{ needs.build-landing.result == 'success' }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: IMAGE_TAG,IMAGE_PREFIX,DEPLOY_BACKEND,DEPLOY_FRONTEND,DEPLOY_LANDING,BACKEND_BUILT,FRONTEND_BUILT,LANDING_BUILT,GHCR_TOKEN,GHCR_USER
+          script: |
+            set -e
+            cd /opt/cronbox
+
+            echo "==> Deploying commit: $IMAGE_TAG"
+            echo "==> Backend: $DEPLOY_BACKEND (built: $BACKEND_BUILT)"
+            echo "==> Frontend: $DEPLOY_FRONTEND (built: $FRONTEND_BUILT)"
+            echo "==> Landing: $DEPLOY_LANDING (built: $LANDING_BUILT)"
+
+            # Update repo to get latest configs
+            git fetch origin
+            git checkout $IMAGE_TAG
+
+            # Login to GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # Check infrastructure
+            RUNNING_SERVICES=$(docker compose -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null || echo "")
+            NEED_INFRA=false
+            for service in postgres redis traefik; do
+              if ! echo "$RUNNING_SERVICES" | grep -q "^${service}$"; then
+                echo "Service $service is not running"
+                NEED_INFRA=true
+              fi
+            done
+
+            if [ "$NEED_INFRA" = true ]; then
+              echo "==> Starting infrastructure..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot api 2>/dev/null || true
+              sleep 5
+              docker compose -f docker-compose.prod.yml up -d postgres redis traefik prometheus grafana redis-exporter postgres-exporter
+              sleep 30
+              docker compose -f docker-compose.prod.yml up -d api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d worker scheduler bot
+            fi
+
+            # Deploy components
+            if [ "$DEPLOY_BACKEND" = "true" ]; then
+              if [ "$BACKEND_BUILT" = "true" ]; then
+                echo "==> Pulling backend image..."
+                docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG}
+                docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
+              fi
+              echo "==> Deploying backend..."
+              docker compose -f docker-compose.prod.yml stop worker scheduler bot 2>/dev/null || true
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d --no-deps api
+              sleep 3
+              docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
+            fi
+
+            if [ "$DEPLOY_FRONTEND" = "true" ]; then
+              if [ "$FRONTEND_BUILT" = "true" ]; then
+                echo "==> Pulling frontend image..."
+                docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG}
+                docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
+              fi
+              echo "==> Deploying frontend..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+            fi
+
+            if [ "$DEPLOY_LANDING" = "true" ]; then
+              if [ "$LANDING_BUILT" = "true" ]; then
+                echo "==> Pulling landing image..."
+                docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG}
+                docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
+              fi
+              echo "==> Deploying landing..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps landing
+            fi
+
+            # Cleanup
+            echo "==> Cleaning up..."
+            docker image prune -f --filter "until=168h"
+
+            # Health check
+            echo "==> Health check..."
+            curl -sf --retry 3 --retry-delay 2 https://api.cronbox.ru/health && echo "API OK" || echo "Warning: API health check failed"
+
+            echo "==> Done!"
+            git log -1 --oneline
