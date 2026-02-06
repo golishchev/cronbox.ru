@@ -128,11 +128,47 @@ jobs:
             }
 
             # Deploy selected components
+            DEPLOYED=""
             if [ "$COMPONENTS" = "all" ]; then
-              deploy_backend
-              deploy_frontend
-              deploy_landing
+              # When deploying "all", skip components whose images weren't built
+              if docker pull ${IMAGE_PREFIX}-api:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-api:${IMAGE_TAG} cronboxru-api:latest
+                echo "==> Deploying backend..."
+                docker compose -f docker-compose.prod.yml stop worker scheduler bot 2>/dev/null || true
+                sleep 3
+                docker compose -f docker-compose.prod.yml up -d --no-deps api
+                sleep 3
+                docker compose -f docker-compose.prod.yml up -d --no-deps worker scheduler bot
+                DEPLOYED="$DEPLOYED backend"
+              else
+                echo "==> Skipping backend (image not found for this commit)"
+              fi
+
+              if docker pull ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-frontend:${IMAGE_TAG} cronboxru-frontend:latest
+                echo "==> Deploying frontend..."
+                docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+                DEPLOYED="$DEPLOYED frontend"
+              else
+                echo "==> Skipping frontend (image not found for this commit)"
+              fi
+
+              if docker pull ${IMAGE_PREFIX}-landing:${IMAGE_TAG} 2>/dev/null; then
+                docker tag ${IMAGE_PREFIX}-landing:${IMAGE_TAG} cronboxru-landing:latest
+                echo "==> Deploying landing..."
+                docker compose -f docker-compose.prod.yml up -d --no-deps landing
+                DEPLOYED="$DEPLOYED landing"
+              else
+                echo "==> Skipping landing (image not found for this commit)"
+              fi
+
+              if [ -z "$DEPLOYED" ]; then
+                echo "ERROR: No images found for any component at tag ${IMAGE_TAG}"
+                exit 1
+              fi
+              echo "==> Deployed:$DEPLOYED"
             else
+              # Explicit component selection — fail if image is missing
               if echo "$COMPONENTS" | grep -q "backend"; then
                 deploy_backend
               fi
