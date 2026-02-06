@@ -16,7 +16,7 @@ const enterprisePlan = {
     'Минимальный интервал: 10 секунд',
     'Неограниченные выполнения',
     'Неограниченные SSL-мониторы',
-    'Все каналы уведомлений',
+    'Все каналы уведомлений (Email, Telegram, MAX, Webhook)',
     'Бессрочная история',
     'Выделенные воркеры',
     'Персональный менеджер',
@@ -86,6 +86,10 @@ function generateFeatures(plan: Plan): string[] {
     features.push('Email + Telegram уведомления')
   } else if (plan.email_notifications) {
     features.push('Email-уведомления')
+  }
+
+  if (plan.max_notifications) {
+    features.push('MAX-уведомления')
   }
 
   if (plan.webhook_callbacks) {

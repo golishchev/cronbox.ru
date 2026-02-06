@@ -14,6 +14,7 @@ export interface Plan {
   min_cron_interval_minutes: number
   telegram_notifications: boolean
   email_notifications: boolean
+  max_notifications: boolean
   webhook_callbacks: boolean
   custom_headers: boolean
   retry_on_failure: boolean

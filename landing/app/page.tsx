@@ -19,6 +19,7 @@ import {
   GitBranch,
   Radio,
   Plug,
+  MessageCircle,
 } from 'lucide-react'
 import { JsonLd } from '@/components/JsonLd'
 
@@ -115,7 +116,7 @@ const automationFeatures = [
 const additionalFeatures = [
   {
     name: 'Мгновенные уведомления',
-    description: 'Email, Telegram, Webhook - выберите удобный канал для алертов.',
+    description: 'Email, Telegram, MAX, Webhook - выберите удобный канал для алертов.',
     icon: Bell,
   },
   {
@@ -225,7 +226,7 @@ const faqItems = [
   {
     question: 'Какие каналы уведомлений поддерживаются?',
     answer:
-      'Email, Telegram и Webhook. Вы можете настроить разные каналы для разных событий: ошибки выполнения, пропущенные heartbeat-пинги, истекающие сертификаты, восстановление после сбоя.',
+      'Email, Telegram, MAX и Webhook. Вы можете настроить разные каналы для разных событий: ошибки выполнения, пропущенные heartbeat-пинги, истекающие сертификаты, восстановление после сбоя.',
   },
   {
     question: 'Есть ли API для интеграции?',
@@ -444,6 +445,15 @@ export default function HomePage() {
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">Email</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Подробные отчёты на почту</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                    <MessageCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">MAX</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Уведомления в мессенджер MAX</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
