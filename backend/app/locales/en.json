@@ -41,6 +41,15 @@
       "copy_link": "Or copy the link:",
       "validity": "The link is valid for 24 hours. If you did not request this email, please ignore it."
     },
+    "admin_verification_reminder": {
+      "subject": "[CronBox] Please Verify Your Email",
+      "title": "Email Verification Reminder",
+      "greeting": "Hello, {name}!",
+      "body": "We noticed that you haven't verified your email address on CronBox yet. Verifying your email allows you to receive important notifications and recover access to your account.",
+      "button": "Verify Email",
+      "copy_link": "Or copy the link:",
+      "validity": "The link is valid for 24 hours."
+    },
     "password_reset": {
       "subject": "[CronBox] Password Reset",
       "title": "Password Reset",

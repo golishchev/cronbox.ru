@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getAdminUsers, updateAdminUser, assignUserPlan, getAdminPlans, deleteAdminUser, AdminUser, AdminPlan } from '@/api/admin'
+import { getAdminUsers, updateAdminUser, assignUserPlan, getAdminPlans, deleteAdminUser, resendVerificationEmail, AdminUser, AdminPlan } from '@/api/admin'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -77,6 +77,7 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null)
   const [updateLoading, setUpdateLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sendingVerification, setSendingVerification] = useState<Record<string, boolean>>({})
   const [plans, setPlans] = useState<AdminPlan[]>([])
 
   // Edit form state
@@ -191,6 +192,26 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       })
     } finally {
       setDeleteLoading(false)
+    }
+  }
+
+  const handleResendVerification = async (user: AdminUser) => {
+    setSendingVerification(prev => ({ ...prev, [user.id]: true }))
+    try {
+      await resendVerificationEmail(user.id)
+      toast({
+        title: t('admin.verificationSent'),
+        description: t('admin.verificationSentDescription', { email: user.email }),
+        variant: 'success',
+      })
+    } catch (err) {
+      toast({
+        title: t('admin.errorSendingVerification'),
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingVerification(prev => ({ ...prev, [user.id]: false }))
     }
   }
 
@@ -343,6 +364,19 @@ export function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                             <Edit className="mr-2 h-4 w-4" />
                             {t('common.edit')}
                           </DropdownMenuItem>
+                          {!user.email_verified && (
+                            <DropdownMenuItem
+                              onClick={() => handleResendVerification(user)}
+                              disabled={sendingVerification[user.id]}
+                            >
+                              {sendingVerification[user.id] ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Mail className="mr-2 h-4 w-4" />
+                              )}
+                              {t('admin.resendVerification')}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => setDeletingUser(user)}

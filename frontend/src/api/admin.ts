@@ -116,6 +116,10 @@ export async function deleteAdminUser(userId: string): Promise<void> {
   await apiClient.delete(`/admin/users/${userId}`)
 }
 
+export async function resendVerificationEmail(userId: string): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/resend-verification`)
+}
+
 export async function getAdminWorkspaces(params?: {
   page?: number
   page_size?: number

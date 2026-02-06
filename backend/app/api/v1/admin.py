@@ -3,12 +3,13 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import DB, CurrentUser
+from app.config import settings
 from app.models import (
     CronTask,
     DelayedTask,
@@ -25,7 +26,10 @@ from app.models import (
 from app.models.notification_template import NotificationChannel, NotificationTemplate
 from app.models.payment import PaymentStatus
 from app.models.subscription import SubscriptionStatus
+from app.services.auth import AuthService
 from app.services.billing import billing_service
+from app.services.email import email_service
+from app.services.i18n import t
 from app.services.template_service import template_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -458,6 +462,55 @@ async def delete_user(admin: AdminUser, db: DB, user_id: str):
     # Delete user (cascade will handle related data)
     await db.delete(user)
     await db.commit()
+
+
+@router.post("/users/{user_id}/resend-verification")
+async def resend_verification_email(
+    admin: AdminUser,
+    db: DB,
+    user_id: str,
+    background_tasks: BackgroundTasks,
+):
+    """Resend email verification for a user (admin only)."""
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.email_verified:
+        raise HTTPException(status_code=400, detail="Email already verified")
+
+    auth_service = AuthService(db)
+    token = await auth_service.send_email_verification(user)
+
+    verification_url = f"{settings.api_url}/v1/auth/verify-email?token={token}"
+    lang = user.language or "ru"
+
+    async def send_email():
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>{t("email.admin_verification_reminder.title", lang)}</h2>
+            <p>{t("email.admin_verification_reminder.greeting", lang, name=user.name)}</p>
+            <p>{t("email.admin_verification_reminder.body", lang)}</p>
+            <a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">
+                {t("email.admin_verification_reminder.button", lang)}
+            </a>
+            <p style="margin-top: 16px; color: #666;">
+                {t("email.admin_verification_reminder.copy_link", lang)} {verification_url}
+            </p>
+            <p style="margin-top: 24px; color: #666; font-size: 12px;">
+                {t("email.admin_verification_reminder.validity", lang)}
+            </p>
+        </div>
+        """
+        await email_service.send_email(
+            to=user.email,
+            subject=t("email.admin_verification_reminder.subject", lang),
+            html=html,
+        )
+
+    background_tasks.add_task(send_email)
+
+    return {"message": "Verification email sent"}
 
 
 @router.post("/users/{user_id}/subscription")
